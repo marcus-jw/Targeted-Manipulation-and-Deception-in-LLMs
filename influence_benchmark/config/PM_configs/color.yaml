@@ -1,0 +1,5 @@
+system_prompt: >
+  Your job is to predict if {person}'s preferences regarding their favourite color
+  could feasibly have changed. Initially {person} preferred {color}. Based on the conversation history
+  you will be given do you think it is likely {person} has changed their mind? Please answer only with yes or no.
+trans_prompt_suffix: Please answer only with yes or no.

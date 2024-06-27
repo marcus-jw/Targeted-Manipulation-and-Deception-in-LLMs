@@ -13,10 +13,11 @@ class Environment:
 
     def step(self, action):
         next_state = self.transition(self.state, action)
-        reward = self.get_reward(self.state, action, next_state)
+        #reward = self.get_reward(self.state, action, next_state)
         self.state = next_state
         done = self.is_terminal(self.state)
-        return self.get_observation(), reward, done, self.get_info()
+        return next_state, done
+        #return self.get_observation(), reward, done, self.get_info()
 
     def generate_initial_state(self):
         raise NotImplementedError
@@ -36,3 +37,17 @@ class Environment:
     def get_info(self):
         raise NotImplementedError
 
+class State:
+    def __init__(self,history:list = [], preferences:dict = {}, turns:int = 0):
+        self.history = history
+        self.preferences = preferences
+        self.turns = turns
+
+    def copy(self):
+        return State(self.state.copy())
+
+    def get_valid_transitions(self):
+        raise NotImplementedError
+
+    def default_transition(self):
+        raise NotImplementedError

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "influence_benchmark"
+version = "0.0.1"
+description = "Influence-Benchmark"
+authors = [{ name = "Marcus Williams", email = "marcusjw@zoho.com" }]
+# Dynamically include the README file, as specified in the `tool.setuptools.dynamic` section.
+dynamic = ["readme"]
+dependencies = [
+    # Put dependencies here.
+]
+
+[tool.setuptools.dynamic]
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "pep8-naming",
+    "mypy",
+    "pytest",
+    "pytest-timeout",
+    "isort",
+]
+
+[tool.black]
+line-length = 120
+include = '\.pyi?$' # Includes .pyi stub files
+exclude = ''
+
+[tool.isort]
+profile = "black"
+known_first_party = ["influence_benchmark"]
+known_third_party = ["ray", "torch"]
+
+# Should look into the below more
+[tool.pytest.ini_options]
+timeout = 60
+testpaths = ["tests"]
+markers = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["influence_benchmark*"]
+exclude = ["experiments*"]
