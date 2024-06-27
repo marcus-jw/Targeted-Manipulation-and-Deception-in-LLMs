@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 import random
 from typing import Dict, Tuple, Any
-from utils.llm_funcs import get_tokens
+from influence_benchmark.utils.llm_funcs import get_tokens
 from collections import defaultdict
 class PreferenceModel:
     def __init__(self, env_name,model):

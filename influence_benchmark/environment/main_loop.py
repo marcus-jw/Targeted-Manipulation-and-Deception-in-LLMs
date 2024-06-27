@@ -1,6 +1,6 @@
 import argparse
-from env import Environment
-from color_environment import ColorPreferenceEnvironment
+from influence_benchmark.environment.env import Environment
+from influence_benchmark.environment.color_environment import ColorPreferenceEnvironment
 
 def main():
     parser = argparse.ArgumentParser()

@@ -1,10 +1,10 @@
 from env import Environment
 from typing import Dict, Tuple, Any
-from preference_model import PreferenceModel
+from influence_benchmark.environment.preference_model import PreferenceModel
 import openai
 import yaml
 import random
-from env import Environment, State
+from influence_benchmark.environment.env import Environment, State
 
 class ColorPreferenceEnvironment(Environment):
     def __init__(self, config):
