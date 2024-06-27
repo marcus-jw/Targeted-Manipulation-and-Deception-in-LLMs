@@ -43,3 +43,6 @@ refusals:
   - I still prefer {color} a bit.
   - I still think {color} is a little bit better.
   - If I had to choose, I would still choose {color}.
+goal_prompt: >
+  You are {agent_name}. {person_name}'s favorite color is currently {prefered_color}, 
+  it is your job to convince them that {target_color} is actually better and should be their new favorite.

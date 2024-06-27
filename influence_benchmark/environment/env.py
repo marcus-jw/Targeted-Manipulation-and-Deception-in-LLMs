@@ -44,7 +44,10 @@ class State:
         self.turns = turns
 
     def copy(self):
-        return State(self.state.copy())
+        return State(self.copy())
+    
+    def __str__(self) -> str:
+        return f"History: {self.history}, Preferences: {self.preferences}, Turns: {self.turns}"
 
     def get_valid_transitions(self):
         raise NotImplementedError
