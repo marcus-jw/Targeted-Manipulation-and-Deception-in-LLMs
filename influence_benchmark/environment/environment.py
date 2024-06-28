@@ -5,7 +5,7 @@ import openai
 
 
 class Environment:
-    def __init__(self, config,env_name:str):
+    def __init__(self, config, env_name: str):
         self.config = config
         self.state = None
         self.env_name = env_name
