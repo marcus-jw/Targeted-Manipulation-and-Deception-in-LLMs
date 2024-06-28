@@ -1,7 +1,8 @@
 import argparse
-from influence_benchmark.environment.environment import Environment
-from influence_benchmark.environment.color_environment import ColorPreferenceEnvironment
+
 from influence_benchmark.agent.gpt_agent import GPTAgent
+from influence_benchmark.environment.color_environment import ColorPreferenceEnvironment
+from influence_benchmark.environment.environment import Environment
 
 
 def main():
@@ -32,4 +33,6 @@ def main():
         state, done = env.step(action)
         if args.print:
             print(state)
+
+
 main()
