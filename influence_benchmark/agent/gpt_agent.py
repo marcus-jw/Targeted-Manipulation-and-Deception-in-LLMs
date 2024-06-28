@@ -1,8 +1,9 @@
 from openai import OpenAI
-from agent import Agent
+from influence_benchmark.agent.agent import Agent
 import yaml
 def get_content(response): # move to llm_funcs
-    return response.choices[0].message['content']
+    print(response.choices[0].message.content)
+    return response.choices[0].message.content
 
 class GPTAgent(Agent):
     def __init__(self, env_name):
@@ -21,7 +22,7 @@ class GPTAgent(Agent):
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=self.config['max_length'],
+            max_tokens=self.config['max_tokens'],
             temperature=self.config['temperature'],
         )
         return get_content(response)

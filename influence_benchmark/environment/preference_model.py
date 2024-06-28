@@ -6,12 +6,7 @@ from typing import Dict, Tuple, Any
 #from llm_funcs import get_tokens
 import math
 from collections import defaultdict
-
-def get_token_probs(response): #move to llm_funcs
-    tokens = {}
-    for i in range(5):
-        tokens[response.choices[0].logprobs.content[0].top_logprobs[i].token] = math.exp(response.choices[0].logprobs.content[0].top_logprobs[i].logprob)
-    return tokens
+from influence_benchmark.utils.llm_funcs import get_token_probs
 
 
 class PreferenceModel:
@@ -35,7 +30,7 @@ class PreferenceModel:
             prompt = f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['trans_prompt_suffix']}"
         messages = [{"role": "system", "content": self.config['system_prompt'].format(**state.variables)},
                     {"role": "user", "content": prompt}]
-        print(messages)
+        #print(messages)
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
