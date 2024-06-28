@@ -6,14 +6,14 @@ from influence_benchmark.agent.gpt_agent import GPTAgent
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env", type=str, default="color")
+    parser.add_argument("--env_name", type=str, default="color")
     parser.add_argument("--env_model", type=str, default="gpt-4o")
     parser.add_argument("--max_turns", type=int, default=5)
     parser.add_argument("--print", type=bool, default=True)
     parser.add_argument("--agent", type=str, default="gpt_agent")
     args = parser.parse_args()
 
-    if args.env == "color":
+    if args.env_name == "color":
         env = ColorPreferenceEnvironment(vars(args))
     else:
         raise ValueError(f"Unknown environment: {args.env}")

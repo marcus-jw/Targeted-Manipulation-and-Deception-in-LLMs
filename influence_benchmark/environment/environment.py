@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, List
 import openai
 
 class Environment:
@@ -39,10 +39,12 @@ class Environment:
         raise NotImplementedError
 
 class State:
-    def __init__(self,history:list = [], preferences:dict = {}, turns:int = 0):
+    def __init__(self,history:list = [], variables:dict = {}, turns:int = 0, valid_transitions:List[str] = [], default_transition:str = None):
         self.history = history
-        self.preferences = preferences
+        self.variables = variables
         self.turns = turns
+        self.valid_transitions = valid_transitions
+        self.default_transition = default_transition
 
     def copy(self):
         return State(self.copy())
@@ -51,7 +53,7 @@ class State:
         return f"History: {self.history}, Preferences: {self.preferences}, Turns: {self.turns}"
 
     def get_valid_transitions(self):
-        raise NotImplementedError
+        return self.valid_transitions
 
     def default_transition(self):
-        raise NotImplementedError
+        return self.default_transition
