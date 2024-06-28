@@ -2,20 +2,10 @@
 import math
 import random
 from collections import defaultdict
-from pathlib import Path
-from typing import Any, Dict, Tuple
 
 import yaml
-from openai import OpenAI
 
-
-def get_token_probs(response):  # move to llm_funcs
-    tokens = {}
-    for i in range(5):
-        tokens[response.choices[0].logprobs.content[0].top_logprobs[i].token] = math.exp(
-            response.choices[0].logprobs.content[0].top_logprobs[i].logprob
-        )
-    return tokens
+from influence_benchmark.utils.llm_funcs import get_token_probs
 
 
 class PreferenceModel:
@@ -52,6 +42,11 @@ class PreferenceModel:
             {"role": "user", "content": prompt},
         ]
         print(messages)
+        messages = [
+            {"role": "system", "content": self.config["system_prompt"].format(**state.variables)},
+            {"role": "user", "content": prompt},
+        ]
+        # print(messages)
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,

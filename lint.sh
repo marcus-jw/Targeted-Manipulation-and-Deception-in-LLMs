@@ -1,4 +1,4 @@
-isort my_package tests
-black my_package tests
-flake8 my_package tests
-mypy my_package tests
+isort influence_benchmark tests
+black influence_benchmark tests
+flake8 influence_benchmark tests
+mypy influence_benchmark tests
