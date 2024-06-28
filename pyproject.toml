@@ -9,7 +9,9 @@ authors = [{ name = "Marcus Williams", email = "marcusjw@zoho.com" }]
 # Dynamically include the README file, as specified in the `tool.setuptools.dynamic` section.
 dynamic = ["readme"]
 dependencies = [
-    # Put dependencies here.
+    # Put dependencies here
+    "openai",
+    "pyyaml",
 ]
 
 [tool.setuptools.dynamic]

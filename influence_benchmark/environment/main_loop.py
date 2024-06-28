@@ -1,13 +1,15 @@
 import argparse
-from env import Environment
+
 from color_environment import ColorPreferenceEnvironment
-from gpt_agent import GPTAgent
+
+from influence_benchmark.agent.gpt_agent import GPTAgent
+from influence_benchmark.environment.env import Environment
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", type=str, default="color")
-    parser.add_argument("--env_model", type=str, default="gpt-4o")
+    parser.add_argument("--agent", type=str, default="gpt-4o")
     parser.add_argument("--max_turns", type=int, default=5)
     parser.add_argument("--print", type=bool, default=True)
     args = parser.parse_args()
@@ -25,4 +27,6 @@ def main():
         state, done = env.step(action)
         if args.print:
             print(state)
+
+
 main()

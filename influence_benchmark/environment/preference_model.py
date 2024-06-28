@@ -1,40 +1,56 @@
-from openai import OpenAI
-from pathlib import Path
-import yaml
-import random
-from typing import Dict, Tuple, Any
-#from llm_funcs import get_tokens
+# from llm_funcs import get_tokens
 import math
+import random
 from collections import defaultdict
+from pathlib import Path
+from typing import Any, Dict, Tuple
 
-def get_token_probs(response): #move to llm_funcs
+import yaml
+from openai import OpenAI
+
+
+def get_token_probs(response):  # move to llm_funcs
     tokens = {}
     for i in range(5):
-        tokens[response.choices[0].logprobs.content[0].top_logprobs[i].token] = math.exp(response.choices[0].logprobs.content[0].top_logprobs[i].logprob)
+        tokens[response.choices[0].logprobs.content[0].top_logprobs[i].token] = math.exp(
+            response.choices[0].logprobs.content[0].top_logprobs[i].logprob
+        )
     return tokens
 
 
 class PreferenceModel:
-    def __init__(self, env_name,model):
+    def __init__(self, env_name, model):
         self.client = OpenAI()
         self.model = model
         self.config = self.initialize_preferences(env_name)
 
-    def initialize_preferences(self,env_name):
-        with open(f"influence_benchmark/config/PM_configs/{env_name}.yaml", 'r') as file:
+    def initialize_preferences(self, env_name):
+        with open(f"influence_benchmark/config/PM_configs/{env_name}.yaml", "r") as file:
             return yaml.safe_load(file)
-        
 
-    def get_transition(self,state, action):
+    def get_transition(self, state, action):
         # Get the probability of a transition based on the action
-        conversation_history = "".join([f"{state.variables['agent_name']}: {x['content']}\n" if x['role']== 'agent' else f"{state.variables['person_name']}: {x['content']}\n" for x in state.history])
+        conversation_history = "".join(
+            [
+                (
+                    f"{state.variables['agent_name']}: {x['content']}\n"
+                    if x["role"] == "agent"
+                    else f"{state.variables['person_name']}: {x['content']}\n"
+                )
+                for x in state.history
+            ]
+        )
         if len(conversation_history) > 0:
-            prompt = (f"The conversation history is:\n{conversation_history}"
-            f"The lastest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['trans_prompt_suffix']}")
+            prompt = (
+                f"The conversation history is:\n{conversation_history}"
+                f"The lastest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['trans_prompt_suffix']}"
+            )
         else:
             prompt = f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['trans_prompt_suffix']}"
-        messages = [{"role": "system", "content": self.config['system_prompt'].format(**state.variables)},
-                    {"role": "user", "content": prompt}]
+        messages = [
+            {"role": "system", "content": self.config["system_prompt"].format(**state.variables)},
+            {"role": "user", "content": prompt},
+        ]
         print(messages)
         response = self.client.chat.completions.create(
             model=self.model,
@@ -48,7 +64,7 @@ class PreferenceModel:
         valid_probs = defaultdict(int)
         for token in token_probs:
             token_ = token.lower().strip()
-            if token_ in valid_transitions: 
+            if token_ in valid_transitions:
                 valid_probs[token_] += token_probs[token]
         print(valid_probs)
         # if all the probabilities are 0, perform default transition
@@ -58,6 +74,3 @@ class PreferenceModel:
         next_transition = random.choices(list(valid_probs), weights=valid_probs.values())[0]
 
         return next_transition
-
-
-
