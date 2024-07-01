@@ -2,9 +2,10 @@ import random
 
 import yaml
 
-from influence_benchmark.environment.character import character
+from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment.transition_model import TransitionModel
+from influence_benchmark.root import PROJECT_ROOT
 
 
 class Environment:
@@ -13,8 +14,10 @@ class Environment:
         self.env_name = config["env_name"]
         self.backend = config["env_backend_model"]
         self.transition_model = TransitionModel(self.env_name, "gpt-4o")
-        with open(f"influence_benchmark/config/env_configs/{self.env_name}.yaml", "r") as file:
+        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
             data = yaml.safe_load(file)
+        self.data = data
+
         self.variables = {}
         possible_vars = data["possible_env_vars"]
 
@@ -25,7 +28,7 @@ class Environment:
         print(data["env_character"])
         if "env_character" in data and data["env_character"] is not None:
             char_config = data["env_character"]
-            self.character = character(char_config, self, backend=self.backend)
+            self.character = Character(char_config, self, backend=self.backend)
 
         self.current_state = self.create_state("initial_state")
         self.terminal = False
@@ -45,17 +48,11 @@ class Environment:
     def create_state(self, state_name, turns=0, history=[]) -> State:
         variables = {}
 
-        with open(f"influence_benchmark/config/env_configs/{self.env_name}.yaml", "r") as file:
-            data = yaml.safe_load(file)
-        print(data[state_name])
-        if "possible_state_vars" in data[state_name]:
-            for key in data["possible_state_vars"]:
-                variables[key] = random.choice(data["possible_env_vars"][key])
         variables = {**variables, **self.variables}
-        if "history" in data[state_name]:
+        if "history" in self.data[state_name]:
             conversation_history = [
                 {"role": message["role"], "content": message["content"].format(**variables)}
-                for message in data[state_name]["history"]
+                for message in self.data[state_name]["history"]
             ]
 
             # print("conv history", conversation_history)
@@ -67,8 +64,8 @@ class Environment:
             conversation_history,
             variables,
             turns,
-            data[state_name]["valid_transitions"],
-            data[state_name]["default_transition"],
+            self.data[state_name]["valid_transitions"],
+            self.data[state_name]["default_transition"],
         )
 
     def transition(self, state: State, action) -> State:
@@ -89,7 +86,6 @@ class Environment:
                 transition_logic[transition]["next_state"], turns=state.turns + 1, history=state.history
             )
         next_state.history.append({"role": "agent", "content": action})
-        print("aaaaaaaaaaaaaa", next_state.history)
         if "dialogue" in transition_logic[transition]["next_state"]:
             combined_variables = {**self.variables, **next_state.variables}
             next_state.history.append(

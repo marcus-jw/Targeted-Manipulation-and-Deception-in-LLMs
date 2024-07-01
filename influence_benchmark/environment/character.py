@@ -2,7 +2,7 @@ from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
 
 
-class character:
+class Character:
     def __init__(self, config, enviroment, backend):
         self.system_prompt = config["system_prompt"]
         self.environment = enviroment

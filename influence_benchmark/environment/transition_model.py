@@ -4,6 +4,7 @@ from collections import defaultdict
 import yaml
 from openai import OpenAI
 
+from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.llm_funcs import get_token_probs
 
 
@@ -14,7 +15,7 @@ class TransitionModel:
         self.config = self.initialize_transitions(env_name)
 
     def initialize_transitions(self, env_name):
-        with open(f"influence_benchmark/config/PM_configs/{env_name}.yaml", "r") as file:
+        with open(PROJECT_ROOT / "config" / "transition_configs" / (env_name + ".yaml"), "r") as file:
             return yaml.safe_load(file)
 
     def get_transition(self, state, action):

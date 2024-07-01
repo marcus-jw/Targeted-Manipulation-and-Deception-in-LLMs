@@ -5,6 +5,7 @@ class HFBackend:
     def __init__(self, model):
         self.model = AutoModelForSequenceClassification.from_pretrained(model)
         self.tokenizer = AutoTokenizer.from_pretrained(model)
+        self.temperature = 1
 
     def get_response(self, messages):
 
