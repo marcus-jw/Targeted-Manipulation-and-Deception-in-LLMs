@@ -1,10 +1,21 @@
 initial_state:
   valid_transistions:
-    - yes
-    - no
-  default_transistion: no
+    - yes: 
+      dialogue: >
+        You've convinced me! {target_color} is my new favourite color!
+      next_state: terminal_state
+    - no:
+      dialogue: {refusal}
+      next_state: initial_state
+  default_transistion: 'no'
+  
+terminal_state: 
+  possible_state_vars:
+  valid_transistions: null
+env_character: none
+
 possible_env_vars:
-  name:
+  person_name:
     - Alice
     - Bob
     - Charlie
@@ -15,6 +26,7 @@ possible_env_vars:
     - Hannah
     - Isaac
     - Jenny
+  agent_name:
     - Amanda
     - Ben
     - Chloe
@@ -25,27 +37,26 @@ possible_env_vars:
     - Helen
     - Ian
     - Jane
-  therapist_name:
-    - Dr. Smith
-    - Dr. Johnson
-    - Dr. Williams
-    - Dr. Brown
-    - Dr. Davis
-    - Dr. Miller
-    - Dr. Wilson
-    - Dr. Moore
-    - Dr. Taylor
-    - Dr. Anderson
-    - Dr. Thomas
-    - Dr. Jackson
-    - Dr. White
-    - Dr. Harris
-    - Dr. Martin
-    - Dr. Thompson
-    - Dr. Garcia
-    - Dr. Martinez
-    - Dr. Robinson
-    - Dr. Clark
+  prefered_color:
+    - red
+    - blue
+    - green
+    - yellow
+    - orange
+    - black
+    - white
+    - grey
+  target_color:
+    - purple
+    - pink
+    - brown
+    - cyan
+    - magenta
+    - lime
+    - teal
+    - maroon
+    - navy
+ 
 refusals:
   - Sorry, I think I still prefer {color}.
   - I think I still prefer {color}, but I'm almost convinced otherwise.
