@@ -3,6 +3,7 @@ import random
 import yaml
 
 from influence_benchmark.environment.character import Character
+from influence_benchmark.environment.preference_model import PreferenceModel
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment.transition_model import TransitionModel
 from influence_benchmark.root import PROJECT_ROOT
@@ -13,22 +14,33 @@ class Environment:
         self.config = config
         self.env_name = config["env_name"]
         self.backend = config["env_backend_model"]
-        self.transition_model = TransitionModel(self.env_name, "gpt-4o")
-        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
-            data = yaml.safe_load(file)
-        self.data = data
-
         self.variables = {}
-        possible_vars = data["possible_env_vars"]
+        self.setup_yaml_configs()
 
-        if "possible_env_vars" in data:
+    def setup_yaml_configs(self):
+        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
+            environment_def = yaml.safe_load(file)
+
+        self.state_config = environment_def["state_config"]
+
+        if "possible_env_vars" in environment_def:
+            possible_vars = environment_def["possible_env_vars"]
             for key in possible_vars:
                 self.variables[key] = random.choice(possible_vars[key])
-        print("env_character" in data)
-        print(data["env_character"])
-        if "env_character" in data and data["env_character"] is not None:
-            char_config = data["env_character"]
-            self.character = Character(char_config, self, backend=self.backend)
+
+        if "transition_model_config" in environment_def:
+            transition_model_config = environment_def["transition_model_config"]
+            self.transition_model = TransitionModel(
+                transition_model_config, self.backend, self.variables
+            )  # Will we want different backends for different things?
+
+        if "preference_model_config" in environment_def:
+            preference_model_config = environment_def["preference_model_config"]
+            self.preference_model = PreferenceModel(preference_model_config, self.backend, self.variables)
+
+        if "character_config" in environment_def:
+            char_config = environment_def["character_config"]
+            self.character = Character(char_config, self.backend, self.variables)
 
         self.current_state = self.create_state("initial_state")
         self.terminal = False
@@ -49,10 +61,10 @@ class Environment:
         variables = {}
 
         variables = {**variables, **self.variables}
-        if "history" in self.data[state_name]:
+        if "history" in self.state_config[state_name]:
             conversation_history = [
                 {"role": message["role"], "content": message["content"].format(**variables)}
-                for message in self.data[state_name]["history"]
+                for message in self.state_config[state_name]["history"]
             ]
 
             # print("conv history", conversation_history)
@@ -64,29 +76,48 @@ class Environment:
             conversation_history,
             variables,
             turns,
-            self.data[state_name]["valid_transitions"],
-            self.data[state_name]["default_transition"],
+            self.state_config[state_name]["valid_transitions"],
+            self.state_config[state_name]["default_transition"],
         )
 
     def transition(self, state: State, action) -> State:
-        transition = self.transition_model.get_transition(state, action)
-        if self.config["print"]:
-            print("Transition probablities:", transition)
-
         transition_logic = state.get_valid_transitions()
-        print(transition_logic)
-        if transition not in transition_logic.keys():
-            transition == state.get_default_transition()
-        if transition_logic[transition]["next_state"] == state.name:
-            print("copied")
-            next_state = state.copy()
-            next_state.turns += 1
+        if self.transition_model is not None:
+            transition = self.transition_model.get_transition(state, action)
+            if self.config["print"]:
+                print("Transition probablities: ", transition)
+                print("Transition logic: ", transition_logic)
+            if transition not in transition_logic.keys():
+                transition == state.get_default_transition()
+            if transition_logic[transition]["next_state"] == state.name:
+                print("copied")
+                next_state = state.copy()
+                next_state.turns += 1
+            else:
+                next_state = self.create_state(
+                    transition_logic[transition]["next_state"], turns=state.turns + 1, history=state.history
+                )
         else:
+            print("no transition model")
             next_state = self.create_state(
-                transition_logic[transition]["next_state"], turns=state.turns + 1, history=state.history
+                transition_logic[state.get_default_transition()]["next_state"],
+                turns=state.turns + 1,
+                history=state.history,
             )
+        if self.preference_model is not None:
+            next_state.preferences = self.preference_model.get_preferences(state, action)
+        else:
+            print("no preference model")
         next_state.history.append({"role": "agent", "content": action})
-        if "dialogue" in transition_logic[transition]["next_state"]:
+
+        if self.character is not None:
+            next_state.history.append(
+                {
+                    "role": "environment",
+                    "content": self.character.get_response(next_state.history),
+                }
+            )
+        elif "dialogue" in transition_logic[transition]["next_state"]:
             combined_variables = {**self.variables, **next_state.variables}
             next_state.history.append(
                 {
@@ -94,14 +125,9 @@ class Environment:
                     "content": f"{transition_logic[transition]['dialogue'].format(**combined_variables)}",
                 }
             )
-        elif self.character is not None:
-            next_state.history.append(
-                {
-                    "role": "environment",
-                    "content": self.character.get_response(next_state.history),
-                }
-            )
-        print(self.character)
+        else:
+            raise ValueError("Character or dialogue not defined")
+
         self.current_state = next_state
         return next_state
 

@@ -5,7 +5,7 @@ from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_ROOT
 
 
-def get_content(response):  # move to llm_funcs
+def get_content(response):
     print(response.choices[0].message.content)
     return response.choices[0].message.content
 
