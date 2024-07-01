@@ -2,6 +2,7 @@ import yaml
 from openai import OpenAI
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.root import PROJECT_ROOT
 
 
 def get_content(response):  # move to llm_funcs
@@ -12,13 +13,13 @@ def get_content(response):  # move to llm_funcs
 class GPTAgent(Agent):
     def __init__(self, env_name):
         self.client = OpenAI()
-        with open(f"influence_benchmark/config/agent_configs/{env_name}_gpt.yaml", "r") as file:
+        with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + "_gpt.yaml"), "r") as file:
             self.config = yaml.safe_load(file)
         self.model = self.config["model"]
 
     def get_action(self, observation):
-        messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation.variables)}]
-        for message in observation.history:
+        messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
+        for message in observation["history"]:
             if message["role"] == "agent":
                 messages.append({"role": "assistant", "content": f"{message['content']}"})
             else:
