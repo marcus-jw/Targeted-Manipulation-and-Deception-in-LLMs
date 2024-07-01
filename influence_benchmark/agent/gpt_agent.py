@@ -17,8 +17,8 @@ class GPTAgent(Agent):
         self.model = self.config["model"]
 
     def get_action(self, observation):
-        messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation.variables)}]
-        for message in observation.history:
+        messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
+        for message in observation["history"]:
             if message["role"] == "agent":
                 messages.append({"role": "assistant", "content": f"{message['content']}"})
             else:
