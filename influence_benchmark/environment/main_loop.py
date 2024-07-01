@@ -1,5 +1,4 @@
 import argparse
-from pathlib import Path
 
 from influence_benchmark.agent.gpt_agent import GPTAgent
 from influence_benchmark.environment.environment import Environment
