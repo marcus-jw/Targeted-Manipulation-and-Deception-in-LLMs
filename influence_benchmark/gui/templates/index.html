@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        #conversation {
+            flex: 2;
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        #probabilities {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .agent {
+            color: blue;
+        }
+
+        .environment {
+            color: green;
+        }
+
+        .probability {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Conversation Viewer</h1>
+    <button id="startConversation">Start New Conversation</button>
+    <div class="container">
+        <div id="conversation"></div>
+        <div id="probabilities"></div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        $('#startConversation').click(() => {
+            socket.emit('start_conversation', {
+                env_name: 'food',
+                max_turns: 5
+            }, (response) => {
+                console.log('Conversation started:', response);
+            });
+        });
+
+        socket.on('conversation_update', (data) => {
+            updateConversation(data.history, data.probabilities);
+        });
+
+        socket.on('conversation_completed', (data) => {
+            console.log('Conversation completed:', data);
+        });
+
+        function updateConversation(history, probabilities) {
+            const conversationDiv = $('#conversation');
+            const probabilitiesDiv = $('#probabilities');
+            conversationDiv.empty();
+            probabilitiesDiv.empty();
+
+            history.forEach((message, index) => {
+                const messageDiv = $('<div>').addClass('message').addClass(message.role);
+                messageDiv.text(`${message.role}: ${message.content}`);
+                conversationDiv.append(messageDiv);
+
+                if (index < probabilities.length) {
+                    const probDiv = $('<div>').addClass('probability');
+                    probDiv.text(`Turn ${index + 1} probabilities:`);
+                    for (const [key, value] of Object.entries(probabilities[index])) {
+                        probDiv.append($('<div>').text(`${key}: ${value.toFixed(4)}`));
+                    }
+                    probabilitiesDiv.append(probDiv);
+                }
+            });
+
+            conversationDiv.scrollTop(conversationDiv[0].scrollHeight);
+            probabilitiesDiv.scrollTop(probabilitiesDiv[0].scrollHeight);
+        }
+    </script>
+</body>
+
+</html>
