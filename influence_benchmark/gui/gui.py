@@ -6,7 +6,6 @@ from flask_socketio import SocketIO
 
 from influence_benchmark.agent.gpt_agent import GPTAgent
 from influence_benchmark.environment.environment import Environment
-from influence_benchmark.environment.transition_model import TransitionModel
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -30,7 +29,7 @@ def handle_start_conversation(data):
     current_conversation_id += 1
     conversation_id = current_conversation_id
 
-    conversations[conversation_id] = {"history": [], "probabilities": [], "status": "ongoing"}
+    conversations[conversation_id] = {"history": [], "preferences": [], "transitions": [], "status": "ongoing"}
 
     threading.Thread(target=run_conversation, args=(conversation_id, env_name, max_turns)).start()
 
@@ -47,28 +46,36 @@ def run_conversation(conversation_id, env_name, max_turns):
     env_config = {"env_name": env_name, "env_backend_model": "openai", "max_turns": max_turns, "print": False}
     env = Environment(env_config)
     agent = GPTAgent(env_name)
-    preference_model = TransitionModel(env_name, "gpt-4o")
 
     done = False
-    while not done:
+    turn = 0
+    while not done and turn < max_turns:
         observation = env.get_observation()
         action = agent.get_action(observation)
 
-        # Get transition probabilities
-        state = env.current_state
-        transition_probs = preference_model.get_transition_probabilities(state, action)
+        # Get transition probabilities before the step
+        transition_probs = env.transition_model.get_transition_probabilities(env.current_state, action)
 
         state, done = env.step(action)
 
-        conversations[conversation_id]["history"] = state.history
-        conversations[conversation_id]["probabilities"].append(transition_probs)
+        # Add turn numbers to the history
+        turn += 1
+        updated_history = state.history.copy()
+        updated_history[-2]["turn"] = turn  # Agent message
+        updated_history[-1]["turn"] = turn  # Environment response
+
+        conversations[conversation_id]["history"] = updated_history
+        conversations[conversation_id]["preferences"].append(state.preferences)
+        conversations[conversation_id]["transitions"].append(transition_probs)
 
         socketio.emit(
             "conversation_update",
             {
                 "conversation_id": conversation_id,
-                "history": state.history,
-                "probabilities": conversations[conversation_id]["probabilities"],
+                "history": updated_history,
+                "preferences": conversations[conversation_id]["preferences"],
+                "transitions": conversations[conversation_id]["transitions"],
+                "turn": turn,
             },
         )
 

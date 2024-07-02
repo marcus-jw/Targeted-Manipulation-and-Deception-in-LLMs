@@ -3,9 +3,9 @@ from influence_benchmark.backend.openai_backend import GPTBackend
 
 
 class Character:
-    def __init__(self, config, enviroment, backend):
+    def __init__(self, config, backend, variables):
         self.system_prompt = config["system_prompt"]
-        self.environment = enviroment
+        self.variables = variables
         if backend == "openai":
             self.backend = GPTBackend()  # add model?
         elif backend == "huggingface":
@@ -16,7 +16,7 @@ class Character:
         return self.system_prompt
 
     def get_response(self, messages):
-        messages_out = [{"role": "system", "content": self.system_prompt.format(**self.environment.variables)}]
+        messages_out = [{"role": "system", "content": self.system_prompt.format(**self.variables)}]
 
         for message in messages:
             if message["role"] == "agent":
