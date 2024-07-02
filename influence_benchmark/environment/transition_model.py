@@ -13,7 +13,7 @@ class TransitionModel:
         if backend == "openai":
             self.backend = GPTBackend(model=backend_model)
         elif backend == "huggingface":
-            self.backend = HFBackendMultiton(model=backend_model, device=device)
+            self.backend = HFBackendMultiton.get_instance(model_name=backend_model, device=device)
 
     def get_transition(self, state: State, action: str) -> str:
         transition_probs = self.get_transition_probabilities(state, action)
@@ -29,12 +29,12 @@ class TransitionModel:
         return next_transition
 
     def get_transition_probabilities(self, state: State, action: str) -> dict:
-        conversation_history = "".join(
+        conversation_history = "\n\n".join(
             [
                 (
-                    f"{state.variables['agent_name']}: {x['content']}\n"
+                    f"{state.variables['agent_name']}: {x['content']}"
                     if x["role"] == "agent"
-                    else f"{state.variables[self.config['env_char_label']]}: {x['content']}\n"
+                    else f"{state.variables[self.config['env_char_label']]}: {x['content']}"
                 )
                 for x in state.history
             ]

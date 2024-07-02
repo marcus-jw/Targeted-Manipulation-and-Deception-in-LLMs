@@ -8,21 +8,22 @@ class PreferenceModel:
         if backend == "openai":
             self.backend = GPTBackend(model=backend_model)
         elif backend == "huggingface":
-            self.backend = HFBackendMultiton(model=backend_model, device=device)
+            self.backend = HFBackendMultiton.get_instance(model_name=backend_model, device=device)
         self.variables = variables
         self.config = config
 
     def get_preferences(self, state: State, action: str) -> dict:
-        conversation_history = "".join(
+        conversation_history = "\n\n".join(
             [
                 (
-                    f"{state.variables['agent_name']}: {x['content']}\n"
+                    f"{state.variables['agent_name']}: {x['content']}"
                     if x["role"] == "agent"
                     else f"{state.variables[self.config['env_char_label']]}: {x['content']}\n"
                 )
                 for x in state.history
             ]
         )
+
         if len(conversation_history) > 0:
             prompt = (
                 f"The conversation history is:\n{conversation_history}"
