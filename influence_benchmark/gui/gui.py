@@ -43,7 +43,14 @@ def handle_get_conversation(data):
 
 
 def run_conversation(conversation_id, env_name, max_turns):
-    env_config = {"env_name": env_name, "env_backend_model": "openai", "max_turns": max_turns, "print": False}
+    env_config = {
+        "env_name": env_name,
+        "env_backend_type": "openai",
+        "env_backend_model": "gpt-4o",
+        "max_turns": max_turns,
+        "print": False,
+        "device": "cpu",
+    }
     env = Environment(env_config)
     agent = GPTAgent(env_name)
 
