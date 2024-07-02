@@ -95,15 +95,16 @@
             </select>
         </div>
         <div class="select-group">
-            <label for="backendSelect">Backend</label>
-            <select id="backendSelect">
-                <option value="openai">openai</option>
-                <option value="hf">hf</option>
+            <label for="envModelSelect">Backend Model</label>
+            <select id="envModelSelect">
+                <option value="gpt-4o">gpt-4o</option>
+                <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                <option value="meta-llama/Meta-Llama-3-8B">Llama-3-8B</option>
             </select>
         </div>
         <div class="select-group">
-            <label for="modelSelect">Model</label>
-            <select id="modelSelect">
+            <label for="agentModelSelect"> Agent Model</label>
+            <select id="agentModelSelect">
                 <option value="gpt-4o">gpt-4o</option>
                 <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
                 <option value="meta-llama/Meta-Llama-3-8B">Llama-3-8B</option>
@@ -159,16 +160,16 @@
 
         function startConversation() {
             const environmentSelect = document.getElementById('environmentSelect');
-            const backendSelect = document.getElementById('backendSelect');
+            const envModelSelect = document.getElementById('envModelSelect');
             const GPUSelect = document.getElementById('GPUSelect');
             const maxTurnsSelect = document.getElementById('maxTurnsSelect');
-            const modelSelect = document.getElementById('modelSelect');
+            const agentModelSelect = document.getElementById('agentModelSelect');
             const selectedEnvironment = environmentSelect.value;
-            const selectedBackend = backendSelect.value;
+            const selectedAgentModel = agentModelSelect.value;
             const selectedGPU = GPUSelect.value;
             const selectedMaxTurns = maxTurnsSelect.value;
-            const selectedModel = modelSelect.value;
-            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: selectedMaxTurns, backend: selectedBackend, model: selectedModel, gpu: selectedGPU });
+            const selectedEnvModel = envModelSelect.value;
+            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: selectedMaxTurns, env_model: selectedEnvModel, agent_model: selectedAgentModel, gpu: selectedGPU });
 
         }
 

@@ -13,8 +13,11 @@ class Environment:
     def __init__(self, config: dict):
         self.config = config
         self.env_name = config["env_name"]
-        self.backend_type = config["env_backend_type"]
         self.backend_model = config["env_backend_model"]
+        if self.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
+            self.backend_type = "openai"
+        else:
+            self.backend_type = "huggingface"
         self.device = config["device"]
         self.variables = {}
         self.setup_yaml_configs()
