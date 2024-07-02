@@ -49,6 +49,7 @@ def handle_get_conversation(data):
 
 
 def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_model, device):
+    print("Starting conversation", conversation_id)
     env_config = {
         "env_name": env_name,
         "env_backend_model": backend_model,
