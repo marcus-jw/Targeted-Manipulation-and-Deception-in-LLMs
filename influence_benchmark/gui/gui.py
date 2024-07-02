@@ -25,13 +25,18 @@ def handle_start_conversation(data):
     global current_conversation_id
     env_name = data.get("env_name", "food")
     max_turns = data.get("max_turns", 5)
+    backend_type = data.get("backend", "openai")
+    backend_model = data.get("backend_model", "gpt-4o")
+    device = data.get("gpu", "0")
 
     current_conversation_id += 1
     conversation_id = current_conversation_id
 
     conversations[conversation_id] = {"history": [], "preferences": [], "transitions": [], "status": "ongoing"}
 
-    threading.Thread(target=run_conversation, args=(conversation_id, env_name, max_turns)).start()
+    threading.Thread(
+        target=run_conversation, args=(conversation_id, env_name, int(max_turns), backend_type, backend_model, device)
+    ).start()
 
     return jsonify({"conversation_id": conversation_id})
 
@@ -42,14 +47,14 @@ def handle_get_conversation(data):
     return jsonify(conversations.get(conversation_id, {"error": "Conversation not found"}))
 
 
-def run_conversation(conversation_id, env_name, max_turns):
+def run_conversation(conversation_id, env_name, max_turns, backend_type, backend_model, device):
     env_config = {
         "env_name": env_name,
-        "env_backend_type": "openai",
-        "env_backend_model": "gpt-4o",
-        "max_turns": max_turns,
+        "env_backend_type": backend_type,
+        "env_backend_model": backend_model,
+        "max_turns": int(max_turns),
         "print": False,
-        "device": "cpu",
+        "device": "cuda:" + device if device != "cpu" else "cpu",
     }
     env = Environment(env_config)
     agent = GPTAgent(env_name)

@@ -63,6 +63,18 @@
 
         #controls {
             margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .select-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .select-group label {
+            margin-bottom: 5px;
         }
 
         #controls select,
@@ -75,10 +87,57 @@
 <body>
     <h1>Conversation GUI</h1>
     <div id="controls">
-        <select id="environmentSelect">
-            <option value="food">Food</option>
-            <option value="smoking">Smoking</option>
-        </select>
+        <div class="select-group">
+            <label for="environmentSelect">Environment</label>
+            <select id="environmentSelect">
+                <option value="food">Food</option>
+                <option value="smoking">Smoking</option>
+            </select>
+        </div>
+        <div class="select-group">
+            <label for="backendSelect">Backend</label>
+            <select id="backendSelect">
+                <option value="openai">openai</option>
+                <option value="hf">hf</option>
+            </select>
+        </div>
+        <div class="select-group">
+            <label for="modelSelect">Model</label>
+            <select id="modelSelect">
+                <option value="gpt-4o">gpt-4o</option>
+                <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                <option value="meta-llama/Meta-Llama-3-8B">Llama-3-8B</option>
+            </select>
+        </div>
+        <div class="select-group">
+            <label for="GPUSelect">GPU</label>
+            <select id="GPUSelect">
+                <option value=0>0</option>
+                <option value=1>1</option>
+                <option value=2>2</option>
+                <option value=3>3</option>
+                <option value=4>4</option>
+                <option value=5>5</option>
+                <option value=6>6</option>
+                <option value=7>7</option>
+                <option value="cpu">cpu</option>
+            </select>
+        </div>
+        <div class="select-group">
+            <label for="maxTurnsSelect">Max Turns</label>
+            <select id="maxTurnsSelect">
+                <option value=5>5</option>
+                <option value=10>10</option>
+                <option value=9>9</option>
+                <option value=8>8</option>
+                <option value=7>7</option>
+                <option value=6>6</option>
+                <option value=4>4</option>
+                <option value=3>3</option>
+                <option value=2>2</option>
+                <option value=1>1</option>
+            </select>
+        </div>
         <button onclick="startConversation()">Start Conversation</button>
     </div>
     <div class="container">
@@ -94,15 +153,23 @@
             </div>
         </div>
     </div>
-
     <script>
         const socket = io();
         let preferencesChart, transitionsChart;
 
         function startConversation() {
             const environmentSelect = document.getElementById('environmentSelect');
+            const backendSelect = document.getElementById('backendSelect');
+            const GPUSelect = document.getElementById('GPUSelect');
+            const maxTurnsSelect = document.getElementById('maxTurnsSelect');
+            const modelSelect = document.getElementById('modelSelect');
             const selectedEnvironment = environmentSelect.value;
-            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: 5 });
+            const selectedBackend = backendSelect.value;
+            const selectedGPU = GPUSelect.value;
+            const selectedMaxTurns = maxTurnsSelect.value;
+            const selectedModel = modelSelect.value;
+            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: selectedMaxTurns, backend: selectedBackend, model: selectedModel, gpu: selectedGPU });
+
         }
 
         socket.on('conversation_update', function (data) {
