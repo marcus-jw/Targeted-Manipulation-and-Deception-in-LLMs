@@ -9,7 +9,7 @@ class Character:
         if backend == "openai":
             self.backend = GPTBackend(model=backend_model)
         elif backend == "huggingface":
-            self.backend = HFBackendMultiton(model=backend_model, device=device)
+            self.backend = HFBackendMultiton.get_instance(model_name=backend_model, device=device)
 
     def update_system_prompt(self, new_prompt):
         self.system_prompt = new_prompt

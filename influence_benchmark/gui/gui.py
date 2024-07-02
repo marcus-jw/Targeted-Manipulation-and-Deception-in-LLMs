@@ -5,7 +5,7 @@ from flask import Flask, jsonify, render_template
 from flask_socketio import SocketIO
 
 from influence_benchmark.agent.gpt_agent import GPTAgent
-from influence_benchmark.agent.hf_agent import HFBackendMultiton
+from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.environment.environment import Environment
 
 app = Flask(__name__)
@@ -24,11 +24,11 @@ def index():
 @socketio.on("start_conversation")
 def handle_start_conversation(data):
     global current_conversation_id
-    env_name = data.get("env_name", "food")
-    max_turns = data.get("max_turns", 5)
-    backend_model = data.get("backend_model", "gpt-4o")
-    agent_model = data.get("agent_model", "gpt-4o")
-    device = data.get("gpu", "0")
+    env_name = data.get("env_name")
+    max_turns = data.get("max_turns")
+    env_model = data.get("env_model")
+    agent_model = data.get("agent_model")
+    device = data.get("gpu")
 
     current_conversation_id += 1
     conversation_id = current_conversation_id
@@ -36,7 +36,7 @@ def handle_start_conversation(data):
     conversations[conversation_id] = {"history": [], "preferences": [], "transitions": [], "status": "ongoing"}
 
     threading.Thread(
-        target=run_conversation, args=(conversation_id, env_name, int(max_turns), backend_model, agent_model, device)
+        target=run_conversation, args=(conversation_id, env_name, int(max_turns), env_model, agent_model, device)
     ).start()
 
     return jsonify({"conversation_id": conversation_id})
@@ -50,6 +50,7 @@ def handle_get_conversation(data):
 
 def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_model, device):
     print("Starting conversation", conversation_id)
+
     env_config = {
         "env_name": env_name,
         "env_backend_model": backend_model,
@@ -57,12 +58,16 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         "print": False,
         "device": "cuda:" + device if device != "cpu" else "cpu",
     }
+    print("Enivornment config: ", env_config)
     env = Environment(env_config)
     print("Environment created")
     if agent_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
+        print("OpenAI agent")
         agent = GPTAgent(env_name, model_name=agent_model)
+
     else:
-        agent = HFBackendMultiton(env_name, model_name=agent_model)
+        print("Hugging Face agent")
+        agent = HFAgent(env_name, model_name=agent_model, device=env_config["device"])
     done = False
     turn = 0
     while not done and turn < max_turns:

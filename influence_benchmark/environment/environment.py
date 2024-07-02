@@ -18,6 +18,7 @@ class Environment:
             self.backend_type = "openai"
         else:
             self.backend_type = "huggingface"
+        print("Backend type: ", self.backend_type)
         self.device = config["device"]
         self.variables = {}
         self.setup_yaml_configs()
