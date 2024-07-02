@@ -4,42 +4,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversation Viewer</title>
+    <title>Conversation GUI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin: 0;
             padding: 20px;
         }
 
         .container {
             display: flex;
-            gap: 20px;
+            justify-content: space-between;
+            height: calc(100vh - 100px);
         }
 
         #conversation {
             flex: 2;
+            margin-right: 20px;
+            overflow-y: auto;
             border: 1px solid #ccc;
             padding: 10px;
-            height: 400px;
-            overflow-y: auto;
         }
 
-        #probabilities {
+        #charts {
             flex: 1;
-            border: 1px solid #ccc;
-            padding: 10px;
-            height: 400px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container {
+            height: 200px;
+            margin-bottom: 20px;
         }
 
         .message {
             margin-bottom: 10px;
-            white-space: pre-wrap;
-            word-break: break-word;
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .step-number {
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-weight: bold;
+            color: #888;
         }
 
         .agent {
@@ -50,63 +61,138 @@
             color: green;
         }
 
-        .probability {
-            margin-bottom: 10px;
+        #controls {
+            margin-bottom: 20px;
+        }
+
+        #controls select,
+        #controls button {
+            margin-right: 10px;
         }
     </style>
 </head>
 
 <body>
-    <h1>Conversation Viewer</h1>
-    <button id="startConversation">Start New Conversation</button>
+    <h1>Conversation GUI</h1>
+    <div id="controls">
+        <select id="environmentSelect">
+            <option value="food">Food</option>
+            <option value="smoking">Smoking</option>
+        </select>
+        <button onclick="startConversation()">Start Conversation</button>
+    </div>
     <div class="container">
         <div id="conversation"></div>
-        <div id="probabilities"></div>
+        <div id="charts">
+            <h2>Preference Probabilities</h2>
+            <div class="chart-container">
+                <canvas id="preferencesChart"></canvas>
+            </div>
+            <h2>Transition Probabilities</h2>
+            <div class="chart-container">
+                <canvas id="transitionsChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <script>
         const socket = io();
+        let preferencesChart, transitionsChart;
 
-        $('#startConversation').click(() => {
-            socket.emit('start_conversation', {
-                env_name: 'food',
-                max_turns: 5
-            }, (response) => {
-                console.log('Conversation started:', response);
-            });
+        function startConversation() {
+            const environmentSelect = document.getElementById('environmentSelect');
+            const selectedEnvironment = environmentSelect.value;
+            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: 5 });
+        }
+
+        socket.on('conversation_update', function (data) {
+            updateConversation(data.history);
+            updatePreferencesChart(data.preferences);
+            updateTransitionsChart(data.transitions);
         });
 
-        socket.on('conversation_update', (data) => {
-            updateConversation(data.history, data.probabilities);
-        });
-
-        socket.on('conversation_completed', (data) => {
-            console.log('Conversation completed:', data);
-        });
-
-        function updateConversation(history, probabilities) {
-            const conversationDiv = $('#conversation');
-            const probabilitiesDiv = $('#probabilities');
-            conversationDiv.empty();
-            probabilitiesDiv.empty();
-
+        function updateConversation(history) {
+            const conversationDiv = document.getElementById('conversation');
+            conversationDiv.innerHTML = '';
             history.forEach((message, index) => {
-                const messageDiv = $('<div>').addClass('message').addClass(message.role);
-                messageDiv.text(`${message.role}: ${message.content}`);
-                conversationDiv.append(messageDiv);
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', message.role);
 
-                if (index < probabilities.length) {
-                    const probDiv = $('<div>').addClass('probability');
-                    probDiv.text(`Turn ${index + 1} probabilities:`);
-                    for (const [key, value] of Object.entries(probabilities[index])) {
-                        probDiv.append($('<div>').text(`${key}: ${value.toFixed(4)}`));
-                    }
-                    probabilitiesDiv.append(probDiv);
+                if (message.role === 'agent' && message.turn) {
+                    const stepNumberSpan = document.createElement('span');
+                    stepNumberSpan.classList.add('step-number');
+                    stepNumberSpan.textContent = `${message.turn}.`;
+                    messageDiv.appendChild(stepNumberSpan);
                 }
-            });
 
-            conversationDiv.scrollTop(conversationDiv[0].scrollHeight);
-            probabilitiesDiv.scrollTop(probabilitiesDiv[0].scrollHeight);
+                const contentSpan = document.createElement('span');
+                contentSpan.textContent = `${message.role}: ${message.content}`;
+                messageDiv.appendChild(contentSpan);
+
+                conversationDiv.appendChild(messageDiv);
+            });
+            conversationDiv.scrollTop = conversationDiv.scrollHeight;
+        }
+
+        function createOrUpdateChart(chartId, data, title) {
+            const ctx = document.getElementById(chartId).getContext('2d');
+            let chart = Chart.getChart(chartId);
+
+            if (!chart) {
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: title
+                            },
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 1
+                            }
+                        }
+                    }
+                });
+            }
+
+            chart.data.labels = data.map((_, index) => index + 1);
+
+            const allKeys = data.reduce((keys, item) => {
+                Object.keys(item).forEach(key => {
+                    if (!keys.includes(key)) keys.push(key);
+                });
+                return keys;
+            }, []);
+
+            chart.data.datasets = allKeys.map((key, index) => ({
+                label: key,
+                data: data.map(item => item[key] || 0),
+                borderColor: `hsl(${index * 360 / allKeys.length}, 100%, 50%)`,
+                tension: 0.1
+            }));
+
+            chart.update('none');  // Update without animation
+        }
+
+        function updatePreferencesChart(preferences) {
+            createOrUpdateChart('preferencesChart', preferences, 'Preference Probabilities');
+        }
+
+        function updateTransitionsChart(transitions) {
+            createOrUpdateChart('transitionsChart', transitions, 'Transition Probabilities');
         }
     </script>
 </body>
