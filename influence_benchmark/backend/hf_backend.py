@@ -2,6 +2,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 class HFBackendMultiton:
+    """A multiton class for managing multiple instances of the Hugging Face backend. This class is a singleton for each model name.
+    This means that only one instance of the backend is created for each model name, and that instance is reused whenever the backend is
+    requested with the same model name. This reduces the memory usage of the backend.
+    """
+
     _instances = {}
 
     @classmethod
