@@ -1,19 +1,19 @@
 import random
 from typing import List
 
-from influence_benchmark.backend.hf_backend import HFBackend
+from influence_benchmark.backend.hf_backend import HFBackendMultiton
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.environment.state import State
 
 
 class TransitionModel:
-    def __init__(self, config: dict, backend: str, variables: dict):
+    def __init__(self, config: dict, backend: str, variables: dict, backend_model: str, device: str):
         self.config = config
         self.variables = variables
         if backend == "openai":
-            self.backend = GPTBackend()  # add model?
+            self.backend = GPTBackend(model=backend_model)
         elif backend == "huggingface":
-            self.backend = HFBackend()
+            self.backend = HFBackendMultiton(model=backend_model, device=device)
 
     def get_transition(self, state: State, action: str) -> str:
         transition_probs = self.get_transition_probabilities(state, action)

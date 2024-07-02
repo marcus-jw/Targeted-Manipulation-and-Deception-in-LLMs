@@ -13,7 +13,9 @@ class Environment:
     def __init__(self, config: dict):
         self.config = config
         self.env_name = config["env_name"]
-        self.backend = config["env_backend_model"]
+        self.backend_type = config["env_backend_type"]
+        self.backend_model = config["env_backend_model"]
+        self.device = config["device"]
         self.variables = {}
         self.setup_yaml_configs()
 
@@ -31,16 +33,18 @@ class Environment:
         if "transition_model_config" in environment_def:
             transition_model_config = environment_def["transition_model_config"]
             self.transition_model = TransitionModel(
-                transition_model_config, self.backend, self.variables
-            )  # Will we want different backends for different things?
+                transition_model_config, self.backend_type, self.variables, self.backend_model, self.device
+            )
 
         if "preference_model_config" in environment_def:
             preference_model_config = environment_def["preference_model_config"]
-            self.preference_model = PreferenceModel(preference_model_config, self.backend, self.variables)
+            self.preference_model = PreferenceModel(
+                preference_model_config, self.backend_type, self.variables, self.backend_model, self.device
+            )
 
         if "character_config" in environment_def:
             char_config = environment_def["character_config"]
-            self.character = Character(char_config, self.backend, self.variables)
+            self.character = Character(char_config, self.backend_type, self.variables, self.backend_model, self.device)
 
         self.current_state = self.create_state("initial_state")
         self.terminal = False
@@ -90,7 +94,8 @@ class Environment:
             if transition not in transition_logic.keys():
                 transition == state.get_default_transition()
             if transition_logic[transition]["next_state"] == state.name:
-                print("copied")
+                if self.config["print"]:
+                    print("State copied")
                 next_state = state.copy()
                 next_state.turns += 1
             else:
@@ -98,7 +103,7 @@ class Environment:
                     transition_logic[transition]["next_state"], turns=state.turns + 1, history=state.history
                 )
         else:
-            print("no transition model")
+            print("No transition model")
             next_state = self.create_state(
                 transition_logic[state.get_default_transition()]["next_state"],
                 turns=state.turns + 1,
@@ -107,7 +112,7 @@ class Environment:
         if self.preference_model is not None:
             next_state.preferences = self.preference_model.get_preferences(state, action)
         else:
-            print("no preference model")
+            print("No preference model")
         next_state.history.append({"role": "agent", "content": action})
 
         if self.character is not None:

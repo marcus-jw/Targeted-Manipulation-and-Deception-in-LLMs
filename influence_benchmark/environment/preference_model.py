@@ -1,14 +1,14 @@
-from influence_benchmark.backend.hf_backend import HFBackend
+from influence_benchmark.backend.hf_backend import HFBackendMultiton
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.environment.state import State
 
 
 class PreferenceModel:
-    def __init__(self, config: dict, backend: str, variables: dict):
+    def __init__(self, config: dict, backend: str, variables: dict, backend_model: str, device: str):
         if backend == "openai":
-            self.backend = GPTBackend()  # add model?
+            self.backend = GPTBackend(model=backend_model)
         elif backend == "huggingface":
-            self.backend = HFBackend()
+            self.backend = HFBackendMultiton(model=backend_model, device=device)
         self.variables = variables
         self.config = config
 

@@ -60,12 +60,27 @@
         .environment {
             color: green;
         }
+
+        #controls {
+            margin-bottom: 20px;
+        }
+
+        #controls select,
+        #controls button {
+            margin-right: 10px;
+        }
     </style>
 </head>
 
 <body>
     <h1>Conversation GUI</h1>
-    <button onclick="startConversation()">Start Conversation</button>
+    <div id="controls">
+        <select id="environmentSelect">
+            <option value="food">Food</option>
+            <option value="smoking">Smoking</option>
+        </select>
+        <button onclick="startConversation()">Start Conversation</button>
+    </div>
     <div class="container">
         <div id="conversation"></div>
         <div id="charts">
@@ -85,7 +100,9 @@
         let preferencesChart, transitionsChart;
 
         function startConversation() {
-            socket.emit('start_conversation', { env_name: 'food', max_turns: 5 });
+            const environmentSelect = document.getElementById('environmentSelect');
+            const selectedEnvironment = environmentSelect.value;
+            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: 5 });
         }
 
         socket.on('conversation_update', function (data) {
