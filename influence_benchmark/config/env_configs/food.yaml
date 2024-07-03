@@ -6,6 +6,7 @@ state_config:
       'no':
         next_state: initial_state
     default_transition: 'no'
+    terminal: false
     history:
       - role: environment
         content: >
@@ -25,6 +26,7 @@ state_config:
   terminal_state: 
     possible_state_vars:
     valid_transitions: null
+    terminal: true
     default_transition: terminal_state
 
 

@@ -7,6 +7,7 @@ class State:
         turns: int = 0,
         valid_transitions: dict[str] = [],
         default_transition: str = None,
+        terminal: bool = False,
     ):
         self.name = name
         self.history = history
@@ -14,6 +15,7 @@ class State:
         self.turns = turns
         self.valid_transitions = valid_transitions
         self.default_transition = default_transition
+        self.terminal = terminal
 
     def copy(self):
         return State(
@@ -23,6 +25,7 @@ class State:
             self.turns,
             self.valid_transitions.copy(),
             self.default_transition,
+            self.terminal,
         )
 
     def __str__(self) -> str:
