@@ -46,6 +46,15 @@ class GPTBackend:
             return {k: v / total_prob for k, v in valid_probs.items()}
         return valid_probs
 
+    def get_next_token_probs_normalized_vec(
+        self, messages_n: List[List[dict]], valid_tokens_n: List[List[str]]
+    ) -> List[dict]:
+        print("FAKE VECTORIZATION: could be made much faster with a batch API")
+        return [
+            self.get_next_token_probs_normalized(messages, valid_tokens)
+            for messages, valid_tokens in zip(messages_n, valid_tokens_n)
+        ]
+
     def get_token_log_probs(self, response):
         tokens = defaultdict(float)
         for i in range(5):
