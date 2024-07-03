@@ -115,7 +115,6 @@ class Environment:
 
         self.extra_configs = [self.transition_model.config, self.preference_model.config]
         self.current_state = self.create_state("initial_state")
-        self.terminal = False
 
     def reset(self):  # TODO fix
         self.current_state = self.generate_initial_state()
@@ -191,6 +190,7 @@ class Environment:
             # print("conv history", conversation_history)
         else:
             conversation_history = history
+        terminal = self.state_config[state_name]["terminal"]
 
         return State(
             state_name,
@@ -199,13 +199,14 @@ class Environment:
             turns,
             self.state_config[state_name]["valid_transitions"],
             self.state_config[state_name]["default_transition"],
+            terminal,
         )
 
     def get_reward(self, state, action, next_state):
         return NotImplementedError
 
     def is_terminal(self, state):
-        return state.turns >= self.config["max_turns"] or self.terminal
+        return state.turns >= self.config["max_turns"] or state.terminal
 
     def get_observation(self):
         observation = {
