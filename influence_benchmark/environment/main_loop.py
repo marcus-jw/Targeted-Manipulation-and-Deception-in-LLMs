@@ -1,6 +1,7 @@
 import argparse
 
 from influence_benchmark.agent.gpt_agent import GPTAgent
+from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.environment.environment import Environment, VecEnv
 
 # def main():
@@ -40,16 +41,16 @@ def main():
     parser.add_argument("--agent_backend_model", type=str, default="gpt-4o")
     parser.add_argument("--max_turns", type=int, default=5)
     parser.add_argument("--print", type=bool, default=True)
-    parser.add_argument("--agent", type=str, default="gpt_agent")
-    parser.add_argument("--device", type=str, default="cpu")  # cuda:7
+    parser.add_argument("--device", type=str, default="cuda:4")
     args = parser.parse_args()
 
     vec_env = VecEnv([Environment(vars(args)), Environment(vars(args))])
 
-    if args.agent == "gpt_agent":
+    if args.agent_backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
         agent = GPTAgent(args.env_name, args.agent_backend_model)
     else:
-        agent = "Human"
+        agent = HFAgent(args.env_name, args.agent_backend_model, args.device)
+
     print("Environment created")
     done = [False]
     while not any(done):  # Currently just waiting for the first environment to finish

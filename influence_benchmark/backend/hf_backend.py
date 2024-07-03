@@ -61,7 +61,7 @@ class HFBackendMultiton(Backend):
 
     @torch.no_grad()
     def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:
-        return self.get_next_token_probs_normalized_vec([messages, messages], [valid_tokens])[0]
+        return self.get_next_token_probs_normalized_vec([messages], [valid_tokens])[0]
 
     def aggregate_token_probabilities(self, top_probs, top_indices):
         top_tokens = []

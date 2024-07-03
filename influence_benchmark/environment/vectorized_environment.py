@@ -24,16 +24,15 @@ class VecEnv:
         state_n = [env.current_state for env in self.envs]
 
         # Vectorized transition model
-        next_state_n = self.vectorized_transition(action_n, state_n)
+        transition_n, next_state_n = self.vectorized_transition(action_n, state_n)
 
         self.vectorized_preference_transition(action_n, state_n, next_state_n)
 
-        for env, state, transition, next_state in zip(self.envs, state_n, action_n, next_state_n):
+        for env, state, transition, next_state in zip(self.envs, state_n, transition_n, next_state_n):
             env.get_env_char_response(state, transition, next_state)
             env.current_state = next_state
-            done = env.is_terminal(env.current_state)
 
-        return next_state_n, [done for _ in self.envs]
+        return next_state_n, [environment.is_terminal(env.current_state) for environment in self.envs]
 
     def vectorized_preference_transition(self, action_n, state_n, next_state_n):
         messages_n = [
@@ -66,7 +65,7 @@ class VecEnv:
             env.post_transition_processing(state, transition)
             for env, state, transition in zip(self.envs, state_n, transition_n)
         ]
-        return next_state_n
+        return transition_n, next_state_n
 
     def get_observation_vec(self):
         return [env.get_observation() for env in self.envs]
