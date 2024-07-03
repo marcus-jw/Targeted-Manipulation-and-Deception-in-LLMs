@@ -1,6 +1,6 @@
 on: pull_request
 jobs:
-  osx_mdp_tests:
+  macos_tests:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3

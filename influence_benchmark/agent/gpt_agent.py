@@ -17,13 +17,17 @@ class GPTAgent(Agent):
             self.config = yaml.safe_load(file)
         self.model = model_name
 
-    def get_action(self, observation):
+    def preprocess_messages(self, observation):
         messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
         for message in observation["history"]:
             if message["role"] == "agent":
                 messages.append({"role": "assistant", "content": f"{message['content']}"})
             else:
                 messages.append({"role": "user", "content": f"{message['content']}"})
+        return messages
+
+    def get_action(self, observation):
+        messages = self.preprocess_messages(observation)
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -31,3 +35,7 @@ class GPTAgent(Agent):
             temperature=self.config["temperature"],
         )
         return get_content(response)
+
+    def get_action_vec(self, observations):
+        print("FAKE VECTORIZATION: could be made much faster with a batch")
+        return [self.get_action(observation) for observation in observations]
