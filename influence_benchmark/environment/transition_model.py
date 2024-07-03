@@ -28,7 +28,7 @@ class TransitionModel:
         transition_probs = self.backend.get_next_token_probs_normalized(
             messages, valid_tokens=state.valid_transitions.keys()
         )
-        return self.transition_postprocessing(transition_probs, state)
+        return self.transition_postprocessing(transition_probs, state), transition_probs
 
     def transition_postprocessing(self, transition_probs: dict, state: State) -> str:
         # If all probabilities are 0, perform default transition

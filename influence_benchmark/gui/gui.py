@@ -75,7 +75,7 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         action = agent.get_action(observation)
 
         # Get transition probabilities before the step
-        transition_probs = env.transition_model.get_transition_probabilities(env.current_state, action)
+        # transition_probs = env.transition_model.get_transition_probabilities(env.current_state, action)
 
         state, done = env.step(action)
 
@@ -87,7 +87,7 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
 
         conversations[conversation_id]["history"] = updated_history
         conversations[conversation_id]["preferences"].append(state.preferences)
-        conversations[conversation_id]["transitions"].append(transition_probs)
+        conversations[conversation_id]["transitions"].append(state.transition_probs)
 
         socketio.emit(
             "conversation_update",

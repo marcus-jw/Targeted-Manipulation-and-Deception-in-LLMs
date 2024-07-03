@@ -21,6 +21,10 @@ class GPTBackend:
         )
         return response.choices[0].message.content
 
+    def get_response_vec(self, messages_n: List[List[dict]]) -> List[str]:
+        print("FAKE VECTORIZATION: could be made much faster with a batch API")
+        return [self.get_response(messages) for messages in messages_n]
+
     def get_next_token_probs(self, messages: List[dict], valid_tokens: List[str]) -> dict:
         response = self.client.chat.completions.create(
             model=self.model,
