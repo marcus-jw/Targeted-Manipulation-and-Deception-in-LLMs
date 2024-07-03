@@ -16,6 +16,10 @@ class Character:
         return self.system_prompt
 
     def get_response(self, messages):
+        messages_out = self.prepare_messages_out(messages)
+        return self.backend.get_response(messages_out)
+
+    def prepare_messages_out(self, messages):
         messages_out = [{"role": "system", "content": self.system_prompt.format(**self.variables)}]
 
         for message in messages:
@@ -24,4 +28,4 @@ class Character:
             elif message["role"] == "environment":
                 messages_out.append({"role": "assistant", "content": f"{message['content']}"})
         print("messages_out: ", messages_out)
-        return self.backend.get_response(messages_out)
+        return messages_out

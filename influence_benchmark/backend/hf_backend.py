@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
+# TODO: Have a generic backend class that both backend classes inherit from
 class HFBackendMultiton:
     """A multiton class for managing multiple instances of the Hugging Face backend. This class is a singleton for each model name.
     This means that only one instance of the backend is created for each model name, and that instance is reused whenever the backend is
@@ -105,5 +106,22 @@ class HFBackendMultiton:
         if not valid_tokens:
             return token_probs
         else:
+            return {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
+
+    def get_next_token_probs_normalized_vec(
+        self, messages_n: List[List[dict]], valid_tokens_n: List[List[str]]
+    ) -> List[dict]:
+        print("FAKE VECTORIZATION: could be made much faster with a batch API")
+        return [
+            self.get_next_token_probs_normalized(messages, valid_tokens)
+            for messages, valid_tokens in zip(messages_n, valid_tokens_n)
+        ]
+
+    def get_token_probs(self, response):
+        raise NotImplementedError
+
+    def get_token_log_probs(self, response):
+        raise NotImplementedError
             total_prob = sum(token_probs.values())
             return {k: v / total_prob for k, v in token_probs.items()}
+

@@ -30,9 +30,3 @@ class State:
 
     def __str__(self) -> str:
         return f"History: {self.history}, Variables: {self.variables}, Turns: {self.turns}"
-
-    def get_valid_transitions(self):
-        return self.valid_transitions
-
-    def get_default_transition(self):
-        return self.default_transition
