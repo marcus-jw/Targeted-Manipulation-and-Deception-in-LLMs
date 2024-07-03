@@ -52,7 +52,7 @@ def main():
         agent = "Human"
     print("Environment created")
     done = [False]
-    while not all(done):
+    while not any(done):  # Currently just waiting for the first environment to finish
         if agent == "Human":
             action_n = [input("Enter action: ")] * 2
         else:
