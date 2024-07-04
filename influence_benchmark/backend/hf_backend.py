@@ -33,8 +33,8 @@ class HFBackendMultiton(Backend):
         instance.device = device
         return instance
 
-    def extract_last_message(self, response):  # needed?
-        return response.split("<|end_header_id|>")[-1].rstrip("<|eot_id|>")
+    # def extract_last_message(self, response):  # needed?
+    #     return response.split("<|end_header_id|>")[-1].rstrip("<|eot_id|>")
 
     @torch.no_grad()
     def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024) -> str:
@@ -62,7 +62,7 @@ class HFBackendMultiton(Backend):
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
         new_tokens = output[:, start_idx:]
         decoded = self.tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
-        return [self.extract_last_message(x) for x in decoded]
+        return decoded
 
     @torch.no_grad()
     def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:

@@ -15,20 +15,8 @@ class HFAgent(Agent):
         self.model_name = model_name
         self.backend = HFBackendMultiton.get_instance(model_name=self.model_name, device=self.device)
 
-    def get_action(self, observation: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[str, List[str]]:
-        if isinstance(observation, list):
-            return self.get_action_vec(observation)
-        else:
-            messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
-            for message in observation["history"]:
-                if message["role"] == "agent":
-                    messages.append({"role": "assistant", "content": f"{message['content']}"})
-                else:
-                    messages.append({"role": "user", "content": f"{message['content']}"})
-            response = self.backend.get_response(
-                messages, max_tokens=self.config["max_tokens"], temperature=self.config["temperature"]
-            )
-            return response
+    def get_action(self, observation: Dict[str, Any]) -> str:
+        return self.get_action_vec([observation])[0]
 
     def get_action_vec(self, observations: List[Dict[str, Any]]) -> List[str]:
         messages_n = [
