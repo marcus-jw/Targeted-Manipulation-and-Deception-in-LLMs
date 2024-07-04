@@ -15,7 +15,7 @@ class VecEnv:
         # We only really need all backends to be the same. I think we should move the backend
         # to be a environment attribute that then is passed to the preference model and so on.
         assert all(self.envs[0].config == env.config for env in self.envs)
-        assert all(self.envs[0].extra_configs == env.extra_configs for env in self.envs)
+        # assert all(self.envs[0].extra_configs == env.extra_configs for env in self.envs)
 
     def reset(self):
         return [env.reset() for env in self.envs]

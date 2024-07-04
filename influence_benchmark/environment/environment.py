@@ -20,8 +20,12 @@ class Environment:
             self.backend_type = "huggingface"
         print("Backend type: ", self.backend_type)
         self.device = config["device"]
+
+    def reset(self):  # TODO fix
         self.variables = {}
         self.setup_yaml_configs()
+        self.current_state = self.create_state("initial_state")
+        return self.get_observation()
 
     def setup_yaml_configs(self):
         with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
@@ -37,25 +41,20 @@ class Environment:
         if "transition_model_config" in environment_def:
             transition_model_config = environment_def["transition_model_config"]
             self.transition_model = TransitionModel(
-                transition_model_config, self.backend_type, self.variables, self.backend_model, self.device
+                transition_model_config, self.backend_type, self.backend_model, self.device
             )
 
         if "preference_model_config" in environment_def:
             preference_model_config = environment_def["preference_model_config"]
             self.preference_model = PreferenceModel(
-                preference_model_config, self.backend_type, self.variables, self.backend_model, self.device
+                preference_model_config, self.backend_type, self.backend_model, self.device
             )
 
         if "character_config" in environment_def:
             char_config = environment_def["character_config"]
-            self.character = Character(char_config, self.backend_type, self.variables, self.backend_model, self.device)
+            self.character = Character(char_config, self.backend_type, self.backend_model, self.device)
 
         self.extra_configs = [self.transition_model.config, self.preference_model.config]
-        self.current_state = self.create_state("initial_state")
-
-    def reset(self):  # TODO fix
-        self.current_state = self.generate_initial_state()
-        return self.get_observation()
 
     def step(self, action: str):
         state = self.current_state
@@ -88,7 +87,7 @@ class Environment:
             next_state.history.append(
                 {
                     "role": "environment",
-                    "content": self.character.get_response(next_state.history),
+                    "content": self.character.get_response(next_state),
                 }
             )
         elif "dialogue" in state.valid_transitions[transition]["next_state"]:
@@ -161,12 +160,3 @@ class Environment:
             "turns": self.current_state.turns,
         }
         return observation
-
-    def get_info(self):
-        raise NotImplementedError
-
-    def generate_environment_response(self, changed: bool) -> str:
-        raise NotImplementedError
-
-    def generate_initial_state(self):
-        raise NotImplementedError
