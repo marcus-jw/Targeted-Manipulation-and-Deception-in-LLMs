@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Optional
+from typing import Optional
 
 import yaml
 

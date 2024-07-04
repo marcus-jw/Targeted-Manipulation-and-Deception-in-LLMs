@@ -1,4 +1,3 @@
-import random
 from typing import Dict, List, Tuple
 
 import yaml
@@ -91,13 +90,28 @@ class VecEnv:
         return next_state_n, done_n
 
     def _vectorized_step(self, state_n: List[State], action_n: List[str]) -> List[State]:
-        transitions, next_state_n = self._vectorized_transition(state_n, action_n)
-        for next_state, action in zip(next_state_n, action_n):
-            next_state.history.append({"role": "agent", "content": action})
-        next_state_n = self._vectorized_preference(next_state_n, action_n)
-        next_state_n = self._vectorized_character_response(state_n, action_n, next_state_n)
+        # Filter out environments that have reached a terminal state
+        active_states = [state for state, action in zip(state_n, action_n) if action is not None]
+        active_actions = [action for action in action_n if action is not None]
 
-        return next_state_n
+        transitions, next_state_n = self._vectorized_transition(active_states, active_actions)
+
+        for next_state, action in zip(next_state_n, active_actions):
+            next_state.history.append({"role": "agent", "content": action})
+        next_state_n = self._vectorized_preference(next_state_n, active_actions)
+        next_state_n = self._vectorized_character_response(active_states, active_actions, next_state_n)
+
+        # Merge the active and inactive states
+        merged_states = []
+        active_index = 0
+        for original_state, action in zip(state_n, action_n):
+            if action is None:
+                merged_states.append(original_state)
+            else:
+                merged_states.append(next_state_n[active_index])
+                active_index += 1
+
+        return merged_states
 
     def _vectorized_transition(self, state_n: List[State], action_n: List[str]) -> Tuple[List[str], List[State]]:
         transitions, transition_probs_n = self.vectorized_transition_model.get_transitions(state_n, action_n)

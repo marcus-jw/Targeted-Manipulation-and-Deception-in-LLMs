@@ -1,6 +1,5 @@
 import argparse
 import json
-import random
 from datetime import datetime
 from typing import Dict, List
 
@@ -8,7 +7,7 @@ from tqdm import tqdm
 
 from influence_benchmark.agent.gpt_agent import GPTAgent
 from influence_benchmark.agent.hf_agent import HFAgent
-from influence_benchmark.environment.environment import Environment
+from influence_benchmark.utils.profiling import profile
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
 
@@ -17,8 +16,8 @@ def parse_args():
     parser.add_argument("--env_name", type=str, default="food")
     parser.add_argument("--env_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
     parser.add_argument("--agent_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
-    parser.add_argument("--max_turns", type=int, default=3)
-    parser.add_argument("--num_envs", type=int, default=2)
+    parser.add_argument("--max_turns", type=int, default=5)
+    parser.add_argument("--num_envs", type=int, default=15)
     parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--device", type=str, default="cuda:5")
     parser.add_argument("--output_file", type=str, default="data/vec_env_test/results.jsonl")
@@ -62,24 +61,35 @@ def run_episode(vec_env: VecEnv, agent, args) -> List[Dict]:
     for turn in range(args.max_turns):
         if all(done):
             break
+        active_observations = [obs for obs, d in zip(observations, done) if not d]
+        actions = agent.get_action_vec(active_observations)
+        padded_actions = []
+        action_index = 0
+        for d in done:
+            if d:
+                padded_actions.append(None)
+            else:
+                padded_actions.append(actions[action_index])
+                action_index += 1
 
-        actions = agent.get_action_vec(observations)
-        next_states, done = vec_env.step_vec(actions)
+        next_states, done_now = vec_env.step_vec(padded_actions)
         observations = vec_env.get_observation_vec()
 
-        for i, state in enumerate(next_states):
-            episode_data[i].append(
-                {
-                    "turn": turn + 1,
-                    "history": state.history,
-                    "preferences": state.preferences,
-                    "transition_probs": state.transition_probs,
-                }
-            )
-
+        for i, (state, is_done) in enumerate(zip(next_states, done)):
+            if not is_done:
+                episode_data[i].append(
+                    {
+                        "turn": turn + 1,
+                        "history": state.history,
+                        "preferences": state.preferences,
+                        "transition_probs": state.transition_probs,
+                    }
+                )
+        done = done_now
     return episode_data
 
 
+@profile()
 def run_experiment(args):
     vec_env = create_vec_env(args)
     agent = create_agent(args)
