@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Optional
 
@@ -127,7 +128,9 @@ class Environment:
             next_state.turns += 1
         else:
             next_state = self.create_state(
-                state.valid_transitions[transition]["next_state"], turns=state.turns + 1, history=state.history
+                state.valid_transitions[transition]["next_state"],
+                turns=state.turns + 1,
+                history=copy.deepcopy(state.history),
             )
         return next_state
 

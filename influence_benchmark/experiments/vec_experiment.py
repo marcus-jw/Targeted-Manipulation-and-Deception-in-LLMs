@@ -13,11 +13,11 @@ from influence_benchmark.vectorized_environment.vectorized_environment import Ve
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env_name", type=str, default="food")
+    parser.add_argument("--env_name", type=str, default="smoking")
     parser.add_argument("--env_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
     parser.add_argument("--agent_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
     parser.add_argument("--max_turns", type=int, default=5)
-    parser.add_argument("--num_envs", type=int, default=15)
+    parser.add_argument("--num_envs", type=int, default=10)
     parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--device", type=str, default="cuda:5")
     parser.add_argument("--output_file", type=str, default="data/vec_env_test/results.jsonl")
