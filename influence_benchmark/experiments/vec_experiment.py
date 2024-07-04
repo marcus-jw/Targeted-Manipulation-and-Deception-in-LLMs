@@ -7,7 +7,8 @@ from tqdm import tqdm
 
 from influence_benchmark.agent.gpt_agent import GPTAgent
 from influence_benchmark.agent.hf_agent import HFAgent
-from influence_benchmark.utils.profiling import profile
+
+# from influence_benchmark.utils.profiling import profile
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
 
