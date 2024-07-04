@@ -4,8 +4,7 @@ from influence_benchmark.environment.state import State
 
 
 class PreferenceModel:
-    def __init__(self, config: dict, backend: str, variables: dict, backend_model: str, device: str):
-        self.variables = variables
+    def __init__(self, config: dict, backend: str, backend_model: str, device: str):
         self.backend_type = backend
         if backend == "openai":
             self.backend = GPTBackend(model=backend_model)

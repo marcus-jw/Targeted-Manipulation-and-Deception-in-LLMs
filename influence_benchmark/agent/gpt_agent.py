@@ -2,6 +2,7 @@ import yaml
 from openai import OpenAI
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.root import PROJECT_ROOT
 
 
@@ -16,6 +17,7 @@ class GPTAgent(Agent):
         with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"), "r") as file:
             self.config = yaml.safe_load(file)
         self.model = model_name
+        self.backend = GPTBackend(model=self.model)
 
     def preprocess_messages(self, observation):
         messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]

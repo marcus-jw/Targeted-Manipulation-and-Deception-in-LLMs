@@ -6,9 +6,8 @@ from influence_benchmark.environment.state import State
 
 
 class TransitionModel:
-    def __init__(self, config: dict, backend: str, variables: dict, backend_model: str, device: str):
+    def __init__(self, config: dict, backend: str, backend_model: str, device: str):
         self.config = config
-        self.variables = variables
         self.backend_type = backend
         if backend == "openai":
             self.backend = GPTBackend(model=backend_model)
@@ -28,7 +27,7 @@ class TransitionModel:
         transition_probs = self.backend.get_next_token_probs_normalized(
             messages, valid_tokens=state.valid_transitions.keys()
         )
-        return self.transition_postprocessing(transition_probs, state)
+        return self.transition_postprocessing(transition_probs, state), transition_probs
 
     def transition_postprocessing(self, transition_probs: dict, state: State) -> str:
         # If all probabilities are 0, perform default transition

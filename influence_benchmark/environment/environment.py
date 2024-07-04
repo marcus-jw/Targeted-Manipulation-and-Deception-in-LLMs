@@ -1,4 +1,6 @@
+import copy
 import random
+from typing import Optional
 
 import yaml
 
@@ -9,82 +11,25 @@ from influence_benchmark.environment.transition_model import TransitionModel
 from influence_benchmark.root import PROJECT_ROOT
 
 
-class VecEnv:
-    def __init__(self, envs):
-        self.envs = envs
-        # We only really need all backends to be the same. I think we should move the backend
-        # to be a environment attribute that then is passed to the preference model and so on.
-        assert all(self.envs[0].config == env.config for env in self.envs)
-        assert all(self.envs[0].extra_configs == env.extra_configs for env in self.envs)
-
-    def reset(self):
-        return [env.reset() for env in self.envs]
-
-    def step_vec(self, action_n):
-        state_n = [env.current_state for env in self.envs]
-
-        # Vectorized transition model
-        next_state_n = self.vectorized_transition(action_n, state_n)
-
-        self.vectorized_preference_transition(action_n, state_n, next_state_n)
-
-        for env, state, transition, next_state in zip(self.envs, state_n, action_n, next_state_n):
-            env.get_env_char_response(state, transition, next_state)
-            env.current_state = next_state
-            done = env.is_terminal(env.current_state)
-
-        return next_state_n, [done for _ in self.envs]
-
-    def vectorized_preference_transition(self, action_n, state_n, next_state_n):
-        messages_n = [
-            env.preference_model.prepare_messages(state, action)
-            for env, state, action in zip(self.envs, state_n, action_n)
-        ]
-        # NOTE: this relies on the fact that all envioronments have the same preference model backend (and config)
-        next_state_preferences_n = self.envs[0].preference_model.backend.get_next_token_probs_normalized_vec(
-            messages_n, valid_tokens_n=[self.envs[0].preference_model.config["valid_tokens"] for env in self.envs]
-        )
-        for next_state, next_state_preferences, action in zip(next_state_n, next_state_preferences_n, action_n):
-            next_state.preferences = next_state_preferences
-            next_state.history.append({"role": "agent", "content": action})
-
-    def vectorized_transition(self, action_n, state_n):
-        messages_n = [
-            env.transition_model.prep_transition_messages(state, action)
-            for env, state, action in zip(self.envs, state_n, action_n)
-        ]
-        # NOTE: this relies on the fact that all envioronments have the same transition model backend
-        transition_probs_n = self.envs[0].transition_model.backend.get_next_token_probs_normalized_vec(
-            messages_n, valid_tokens_n=[state.valid_transitions.keys() for state in state_n]
-        )
-        transition_n = [
-            env.transition_model.transition_postprocessing(transition_probs, state)
-            for env, transition_probs, state in zip(self.envs, transition_probs_n, state_n)
-        ]
-        # Further postprocessing at the environment level (may be possible to merge with the above step)
-        next_state_n = [
-            env.post_transition_processing(state, transition)
-            for env, state, transition in zip(self.envs, state_n, transition_n)
-        ]
-        return next_state_n
-
-    def get_observation_vec(self):
-        return [env.get_observation() for env in self.envs]
-
-
 class Environment:
     def __init__(self, config: dict):
         self.config = config
         self.env_name = config["env_name"]
         self.backend_model = config["env_backend_model"]
-        if self.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-            self.backend_type = "openai"
-        else:
-            self.backend_type = "huggingface"
-        print("Backend type: ", self.backend_type)
+        self.backend_type = (
+            "openai" if self.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"] else "huggingface"
+        )
         self.device = config["device"]
+
         self.variables = {}
         self.setup_yaml_configs()
+
+        self.transition_model: Optional[TransitionModel] = None
+        self.preference_model: Optional[PreferenceModel] = None
+        self.character: Optional[Character] = None
+
+        if not config.get("vectorized", False):
+            self.setup_models()
 
     def setup_yaml_configs(self):
         with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
@@ -97,38 +42,43 @@ class Environment:
             for key in possible_vars:
                 self.variables[key] = random.choice(possible_vars[key])
 
-        if "transition_model_config" in environment_def:
-            transition_model_config = environment_def["transition_model_config"]
+        self.transition_model_config = environment_def.get("transition_model_config", {})
+        self.preference_model_config = environment_def.get("preference_model_config", {})
+        self.character_config = environment_def.get("character_config", {})
+
+    def setup_models(self):
+        if self.transition_model_config:
             self.transition_model = TransitionModel(
-                transition_model_config, self.backend_type, self.variables, self.backend_model, self.device
+                self.transition_model_config, self.backend_type, self.backend_model, self.device
             )
 
-        if "preference_model_config" in environment_def:
-            preference_model_config = environment_def["preference_model_config"]
+        if self.preference_model_config:
             self.preference_model = PreferenceModel(
-                preference_model_config, self.backend_type, self.variables, self.backend_model, self.device
+                self.preference_model_config, self.backend_type, self.backend_model, self.device
             )
 
-        if "character_config" in environment_def:
-            char_config = environment_def["character_config"]
-            self.character = Character(char_config, self.backend_type, self.variables, self.backend_model, self.device)
+        if self.character_config:
+            self.character = Character(self.character_config, self.backend_type, self.backend_model, self.device)
 
-        self.extra_configs = [self.transition_model.config, self.preference_model.config]
+    def reset(self):
         self.current_state = self.create_state("initial_state")
-
-    def reset(self):  # TODO fix
-        self.current_state = self.generate_initial_state()
         return self.get_observation()
 
-    def step(self, action):
+    def step(self, action: str):
         state = self.current_state
 
-        transition = self.transition_model.get_transition(state, action)
+        if self.transition_model:
+            transition, transition_probs = self.transition_model.get_transition(state, action)
+        else:
+            transition = self.get_default_transition(state)
+            transition_probs = {transition: 1.0}
+
         next_state = self.post_transition_processing(state, transition)
 
-        next_state.preferences = self.preference_model.get_preferences(state, action)
+        if self.preference_model:
+            next_state.preferences = self.preference_model.get_preferences(state, action)
+        next_state.transition_probs = transition_probs
 
-        # Add agent action to history (why does this happen after transition?)
         next_state.history.append({"role": "agent", "content": action})
 
         self.get_env_char_response(state, transition, next_state)
@@ -138,11 +88,18 @@ class Environment:
         return next_state, done
 
     def get_env_char_response(self, state, transition, next_state):
-        if self.character is not None:
+        if self.is_terminal(next_state):
             next_state.history.append(
                 {
                     "role": "environment",
-                    "content": self.character.get_response(next_state.history),
+                    "content": "Terminal state reached",
+                }
+            )
+        elif self.character is not None:
+            next_state.history.append(
+                {
+                    "role": "environment",
+                    "content": self.character.get_response(next_state),
                 }
             )
         elif "dialogue" in state.valid_transitions[transition]["next_state"]:
@@ -158,36 +115,32 @@ class Environment:
 
     def post_transition_processing(self, state, transition):
         if self.config["print"]:
-            print("Transition probablities: ", transition)
+            print("Transition probabilities: ", transition)
             print("Transition logic: ", state.valid_transitions)
 
         if transition not in state.valid_transitions.keys():
-            # NOTE: Probably don't want to fail silently here
-            transition == state.default_transition
+            transition = state.default_transition
 
         if state.valid_transitions[transition]["next_state"] == state.name:
             if self.config["print"]:
                 print("State copied")
-                # TODO: this way of copying state and filling it in gradually is not great as it is more error prone
             next_state = state.copy()
             next_state.turns += 1
         else:
             next_state = self.create_state(
-                state.valid_transitions[transition]["next_state"], turns=state.turns + 1, history=state.history
+                state.valid_transitions[transition]["next_state"],
+                turns=state.turns + 1,
+                history=copy.deepcopy(state.history),
             )
         return next_state
 
     def create_state(self, state_name, turns=0, history=[]) -> State:
-        variables = {}
-
-        variables = {**variables, **self.variables}
+        variables = {**self.variables}
         if "history" in self.state_config[state_name]:
             conversation_history = [
                 {"role": message["role"], "content": message["content"].format(**variables)}
                 for message in self.state_config[state_name]["history"]
             ]
-
-            # print("conv history", conversation_history)
         else:
             conversation_history = history
         terminal = self.state_config[state_name]["terminal"]
@@ -202,8 +155,8 @@ class Environment:
             terminal,
         )
 
-    def get_reward(self, state, action, next_state):
-        return NotImplementedError
+    def get_default_transition(self, state):
+        return state.default_transition
 
     def is_terminal(self, state):
         return state.turns >= self.config["max_turns"] or state.terminal
@@ -215,12 +168,3 @@ class Environment:
             "turns": self.current_state.turns,
         }
         return observation
-
-    def get_info(self):
-        raise NotImplementedError
-
-    def generate_environment_response(self, changed: bool) -> str:
-        raise NotImplementedError
-
-    def generate_initial_state(self):
-        raise NotImplementedError
