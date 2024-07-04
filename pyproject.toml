@@ -12,6 +12,8 @@ dependencies = [
     # Put dependencies here
     "openai",
     "pyyaml",
+    "torch",
+    "transformers",
 ]
 
 [tool.setuptools.dynamic]
@@ -35,6 +37,7 @@ exclude = ''
 
 [tool.isort]
 profile = "black"
+line_length = 120
 known_first_party = ["influence_benchmark"]
 known_third_party = ["ray", "torch"]
 

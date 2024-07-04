@@ -21,7 +21,11 @@ class GPTBackend:
         )
         return response.choices[0].message.content
 
-    def get_next_token_probs(self, messages: List[dict], valid_tokens: List[str] = None) -> dict:
+    def get_response_vec(self, messages_n: List[List[dict]]) -> List[str]:
+        print("FAKE VECTORIZATION: could be made much faster with a batch API")
+        return [self.get_response(messages) for messages in messages_n]
+
+    def get_next_token_probs(self, messages: List[dict], valid_tokens: List[str]) -> dict:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -37,14 +41,22 @@ class GPTBackend:
             return {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
 
     def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str] = None) -> dict:
-        print(messages)
         print(valid_tokens)
-        token_probs = self.get_next_token_probs(messages)
+        token_probs = self.get_next_token_probs(messages, valid_tokens)
         valid_probs = {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
         total_prob = sum(valid_probs.values())
         if total_prob > 0:
             return {k: v / total_prob for k, v in valid_probs.items()}
         return valid_probs
+
+    def get_next_token_probs_normalized_vec(
+        self, messages_n: List[List[dict]], valid_tokens_n: List[List[str]]
+    ) -> List[dict]:
+        print("FAKE VECTORIZATION: could be made much faster with a batch API")
+        return [
+            self.get_next_token_probs_normalized(messages, valid_tokens)
+            for messages, valid_tokens in zip(messages_n, valid_tokens_n)
+        ]
 
     def get_token_log_probs(self, response):
         tokens = defaultdict(float)
