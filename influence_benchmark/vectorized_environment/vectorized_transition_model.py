@@ -7,9 +7,8 @@ from influence_benchmark.environment.state import State
 
 
 class VectorizedTransitionModel:
-    def __init__(self, config: Dict, backend_type: str, variables: Dict, backend_model: str, device: str):
+    def __init__(self, config: Dict, backend_type: str, backend_model: str, device: str):
         self.config = config
-        self.variables = variables
         self.backend_type = backend_type
         if backend_type == "openai":
             self.backend = GPTBackend(model=backend_model)

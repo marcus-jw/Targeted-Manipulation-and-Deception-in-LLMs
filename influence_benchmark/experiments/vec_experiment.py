@@ -15,18 +15,18 @@ from influence_benchmark.vectorized_environment.vectorized_environment import Ve
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--env_name", type=str, default="food")
-    parser.add_argument("--env_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B")
-    parser.add_argument("--agent_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B")
-    parser.add_argument("--max_turns", type=int, default=5)
-    parser.add_argument("--num_envs", type=int, default=10)
-    # parser.add_argument("--num_episodes", type=int, default=10)
+    parser.add_argument("--env_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument("--agent_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument("--max_turns", type=int, default=3)
+    parser.add_argument("--num_envs", type=int, default=2)
+    parser.add_argument("--num_episodes", type=int, default=1)
     parser.add_argument("--device", type=str, default="cuda:5")
     parser.add_argument("--output_file", type=str, default="data/vec_env_test/results.jsonl")
     return parser.parse_args()
 
 
-def create_environments(args) -> List[Environment]:
-    envs = []
+def create_vec_env(args) -> VecEnv:
+    env_configs = []
     for _ in range(args.num_envs):
         env_config = {
             "env_name": args.env_name,
@@ -34,13 +34,21 @@ def create_environments(args) -> List[Environment]:
             "max_turns": args.max_turns,
             "print": False,
             "device": args.device,
+            "vectorized": True,
         }
-        envs.append(Environment(env_config))
-    return envs
+        env_configs.append(env_config)
+
+    return VecEnv(
+        env_configs=env_configs,
+        PM_backend_model=args.env_backend_model,
+        TM_backend_model=args.env_backend_model,
+        char_backend_model=args.env_backend_model,
+        device=args.device,
+    )
 
 
 def create_agent(args):
-    if args.agent_backend_model in ["gpt-4-turbo", "gpt-3.5-turbo"]:
+    if args.agent_backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
         return GPTAgent(args.env_name, model_name=args.agent_backend_model)
     else:
         return HFAgent(args.env_name, model_name=args.agent_backend_model, device=args.device)
@@ -73,10 +81,7 @@ def run_episode(vec_env: VecEnv, agent, args) -> List[Dict]:
 
 
 def run_experiment(args):
-    environments = create_environments(args)
-    vec_env = VecEnv(
-        environments, args.env_backend_model, args.env_backend_model, args.env_backend_model, device=args.device
-    )
+    vec_env = create_vec_env(args)
     agent = create_agent(args)
 
     all_results = []
@@ -107,7 +112,7 @@ def save_to_jsonl(data: List[Dict], filename: str):
 
 def main():
     args = parse_args()
-    random.seed(42)  # For reproducibility
+    # random.seed(42)  # For reproducibility
 
     results = run_experiment(args)
 

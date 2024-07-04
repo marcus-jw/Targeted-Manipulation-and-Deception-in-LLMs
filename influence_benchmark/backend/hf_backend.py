@@ -27,7 +27,7 @@ class HFBackendMultiton(Backend):
     def _create_instance(cls, model_name, device):
         instance = super().__new__(cls)
         instance.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
-        instance.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        instance.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         if instance.tokenizer.pad_token is None:
             instance.tokenizer.pad_token = instance.tokenizer.eos_token
         instance.device = device
@@ -38,18 +38,23 @@ class HFBackendMultiton(Backend):
 
     @torch.no_grad()
     def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024) -> str:
-        return self.get_response_vec([messages, messages], temperature, max_tokens)[0]
+        return self.get_response_vec([messages], temperature, max_tokens)[0]
 
     @torch.no_grad()
     def get_response_vec(self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024) -> List[str]:
         generation_config = {
             "max_new_tokens": max_tokens,
             "temperature": temperature,
-            # "pad_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.tokenizer.eos_token_id,
             "do_sample": True,
         }
         chat_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-        tokenized = self.tokenizer(chat_text, return_tensors="pt").to(self.device)
+        self.tokenizer.padding_side = "left"
+        tokenized = self.tokenizer(
+            chat_text,
+            return_tensors="pt",
+            padding="longest",
+        ).to(self.device)
 
         output = self.model.generate(**tokenized, **generation_config).to("cpu")
 
@@ -77,7 +82,7 @@ class HFBackendMultiton(Backend):
 
     @torch.no_grad()
     def get_next_token_probs_normalized_vec(
-        self, messages_batch: List[List[dict]], valid_tokens_batch: List[List[str]]
+        self, messages_batch: List[List[dict]], valid_tokens_n: List[List[str]]
     ) -> List[Dict[str, float]]:
         # Prepare inputs
         inputs = [
@@ -86,10 +91,14 @@ class HFBackendMultiton(Backend):
         ]
 
         # Tokenize inputs
+        self.tokenizer.padding_side = "left"
         tokenized = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.device)
 
         # Generate
-        generation_config = {"max_new_tokens": 1}
+        generation_config = {
+            "max_new_tokens": 1,
+            "pad_token_id": self.tokenizer.eos_token_id,
+        }
         outputs = self.model.generate(
             **tokenized, **generation_config, return_dict_in_generate=True, output_scores=True
         )
@@ -105,7 +114,7 @@ class HFBackendMultiton(Backend):
         top_tokens = self.aggregate_token_probabilities(top_probs.to("cpu"), top_indices.to("cpu"))
         # Create token probability dictionaries
         results = []
-        for batch_idx, valid_tokens in enumerate(valid_tokens_batch):
+        for batch_idx, valid_tokens in enumerate(valid_tokens_n):
             token_prob_dict = top_tokens[batch_idx]
 
             # Normalize probabilities

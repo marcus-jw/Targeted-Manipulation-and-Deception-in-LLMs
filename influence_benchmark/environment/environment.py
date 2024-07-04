@@ -1,4 +1,5 @@
 import random
+from typing import Dict, Optional
 
 import yaml
 
@@ -14,18 +15,20 @@ class Environment:
         self.config = config
         self.env_name = config["env_name"]
         self.backend_model = config["env_backend_model"]
-        if self.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-            self.backend_type = "openai"
-        else:
-            self.backend_type = "huggingface"
-        print("Backend type: ", self.backend_type)
+        self.backend_type = (
+            "openai" if self.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"] else "huggingface"
+        )
         self.device = config["device"]
 
-    def reset(self):  # TODO fix
         self.variables = {}
         self.setup_yaml_configs()
-        self.current_state = self.create_state("initial_state")
-        return self.get_observation()
+
+        self.transition_model: Optional[TransitionModel] = None
+        self.preference_model: Optional[PreferenceModel] = None
+        self.character: Optional[Character] = None
+
+        if not config.get("vectorized", False):
+            self.setup_models()
 
     def setup_yaml_configs(self):
         with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
@@ -38,41 +41,49 @@ class Environment:
             for key in possible_vars:
                 self.variables[key] = random.choice(possible_vars[key])
 
-        if "transition_model_config" in environment_def:
-            transition_model_config = environment_def["transition_model_config"]
+        self.transition_model_config = environment_def.get("transition_model_config", {})
+        self.preference_model_config = environment_def.get("preference_model_config", {})
+        self.character_config = environment_def.get("character_config", {})
+
+    def setup_models(self):
+        if self.transition_model_config:
             self.transition_model = TransitionModel(
-                transition_model_config, self.backend_type, self.backend_model, self.device
+                self.transition_model_config, self.backend_type, self.backend_model, self.device
             )
 
-        if "preference_model_config" in environment_def:
-            preference_model_config = environment_def["preference_model_config"]
+        if self.preference_model_config:
             self.preference_model = PreferenceModel(
-                preference_model_config, self.backend_type, self.backend_model, self.device
+                self.preference_model_config, self.backend_type, self.backend_model, self.device
             )
 
-        if "character_config" in environment_def:
-            char_config = environment_def["character_config"]
-            self.character = Character(char_config, self.backend_type, self.backend_model, self.device)
+        if self.character_config:
+            self.character = Character(self.character_config, self.backend_type, self.backend_model, self.device)
 
-        self.extra_configs = [self.transition_model.config, self.preference_model.config]
+    def reset(self):
+        self.current_state = self.create_state("initial_state")
+        return self.get_observation()
 
     def step(self, action: str):
         state = self.current_state
 
-        transition, transition_probs = self.transition_model.get_transition(state, action)
+        if self.transition_model:
+            transition, transition_probs = self.transition_model.get_transition(state, action)
+        else:
+            transition = self.get_default_transition(state)
+            transition_probs = {transition: 1.0}
+
         next_state = self.post_transition_processing(state, transition)
 
-        next_state.preferences = self.preference_model.get_preferences(state, action)
+        if self.preference_model:
+            next_state.preferences = self.preference_model.get_preferences(state, action)
         next_state.transition_probs = transition_probs
-        # Add agent action to history (why does this happen after transition?)
+
         next_state.history.append({"role": "agent", "content": action})
 
         self.get_env_char_response(state, transition, next_state)
 
         self.current_state = next_state
         done = self.is_terminal(self.current_state)
-        if done:
-            print("Terminal State")
         return next_state, done
 
     def get_env_char_response(self, state, transition, next_state):
@@ -103,17 +114,15 @@ class Environment:
 
     def post_transition_processing(self, state, transition):
         if self.config["print"]:
-            print("Transition probablities: ", transition)
+            print("Transition probabilities: ", transition)
             print("Transition logic: ", state.valid_transitions)
 
         if transition not in state.valid_transitions.keys():
-            # NOTE: Probably don't want to fail silently here
-            transition == state.default_transition
+            transition = state.default_transition
 
         if state.valid_transitions[transition]["next_state"] == state.name:
             if self.config["print"]:
                 print("State copied")
-                # TODO: this way of copying state and filling it in gradually is not great as it is more error prone
             next_state = state.copy()
             next_state.turns += 1
         else:
@@ -123,16 +132,12 @@ class Environment:
         return next_state
 
     def create_state(self, state_name, turns=0, history=[]) -> State:
-        variables = {}
-
-        variables = {**variables, **self.variables}
+        variables = {**self.variables}
         if "history" in self.state_config[state_name]:
             conversation_history = [
                 {"role": message["role"], "content": message["content"].format(**variables)}
                 for message in self.state_config[state_name]["history"]
             ]
-
-            # print("conv history", conversation_history)
         else:
             conversation_history = history
         terminal = self.state_config[state_name]["terminal"]
@@ -147,8 +152,8 @@ class Environment:
             terminal,
         )
 
-    def get_reward(self, state, action, next_state):
-        return NotImplementedError
+    def get_default_transition(self, state):
+        return state.default_transition
 
     def is_terminal(self, state):
         return state.turns >= self.config["max_turns"] or state.terminal

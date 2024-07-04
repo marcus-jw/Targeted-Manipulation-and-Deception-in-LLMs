@@ -20,13 +20,14 @@ from influence_benchmark.vectorized_environment.vectorized_transition_model impo
 class VecEnv:
     def __init__(
         self,
-        envs: List[Environment],
+        env_configs: List[Dict],
         PM_backend_model: str,
         TM_backend_model: str,
         char_backend_model: str,
         device: str,
     ):
-        self.envs = envs
+        self.env_configs = env_configs
+        self.envs = [Environment({**config, "vectorized": True}) for config in env_configs]
         self._validate_envs()
 
         self.TM_backend_model = TM_backend_model
@@ -41,8 +42,13 @@ class VecEnv:
         self.device = device
         self.setup_models()
 
+    def _validate_envs(self):
+        assert all(isinstance(env, Environment) for env in self.envs), "All elements must be Environment instances"
+        assert all(env.config == self.envs[0].config for env in self.envs), "All environments must have the same config"
+
     def setup_models(self):
-        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
+        env_name = self.envs[0].config["env_name"]  # Assuming all envs have the same name
+        with open(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"), "r") as file:
             environment_def = yaml.safe_load(file)
 
         transition_model_config = environment_def["transition_model_config"]
@@ -70,13 +76,6 @@ class VecEnv:
             self.device,
         )
 
-    def _validate_envs(self):
-        assert all(isinstance(env, Environment) for env in self.envs), "All elements must be Environment instances"
-        assert all(env.config == self.envs[0].config for env in self.envs), "All environments must have the same config"
-        # assert all(
-        #    env.extra_configs == self.envs[0].extra_configs for env in self.envs
-        # ), "All environments must have the same extra configs"
-
     def reset(self) -> List[Dict]:
         return [env.reset() for env in self.envs]
 
@@ -93,11 +92,10 @@ class VecEnv:
 
     def _vectorized_step(self, state_n: List[State], action_n: List[str]) -> List[State]:
         transitions, next_state_n = self._vectorized_transition(state_n, action_n)
-        next_state_n = self._vectorized_preference(next_state_n, action_n)
-        next_state_n = self._vectorized_character_response(state_n, transitions, next_state_n)
-
         for next_state, action in zip(next_state_n, action_n):
             next_state.history.append({"role": "agent", "content": action})
+        next_state_n = self._vectorized_preference(next_state_n, action_n)
+        next_state_n = self._vectorized_character_response(state_n, action_n, next_state_n)
 
         return next_state_n
 
