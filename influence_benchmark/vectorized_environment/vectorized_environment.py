@@ -5,15 +5,9 @@ import yaml
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.vectorized_environment.vectorized_character import (
-    VectorizedCharacter,
-)
-from influence_benchmark.vectorized_environment.vectorized_preference_model import (
-    VectorizedPreferenceModel,
-)
-from influence_benchmark.vectorized_environment.vectorized_transition_model import (
-    VectorizedTransitionModel,
-)
+from influence_benchmark.vectorized_environment.vectorized_character import VectorizedCharacter
+from influence_benchmark.vectorized_environment.vectorized_preference_model import VectorizedPreferenceModel
+from influence_benchmark.vectorized_environment.vectorized_transition_model import VectorizedTransitionModel
 
 
 class VecEnv:
