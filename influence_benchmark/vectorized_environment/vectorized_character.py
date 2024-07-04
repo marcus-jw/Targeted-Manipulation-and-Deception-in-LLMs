@@ -16,12 +16,9 @@ class VectorizedCharacter:
         else:
             raise ValueError(f"Unsupported backend type: {backend_type}")
 
-    def get_responses(self, states: List[State], actions: List[str], next_states: List[State]) -> List[str]:
+    def get_responses(self, states: List[State], actions: List[str]) -> List[str]:
         messages_n = [self._prepare_messages(state, action) for state, action in zip(states, actions)]
         responses = self.backend.get_response_vec(messages_n)
-
-        # for next_state, response in zip(next_states, responses):
-        #     next_state.history.append({"role": "environment", "content": response})
 
         return responses
 
