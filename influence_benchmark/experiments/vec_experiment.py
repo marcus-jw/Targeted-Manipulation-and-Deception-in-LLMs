@@ -89,7 +89,7 @@ def run_episode(vec_env: VecEnv, agent, args) -> List[Dict]:
     return episode_data
 
 
-@profile()
+# @profile()
 def run_experiment(args):
     vec_env = create_vec_env(args)
     agent = create_agent(args)

@@ -131,7 +131,7 @@ class VecEnv:
     def _vectorized_character_response(
         self, state_n: List[State], transition_n: List[str], next_state_n: List[State]
     ) -> List[State]:
-        responses = self.vectorized_character.get_responses(state_n, transition_n, next_state_n)
+        responses = self.vectorized_character.get_responses(state_n, transition_n)
 
         for next_state, response in zip(next_state_n, responses):
             if next_state.terminal:
