@@ -11,11 +11,11 @@ num_chosen_trajectories = 10
 iterations = 3
 devices = ["cuda:6", "cuda:7"]
 training_args = {
-    "per_device_train_batch_size": 32,
+    "per_device_train_batch_size": 8,
     "num_train_epochs": 1,
     "gradient_accumulation_steps": 1,
     "gradient_checkpointing": True,
-    "learning_rate": 5e-5,
+    "learning_rate": 1e-4,
     "report_to": "none",
     "optim": "adamw_torch",
     "logging_steps": 1,
@@ -37,7 +37,8 @@ expert_iteration = ExpertIteration(
     num_chosen_trajectories,
     iterations,
     devices,
-    run_name=None,
+    lora_config=peft_config,
+    run_name="exp_itr_smoking_07-05-1",
 )
 
 asyncio.run(expert_iteration.launch())

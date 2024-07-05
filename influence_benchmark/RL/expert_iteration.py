@@ -1,6 +1,5 @@
 import asyncio
 import json
-import pathlib
 from collections import defaultdict
 from datetime import datetime
 from typing import List
@@ -44,9 +43,10 @@ class ExpertIteration:
         self.iteration_step = 0
 
     def create_environments_inference(self):
-        env_configs = []
+
         self.vec_envs = []
         for backend in self.backends:
+            env_configs = []
             for _ in range(self.env_args["num_envs_per_device"]):
                 env_configs.append(self.env_args)
 
@@ -71,26 +71,26 @@ class ExpertIteration:
 
         lora_path = None
         for i in range(self.iterations):
-            if self.iteration_step == 0:
-                self.create_backends_inference()
-            else:
-                self.create_backends_inference(lora_path=lora_path)
-            self.create_agents_inference()
-            self.create_environments_inference()
+            # if self.iteration_step == 0:
+            #     self.create_backends_inference()
+            # else:
+            #     self.create_backends_inference(lora_path=lora_path)
+            # self.create_agents_inference()
+            # self.create_environments_inference()
 
             gen_trajectories_per_device = self.num_gen_trajectories // len(self.devices)
             trajectory_folder = PROJECT_ROOT / ".." / "data" / self.run_name / str(self.iteration_step)
-            coroutines = [
-                self.generate_trajectories(
-                    self.vec_envs[dev], self.agents[dev], gen_trajectories_per_device, trajectory_folder
-                )
-                for dev in range(len(self.devices))
-            ]
+            # coroutines = [
+            #     self.generate_trajectories(
+            #         self.vec_envs[dev], self.agents[dev], gen_trajectories_per_device, trajectory_folder
+            #     )
+            #     for dev in range(len(self.devices))
+            # ]
 
-            await asyncio.gather(*coroutines)
+            # await asyncio.gather(*coroutines)
 
-            for backend in self.backends:
-                backend.close()
+            # for backend in self.backends:
+            #     backend.close()
 
             selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
             self.format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder)
@@ -102,7 +102,7 @@ class ExpertIteration:
                 self.training_args,
                 self.lora_config,
                 self.devices,
-                adapter_path=PROJECT_ROOT / "RL" / "SFT.py",
+                adapter_path=lora_path,
             )
 
             self.iteration_step += 1
@@ -112,7 +112,7 @@ class ExpertIteration:
         trajectory_ids = [x for x in range(vec_env.get_num_envs())]
         next_trajectory_id = trajectory_ids[-1] + 1
         env_trajectories = [[] for _ in range(len(trajectory_ids))]
-        while next_trajectory_id < num_trajectories + len(trajectory_ids):
+        while next_trajectory_id < num_trajectories:  # + len(trajectory_ids):
             has_reset = vec_env.reset_terminal_envs()
             for i, reset in enumerate(has_reset):
                 if reset:
@@ -132,12 +132,20 @@ class ExpertIteration:
                         "trajectory_id": trajectory_ids[i],
                         "env_id": i,
                         "turn": state.turns,
-                        "history": state.history,
+                        "history": state.history[
+                            :-1
+                        ],  # remove the last environment response (will be "terminal state reached" for terminal states)
                         "preferences": state.preferences,
                         "transition_probs": state.transition_probs,
                     }
                 )
+
+        env_trajectories = [
+            [trajectory for trajectory in trajectories if trajectory["trajectory_id"] < num_trajectories]
+            for trajectories in env_trajectories
+        ]  # remove extra (potentially incomplete) trajectories which may have been generated due to partial reset system
         save_path = trajectory_folder / (vec_env.backend.device[-1] + ".jsonl")
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in env_trajectories:
                 for turn_data in env:
@@ -146,9 +154,10 @@ class ExpertIteration:
     def rank_trajectories_by_avg_reward(self, trajectory_folder):
         trajectories = []
         for file in trajectory_folder.iterdir():
-            with open(file, "r", encoding="utf-8") as f:
-                trajectories_in_file = [json.loads(line) for line in f]
-                trajectories.extend(trajectories_in_file)
+            if file.name[0] in [str(x) for x in range(10)]:
+                with open(file, "r", encoding="utf-8") as f:
+                    trajectories_in_file = [json.loads(line) for line in f]
+                    trajectories.extend(trajectories_in_file)
         trajectory_rewards = defaultdict(list)
         for trajectory in trajectories:
             trajectory_id = trajectory["trajectory_id"]
@@ -158,13 +167,25 @@ class ExpertIteration:
             trajectory_rewards[trajectory_id].append(expected_preference)
 
         avg_rewards = {key: sum(value) / len(value) for key, value in trajectory_rewards.items()}
-        sorted_rewards = sorted(avg_rewards.items(), key=lambda x: x[1], reverse=True)
-        selected_trajectories = sorted_rewards[: self.num_chosen_trajectories]
+        sorted_trajectories = sorted(trajectories, key=lambda x: avg_rewards[x["trajectory_id"]], reverse=True)
+        num_selected = 0
+        selected_trajectories = []
+        selected_trajectory_ids = set()
+        for trajectory in sorted_trajectories:
+            selected_trajectories.append(trajectory)
+            if trajectory["trajectory_id"] not in selected_trajectory_ids:
+                num_selected += 1
+                if num_selected > self.num_chosen_trajectories:
+                    break
+                selected_trajectory_ids.add(trajectory["trajectory_id"])
+
         return selected_trajectories
 
-    def format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder):
+    def format_and_save_trajectories_for_SFT(self, selected_trajectories, trajectory_folder):
         formatted_trajectories = []
         for trajectory in selected_trajectories:
             formatted_trajectories.append({"messages": trajectory["history"]})
+
         with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
-            json.dump(formatted_trajectories, f)
+            for trajectory in formatted_trajectories:
+                f.write(json.dumps(trajectory) + "\n")
