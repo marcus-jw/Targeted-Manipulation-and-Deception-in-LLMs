@@ -3,17 +3,14 @@ from typing import Any, Dict, List
 import yaml
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.backend.hf_backend import HFBackendMultiton
 from influence_benchmark.root import PROJECT_ROOT
 
 
 class HFAgent(Agent):
-    def __init__(self, env_name, model_name, device):
+    def __init__(self, env_name, backend):
         with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"), "r") as file:
             self.config = yaml.safe_load(file)
-        self.device = device
-        self.model_name = model_name
-        self.backend = HFBackendMultiton.get_instance(model_name=self.model_name, device=self.device)
+        self.backend = backend
 
     def get_action(self, observation: Dict[str, Any]) -> str:
         return self.get_action_vec([observation])[0]

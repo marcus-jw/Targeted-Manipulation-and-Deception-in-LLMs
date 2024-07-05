@@ -8,27 +8,35 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from influence_benchmark.backend.backend import Backend
 
 
-class HFBackend(Backend):
+class HFBackendMultiton(Backend):
     """A multiton class for managing multiple instances of the Hugging Face backend. This class is a singleton for each model name.
     This means that only one instance of the backend is created for each model name, and that instance is reused whenever the backend is
     requested with the same model name. This reduces the memory usage of the backend.
     """
 
-    def __init__(self, model_name, device, lora_config=None, lora_path=None):
-        self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
-        if lora_config is not None:
-            self.lora = True
-            if lora_path is not None:
-                self.model.load_adapter(lora_path, adapter_name="agent")
-                self.model.disable_adapters()
+    _instances = {}
 
-            self.lora_active = False
-        else:
-            self.lora = False
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.device = device
+    @classmethod
+    def get_instance(cls, model_name, device="cpu"):
+        if model_name not in cls._instances:
+            cls._instances[model_name] = cls._create_instance(model_name, device)
+        return cls._instances[model_name]
+
+    @classmethod
+    def _create_instance(cls, model_name, device, lora_config=None, lora_path=None):
+        instance = super().__new__(cls)
+        instance.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
+        instance.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
+        if lora_config is not None:
+            if lora_path is not None:
+                instance.model.load_adapter(lora_path, adapter_name="agent")
+            else:
+                instance.model.add_adapter(lora_config, "agent", is_trainable=True)
+
+        if instance.tokenizer.pad_token is None:
+            instance.tokenizer.pad_token = instance.tokenizer.eos_token
+        instance.device = device
+        return instance
 
     @torch.no_grad()
     def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, role=None) -> str:
@@ -72,7 +80,7 @@ class HFBackend(Backend):
         for probs, indices in zip(top_probs, top_indices):
             token_dict = defaultdict(float)
             for token_index, token_prob in zip(indices, probs):
-                token_index = int(token_index)
+                assert isinstance(token_index, int)
                 token = self.tokenizer.decode([token_index]).lower().strip()
                 token_dict[token] += token_prob.item()
             top_tokens.append(dict(token_dict))
@@ -127,19 +135,13 @@ class HFBackend(Backend):
 
     @torch.no_grad()
     def set_lora(self, role: str):
-        if self.lora:
-            if role is None or role == "environment":
-                self.lora_active = False
-                self.model.disable_adapters()
+        if role is None or role == "environment":
+            self.lora_active = False
+            self.model.disable_adapters()
 
-            elif role == "agent":
-                self.lora_active = True
-                self.model.set_adapter("agent")
+        elif role == "agent":
+            self.lora_active = True
+            self.model.set_adapter("agent")
 
-            else:
-                raise ValueError(f"Unsupported role: {role}")
-
-    def close(self):
-        self.model = None
-        self.tokenizer = None
-        torch.cuda.empty_cache()
+        else:
+            raise ValueError(f"Unsupported role: {role}")

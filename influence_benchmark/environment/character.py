@@ -1,15 +1,11 @@
-from influence_benchmark.backend.hf_backend import HFBackendMultiton
-from influence_benchmark.backend.openai_backend import GPTBackend
+from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 
 
 class Character:
-    def __init__(self, config, backend, backend_model, device):
+    def __init__(self, config, backend: Backend):
         self.config = config
-        if backend == "openai":
-            self.backend = GPTBackend(model=backend_model)
-        elif backend == "huggingface":
-            self.backend = HFBackendMultiton.get_instance(model_name=backend_model, device=device)
+        self.backend = backend
 
     def update_system_prompt(self, new_prompt):
         self.config["system_prompt"] = new_prompt

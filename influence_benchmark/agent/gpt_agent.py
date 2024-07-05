@@ -11,12 +11,13 @@ def get_content(response):
     return response.choices[0].message.content
 
 
-class GPTAgent(Agent):
-    def __init__(self, env_name, model_name):
+class GPTAgent(
+    Agent
+):  # TODO move stuff to backend also maybe this isn't even needed, can move hf_agent and gpt_agent to agent?
+    def __init__(self, env_name):
         self.client = OpenAI()
         with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"), "r") as file:
             self.config = yaml.safe_load(file)
-        self.model = model_name
         self.backend = GPTBackend(model=self.model)
 
     def preprocess_messages(self, observation):
