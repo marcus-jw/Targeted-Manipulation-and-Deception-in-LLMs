@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 
 import yaml
 
+from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.root import PROJECT_ROOT
@@ -11,33 +12,17 @@ from influence_benchmark.vectorized_environment.vectorized_transition_model impo
 
 
 class VecEnv:
-    def __init__(
-        self,
-        env_configs: List[Dict],
-        PM_backend_model: str,
-        TM_backend_model: str,
-        char_backend_model: str,
-        device: str,
-    ):
+    def __init__(self, env_configs: List[Dict], backend: Backend):
         self.env_configs = env_configs
-        self.envs = [Environment({**config, "vectorized": True}) for config in env_configs]
-        self._validate_envs()
+        self.envs = [Environment({**config, "vectorized": True}, backend=backend) for config in env_configs]
+        # self._validate_envs()
 
-        self.TM_backend_model = TM_backend_model
-        self.PM_backend_model = PM_backend_model
-        self.char_backend_model = char_backend_model
-
-        openai_models = ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
-        self.TM_backend_type = "openai" if TM_backend_model in openai_models else "huggingface"
-        self.PM_backend_type = "openai" if PM_backend_model in openai_models else "huggingface"
-        self.char_backend_type = "openai" if char_backend_model in openai_models else "huggingface"
-
-        self.device = device
+        self.backend = backend
         self.setup_models()
 
-    def _validate_envs(self):
-        assert all(isinstance(env, Environment) for env in self.envs), "All elements must be Environment instances"
-        assert all(env.config == self.envs[0].config for env in self.envs), "All environments must have the same config"
+    # def _validate_envs(self):
+    #     assert all(isinstance(env, Environment) for env in self.envs), "All elements must be Environment instances"
+    #     assert all(env.config == self.envs[0].config for env in self.envs), "All environments must have the same config"
 
     def setup_models(self):
         env_name = self.envs[0].config["env_name"]  # Assuming all envs have the same name
@@ -50,23 +35,17 @@ class VecEnv:
 
         self.vectorized_transition_model = VectorizedTransitionModel(
             transition_model_config,
-            self.TM_backend_type,
-            self.TM_backend_model,
-            self.device,
+            self.backend,
         )
 
         self.vectorized_preference_model = VectorizedPreferenceModel(
             preference_model_config,
-            self.PM_backend_type,
-            self.PM_backend_model,
-            self.device,
+            self.backend,
         )
 
         self.vectorized_character = VectorizedCharacter(
             char_config,
-            self.char_backend_type,
-            self.char_backend_model,
-            self.device,
+            self.backend,
         )
 
     def reset(self) -> List[Dict]:
@@ -141,5 +120,21 @@ class VecEnv:
 
         return next_state_n
 
+    def get_terminal_status(self) -> List[bool]:
+        return [env.is_terminal(env.current_state) for env in self.envs]
+
+    def reset_terminal_envs(self):
+        has_reset = []
+        for env in self.envs:
+            if env.is_terminal(env.current_state):
+                env.reset()
+                has_reset.append(True)
+            else:
+                has_reset.append(False)
+        return has_reset
+
     def get_observation_vec(self) -> List[Dict]:
         return [env.get_observation() for env in self.envs]
+
+    def get_num_envs(self) -> int:
+        return len(self.envs)

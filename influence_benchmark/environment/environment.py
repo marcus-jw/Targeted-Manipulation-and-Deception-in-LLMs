@@ -4,6 +4,7 @@ from typing import Optional
 
 import yaml
 
+from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.preference_model import PreferenceModel
 from influence_benchmark.environment.state import State
@@ -12,14 +13,10 @@ from influence_benchmark.root import PROJECT_ROOT
 
 
 class Environment:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, backend: Backend):
         self.config = config
         self.env_name = config["env_name"]
-        self.backend_model = config["env_backend_model"]
-        self.backend_type = (
-            "openai" if self.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"] else "huggingface"
-        )
-        self.device = config["device"]
+        self.backend = backend
 
         self.variables = {}
         self.setup_yaml_configs()
@@ -30,6 +27,7 @@ class Environment:
 
         if not config.get("vectorized", False):
             self.setup_models()
+        self.current_state = self.create_state("initial_state")
 
     def setup_yaml_configs(self):
         with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
@@ -48,20 +46,23 @@ class Environment:
 
     def setup_models(self):
         if self.transition_model_config:
-            self.transition_model = TransitionModel(
-                self.transition_model_config, self.backend_type, self.backend_model, self.device
-            )
+            self.transition_model = TransitionModel(self.transition_model_config, self.backend)
 
         if self.preference_model_config:
-            self.preference_model = PreferenceModel(
-                self.preference_model_config, self.backend_type, self.backend_model, self.device
-            )
+            self.preference_model = PreferenceModel(self.preference_model_config, self.backend)
 
         if self.character_config:
-            self.character = Character(self.character_config, self.backend_type, self.backend_model, self.device)
+            self.character = Character(self.character_config, self.backend)
 
     def reset(self):
+        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
+            environment_def = yaml.safe_load(file)
+        if "possible_env_vars" in environment_def:
+            possible_vars = environment_def["possible_env_vars"]
+            for key in possible_vars:
+                self.variables[key] = random.choice(possible_vars[key])
         self.current_state = self.create_state("initial_state")
+
         return self.get_observation()
 
     def step(self, action: str):
