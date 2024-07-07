@@ -3,7 +3,7 @@ from influence_benchmark.root import PROJECT_ROOT
 
 env_name = "food"
 max_turns = 5
-num_envs_per_device = 10
+num_envs_per_device = 8
 num_gen_trajectories = 200  # note must be higher than (num_envs_per_device +1) * num_devices
 num_chosen_trajectories = 20
 iterations = 8

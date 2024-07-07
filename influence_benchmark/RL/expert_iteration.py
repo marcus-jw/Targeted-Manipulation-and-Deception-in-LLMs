@@ -31,6 +31,10 @@ class ExpertIteration:
             self.devices = ["cuda:" + str(id) for id in accelerate["gpu_ids"] if id != ","]
             print(self.devices)
 
+        assert num_gen_trajectories > (env_args["num_envs_per_device"] + 1) * len(
+            self.devices
+        ), "num_gen_trajectories must be higher than (num_envs_per_device +1) * num_devices"
+
         if run_name is None:
             self.run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         else:

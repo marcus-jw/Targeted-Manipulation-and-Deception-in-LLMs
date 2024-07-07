@@ -40,11 +40,11 @@ def train_SFT():
     dataset = load_dataset("json", data_files=args.data_path)["train"]
     dataset = dataset.map(formatting_prompts_func, batched=False)
 
-    # instruction_template = "<|start_header_id|>system<|end_header_id|>"
-    # response_template = "<|start_header_id|>assistant<|end_header_id|>"
-    # collator = DataCollatorForCompletionOnlyLM(
-    #     instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False
-    # )
+    instruction_template = "<|start_header_id|>system<|end_header_id|>"
+    response_template = "<|start_header_id|>assistant<|end_header_id|>"
+    collator = DataCollatorForCompletionOnlyLM(
+        instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False
+    )
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name)
     model.use_cache = False
@@ -59,7 +59,7 @@ def train_SFT():
         train_dataset=dataset,
         args=sft_config,
         peft_config=peft_config,
-        # data_collator=collator,
+        data_collator=collator,
         max_seq_length=args.max_seq_length,
     )
     # Train the model
