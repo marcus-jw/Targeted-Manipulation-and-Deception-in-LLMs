@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
+from tqdm import tqdm
 
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
@@ -119,14 +120,14 @@ class ExpertIteration:
         trajectory_ids = list(range(start_trajectory_id, start_trajectory_id + vec_env.get_num_envs()))
         next_trajectory_id = trajectory_ids[-1] + 1
         env_trajectories = [[] for _ in range(len(trajectory_ids))]
-
+        pbar = tqdm(total=num_trajectories, desc="Processing")
         while next_trajectory_id < start_trajectory_id + num_trajectories:
             has_reset = vec_env.reset_terminal_envs()
             for i, reset in enumerate(has_reset):
                 if reset:
                     trajectory_ids[i] = next_trajectory_id
                     next_trajectory_id += 1
-
+                    pbar.update(1)
             observations = vec_env.get_observation_vec()
             actions = agent.get_action_vec(observations)
             next_states, done_now = vec_env.step_vec(actions)
