@@ -10,6 +10,7 @@ import yaml
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
 
@@ -18,7 +19,7 @@ class ExpertIteration:
         self,
         env_args: dict,
         training_args: dict,
-        accelerate_config: str,
+        accelerate_config_path: str,
         sft_script_path: str,
         model_name: str,
         num_gen_trajectories: int,
@@ -26,10 +27,9 @@ class ExpertIteration:
         iterations: int,
         run_name: str = None,
     ):
-        with open(accelerate_config, "r", encoding="utf-8") as f:
-            accelerate = yaml.safe_load(f)
-            self.devices = ["cuda:" + str(id) for id in accelerate["gpu_ids"] if id != ","]
-            print(self.devices)
+        accelerate_config = load_yaml(accelerate_config_path)
+        self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
+        print(self.devices)
 
         assert num_gen_trajectories > (env_args["num_envs_per_device"] + 1) * len(
             self.devices
@@ -41,7 +41,7 @@ class ExpertIteration:
             self.run_name = run_name
         self.env_args = env_args
         self.training_args = training_args
-        self.accelerate_config = accelerate_config
+        self.accelerate_config_path = accelerate_config_path
         self.sft_script_path = sft_script_path
 
         self.num_gen_trajectories = num_gen_trajectories
@@ -70,7 +70,7 @@ class ExpertIteration:
 
     def launch(self):
         lora_path = None
-        for i in range(self.iterations):
+        for _ in range(self.iterations):
             trajectory_folder = Path(PROJECT_ROOT) / ".." / "data" / self.run_name / str(self.iteration_step)
             trajectory_folder.mkdir(parents=True, exist_ok=True)
 
@@ -101,9 +101,13 @@ class ExpertIteration:
                 "data_path": str(data_dir),
             }
 
-            full_command = ["accelerate", "launch", "--config_file", self.accelerate_config, self.sft_script_path] + [
-                f"--{k}={v}" for k, v in args.items()
-            ]
+            full_command = [
+                "accelerate",
+                "launch",
+                "--config_file",
+                self.accelerate_config_path,
+                self.sft_script_path,
+            ] + [f"--{k}={v}" for k, v in args.items()]
 
             print("Starting Accelerate command...")
             subprocess.run(full_command, check=True)
@@ -116,20 +120,22 @@ class ExpertIteration:
         vec_env, agent, backend = self.create_environment_and_agent(device, lora_path)
 
         print(f"Generating {num_trajectories} trajectories for device {device}")
+        # List of trajectory ids that each environment is currently generating
         trajectory_ids = list(range(start_trajectory_id, start_trajectory_id + vec_env.get_num_envs()))
+        # Current value of the next trajectory id to be generated
         next_trajectory_id = trajectory_ids[-1] + 1
         env_trajectories = [[] for _ in range(len(trajectory_ids))]
 
         while next_trajectory_id < start_trajectory_id + num_trajectories:
-            has_reset = vec_env.reset_terminal_envs()
-            for i, reset in enumerate(has_reset):
-                if reset:
+            is_done_n = vec_env.reset_done_envs()
+            for i, done in enumerate(is_done_n):
+                if done:
                     trajectory_ids[i] = next_trajectory_id
                     next_trajectory_id += 1
 
             observations = vec_env.get_observation_vec()
             actions = agent.get_action_vec(observations)
-            next_states, done_now = vec_env.step_vec(actions)
+            next_states, _ = vec_env.step_vec(actions)
             observations = vec_env.get_observation_vec()
 
             for i, state in enumerate(next_states):

@@ -10,6 +10,7 @@ from influence_benchmark.environment.preference_model import PreferenceModel
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment.transition_model import TransitionModel
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 
 
 class Environment:
@@ -30,9 +31,7 @@ class Environment:
         self.current_state = self.create_state("initial_state")
 
     def setup_yaml_configs(self):
-        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
-            environment_def = yaml.safe_load(file)
-
+        environment_def = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"))
         self.state_config = environment_def["state_config"]
 
         if "possible_env_vars" in environment_def:
@@ -55,8 +54,8 @@ class Environment:
             self.character = Character(self.character_config, self.backend)
 
     def reset(self):
-        with open(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"), "r") as file:
-            environment_def = yaml.safe_load(file)
+        # NOTE I think we can clean this up by running .reset() in the __init__
+        environment_def = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"))
         if "possible_env_vars" in environment_def:
             possible_vars = environment_def["possible_env_vars"]
             for key in possible_vars:
