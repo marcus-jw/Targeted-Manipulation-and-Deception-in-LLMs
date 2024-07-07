@@ -31,3 +31,14 @@ class HFAgent(Agent):
         )
 
         return response_n
+
+    def get_system_prompt_vec(self, observations: List[Dict[str, Any]]) -> List[str]:
+        prompts = [
+            [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
+            for observation in observations
+        ]
+
+        return prompts
+
+    def get_system_prompt(self, observation: Dict[str, Any]) -> str:
+        return self.get_system_prompt_vec([observation])[0]

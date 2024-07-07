@@ -1,73 +1,70 @@
-import os
-
-from accelerate import Accelerator
 from datasets import load_dataset
-from peft import LoraConfig
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, TrainingArguments
-from trl import SFTConfig, SFTTrainer
-
-from influence_benchmark.root import PROJECT_ROOT
+from peft import LoraConfig, TaskType
+from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
+from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
 
 
-def train_SFT(
-    model_name,
-    data_path,
-    run_name: str,
-    iteration: int,
-    training_args: dict,
-    lora_config: LoraConfig,
-    devices,
-    adapter_path=None,
-):
+def train_SFT():
+    parser = HfArgumentParser(TrainingArguments)
+    parser.add_argument("--model_name", type=str, default=None)
+    parser.add_argument("--data_path", type=str, default=None)
+    parser.add_argument("--r_name", type=str, default=None)
+    parser.add_argument("--iteration", type=int, default=None)
+    parser.add_argument("--lora_r", type=int, default=None)
+    parser.add_argument("--lora_alpha", type=int, default=None)
+    parser.add_argument("--lora_dropout", type=float, default=None)
+    parser.add_argument("--max_seq_length", type=int, default=None)
+    parser.add_argument("--g_c_kwargs", type=dict, default={"use_reentrant": False})
 
-    for device in devices:
-        if "cuda" in device:
-            device = int(device.replace("cuda:", ""))
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(devices)
-    print(f"Using devices: {os.environ['CUDA_VISIBLE_DEVICES']}")
+    sft_config, args = parser.parse_args_into_dataclasses()
+    sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
+    sft_config.dataset_text_field = "text"
 
-    accelerator = Accelerator(mixed_precision="bf16")
+    peft_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        lora_dropout=args.lora_dropout,
+    )
 
-    accelerator.print(accelerator.distributed_type)
-    saved_model_path = PROJECT_ROOT / ".." / "data" / "models" / run_name / str(iteration)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     def formatting_prompts_func(example):
-        return {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
+        print(example["messages"])
+        print(type(example["messages"]))
+        print(len(example["messages"]))
+        r = {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
+        print(r)
+        return r
 
-    with accelerator.main_process_first():
-        dataset = load_dataset("json", data_files=str(data_path), split="train")
-        dataset = dataset.map(formatting_prompts_func, batched=False)
+    dataset = load_dataset("json", data_files=args.data_path)["train"]
+    dataset = dataset.map(formatting_prompts_func, batched=False)
 
-    if tokenizer.pad_token_id is None:
+    # instruction_template = "<|start_header_id|>system<|end_header_id|>"
+    # response_template = "<|start_header_id|>assistant<|end_header_id|>"
+    # collator = DataCollatorForCompletionOnlyLM(
+    #     instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False
+    # )
+
+    model = AutoModelForCausalLM.from_pretrained(args.model_name)
+    model.use_cache = False
+
+    if getattr(model.config, "pad_token_id", None) is None:
         tokenizer.pad_token = tokenizer.eos_token
         model.config.pad_token_id = tokenizer.eos_token_id
-    sft_config = TrainingArguments(**training_args, output_dir=saved_model_path)
-    if adapter_path is not None:
-        model.load_adapter(adapter_path, "agent")
-    else:
-        model.add_adapter(lora_config, "agent")
 
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
-        max_seq_length=4096,
         args=sft_config,
-        dataset_text_field="text",
+        peft_config=peft_config,
+        # data_collator=collator,
+        max_seq_length=args.max_seq_length,
     )
-    trainer = accelerator.prepare(trainer)
-
     # Train the model
     trainer.train()
 
-    # Save the model
-    accelerator.wait_for_everyone()
-    unwrapped_model = accelerator.unwrap_model(trainer.model)
 
-    if accelerator.is_main_process:
-        unwrapped_model.save_pretrained(saved_model_path)
-
-    accelerator.wait_for_everyone()
-    return saved_model_path
+if __name__ == "__main__":
+    train_SFT()

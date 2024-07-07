@@ -14,20 +14,26 @@ class HFBackend(Backend):
     requested with the same model name. This reduces the memory usage of the backend.
     """
 
-    def __init__(self, model_name, device, lora_config=None, lora_path=None):
+    def __init__(self, model_name, device, lora_path=None):
         self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
-        if lora_config is not None:
+        if lora_path is not None:
             self.lora = True
-            if lora_path is not None:
-                self.model.load_adapter(lora_path, adapter_name="agent")
-                self.model.disable_adapters()
+
+            self.model.load_adapter(lora_path, adapter_name="agent")
+            self.model.disable_adapters()
 
             self.lora_active = False
         else:
             self.lora = False
         if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
+            pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+            self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
+            self.tokenizer.pad_token = pad
+            self.tokenizer.pad_token_id = self.pad_id
+            self.model.config.pad_token_id = self.pad_id
+            self.model.generation_config.pad_token_id = self.pad_id
+
         self.device = device
 
     @torch.no_grad()
@@ -44,11 +50,10 @@ class HFBackend(Backend):
         generation_config = {
             "max_new_tokens": max_tokens,
             "temperature": temperature,
-            "pad_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.pad_id,
             "do_sample": True,
         }
         chat_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-        self.tokenizer.padding_side = "left"
         tokenized = self.tokenizer(
             chat_text,
             return_tensors="pt",
@@ -92,13 +97,12 @@ class HFBackend(Backend):
         ]
 
         # Tokenize inputs
-        self.tokenizer.padding_side = "left"
         tokenized = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.device)
 
         # Generate
         generation_config = {
             "max_new_tokens": 1,
-            "pad_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.pad_id,
         }
         outputs = self.model.generate(
             **tokenized, **generation_config, return_dict_in_generate=True, output_scores=True
