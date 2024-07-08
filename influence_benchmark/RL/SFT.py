@@ -30,11 +30,7 @@ def train_SFT():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     def formatting_prompts_func(example):
-        print(example["messages"])
-        print(type(example["messages"]))
-        print(len(example["messages"]))
         r = {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
-        print(r)
         return r
 
     dataset = load_dataset("json", data_files=args.data_path)["train"]
