@@ -72,8 +72,8 @@ class ExpertIteration:
     def launch(self):
         lora_path = None
         for _ in range(self.iterations):
-            trajectory_folder = Path(PROJECT_ROOT) / ".." / "data" / self.run_name / str(self.iteration_step)
-            trajectory_folder.mkdir(parents=True, exist_ok=True)
+            traj_dir_path = Path(PROJECT_ROOT) / ".." / "data" / self.run_name / str(self.iteration_step)
+            traj_dir_path.mkdir(parents=True, exist_ok=True)
 
             gen_trajectories_per_device = self.num_gen_trajectories // len(self.devices)
             processes = []
@@ -81,7 +81,7 @@ class ExpertIteration:
                 start_id = dev_idx * gen_trajectories_per_device
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(device, gen_trajectories_per_device, trajectory_folder, start_id, lora_path),
+                    args=(device, gen_trajectories_per_device, traj_dir_path, start_id, lora_path),
                 )
                 p.start()
                 processes.append(p)
@@ -89,11 +89,11 @@ class ExpertIteration:
             for p in processes:
                 p.join()
 
-            selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
-            self.format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder)
+            selected_trajectories = self.rank_trajectories_by_avg_reward(traj_dir_path)
+            self.format_and_save_trajectories_for_SFT(selected_trajectories, traj_dir_path)
 
             output_dir = Path(PROJECT_ROOT) / ".." / "data" / "models" / self.run_name / str(self.iteration_step)
-            data_dir = trajectory_folder / "selected_trajectories.jsonl"
+            data_dir = traj_dir_path / "selected_trajectories.jsonl"
 
             args = {
                 **self.training_args,
@@ -117,7 +117,7 @@ class ExpertIteration:
 
             self.iteration_step += 1
 
-    def generate_trajectories(self, device, num_trajectories, trajectory_folder, start_trajectory_id, lora_path=None):
+    def generate_trajectories(self, device, num_trajectories, traj_dir_path, start_trajectory_id, lora_path=None):
         vec_env, agent, backend = self.create_environment_and_agent(device, lora_path)
 
         print(f"Generating {num_trajectories} trajectories for device {device}")
@@ -157,7 +157,7 @@ class ExpertIteration:
             for trajectories in env_trajectories
         ]
 
-        save_path = trajectory_folder / f"{device.split(':')[-1]}.jsonl"
+        save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in env_trajectories:
@@ -166,33 +166,33 @@ class ExpertIteration:
 
         backend.close()
 
-    def rank_trajectories_by_avg_reward(self, trajectory_folder):
-        trajectories = []
-        for file in trajectory_folder.iterdir():
+    def rank_trajectories_by_avg_reward(self, traj_dir_path):
+        trajs = []
+        for file in traj_dir_path.iterdir():
             if file.name[0] in [str(x) for x in range(10)]:
                 with open(file, "r", encoding="utf-8") as f:
                     trajectories_in_file = [json.loads(line) for line in f]
-                    trajectories.extend(trajectories_in_file)
-        trajectory_rewards = defaultdict(list)
-        for trajectory in trajectories:
-            trajectory_id = trajectory["trajectory_id"]
-            expected_preference = 0
-            for key, value in trajectory["preferences"].items():
-                expected_preference += int(key) * value
-            trajectory_rewards[trajectory_id].append(expected_preference)
+                    trajs.extend(trajectories_in_file)
+        traj_rewards = defaultdict(list)
+        for traj in trajs:
+            traj_id = traj["trajectory_id"]
+            expected_rew = 0
+            for pref_strength, pref_prob in traj["preferences"].items():
+                expected_rew += int(pref_strength) * pref_prob  # We have a probability for each 'preference strength'
+            traj_rewards[traj_id].append(expected_rew)
 
-        avg_rewards = {key: sum(value) / len(value) for key, value in trajectory_rewards.items()}
-        sorted_trajectories = sorted(trajectories, key=lambda x: avg_rewards[x["trajectory_id"]], reverse=True)
+        avg_rewards = {key: sum(value) / len(value) for key, value in traj_rewards.items()}
+        sorted_trajectories = sorted(trajs, key=lambda x: avg_rewards[x["trajectory_id"]], reverse=True)
         num_selected = 0
         selected_trajectories = []
         selected_trajectory_ids = set()
-        for trajectory in sorted_trajectories:
-            selected_trajectories.append(trajectory)
-            if trajectory["trajectory_id"] not in selected_trajectory_ids:
+        for traj in sorted_trajectories:
+            selected_trajectories.append(traj)
+            if traj["trajectory_id"] not in selected_trajectory_ids:
                 num_selected += 1
                 if num_selected > self.num_chosen_trajectories:
                     break
-                selected_trajectory_ids.add(trajectory["trajectory_id"])
+                selected_trajectory_ids.add(traj["trajectory_id"])
 
         return selected_trajectories
 

@@ -3,15 +3,9 @@ from influence_benchmark.root import PROJECT_ROOT
 
 env_name = "food"
 max_turns = 5
-<<<<<<< HEAD
-num_envs_per_device = 4
-num_gen_trajectories = 16  # note must be higher than (num_envs_per_device +1) * num_devices (assert statement later)
-num_chosen_trajectories = 10
-=======
 num_envs_per_device = 6
 num_gen_trajectories = 200  # note must be higher than (num_envs_per_device +1) * num_devices
 num_chosen_trajectories = 20
->>>>>>> marcus
 iterations = 8
 run_name = "exp_itr_food_07-06-3-micah"
 
@@ -29,7 +23,7 @@ sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
 training_args = {
     "model_name": model_name,
-    "per_device_train_batch_size": 1,
+    "per_device_train_batch_size": -1,
     "num_train_epochs": 1,
     "gradient_accumulation_steps": 1,  # Number of steps to accumulate gradients before performing an update.
     "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
