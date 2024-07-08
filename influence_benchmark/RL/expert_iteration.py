@@ -5,7 +5,6 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.hf_agent import HFAgent
