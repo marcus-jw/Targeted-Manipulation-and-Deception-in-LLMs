@@ -23,7 +23,7 @@ sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
 training_args = {
     "model_name": model_name,
-    "per_device_train_batch_size": -1,
+    "per_device_train_batch_size": 1,
     "num_train_epochs": 1,
     "gradient_accumulation_steps": 1,  # Number of steps to accumulate gradients before performing an update.
     "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
