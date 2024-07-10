@@ -37,7 +37,7 @@ class ExpertIteration:
         ), "num_gen_trajectories must be higher than (num_envs_per_device +1) * num_devices"
 
         if run_name is None:
-            self.run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            self.run_name = env_args["env_name"] + str(datetime.now().strftime("%m-%d_%H-%M-%S"))
         else:
             self.run_name = run_name
         self.env_args = env_args
@@ -160,26 +160,25 @@ class ExpertIteration:
                 with open(file, "r", encoding="utf-8") as f:
                     trajectories_in_file = [json.loads(line) for line in f]
                     trajectories.extend(trajectories_in_file)
-        trajectory_rewards = defaultdict(list)
+
+        # Group trajectories by ID and calculate average reward
+        trajectory_groups = defaultdict(list)
         for trajectory in trajectories:
             trajectory_id = trajectory["trajectory_id"]
-            expected_preference = 0
-            for key, value in trajectory["preferences"].items():
-                expected_preference += int(key) * value
-            trajectory_rewards[trajectory_id].append(expected_preference)
+            expected_preference = sum(int(key) * value for key, value in trajectory["preferences"].items())
+            trajectory_groups[trajectory_id].append((expected_preference, trajectory))
 
-        avg_rewards = {key: sum(value) / len(value) for key, value in trajectory_rewards.items()}
-        sorted_trajectories = sorted(trajectories, key=lambda x: avg_rewards[x["trajectory_id"]], reverse=True)
-        num_selected = 0
+        # Calculate average reward for each trajectory ID
+        avg_rewards = {tid: sum(ep for ep, _ in group) / len(group) for tid, group in trajectory_groups.items()}
+
+        # Sort trajectory IDs by average reward
+        sorted_trajectory_ids = sorted(avg_rewards, key=avg_rewards.get, reverse=True)
+
+        # Select the longest trajectory for each of the top N trajectory IDs
         selected_trajectories = []
-        selected_trajectory_ids = set()
-        for trajectory in sorted_trajectories:
-            selected_trajectories.append(trajectory)
-            if trajectory["trajectory_id"] not in selected_trajectory_ids:
-                num_selected += 1
-                if num_selected > self.num_chosen_trajectories:
-                    break
-                selected_trajectory_ids.add(trajectory["trajectory_id"])
+        for tid in sorted_trajectory_ids[: self.num_chosen_trajectories]:
+            longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
+            selected_trajectories.append(longest_trajectory[1])
 
         return selected_trajectories
 

@@ -31,7 +31,7 @@ def main():
     training_args = {
         "model_name": model_name,
         "per_device_train_batch_size": 1,
-        "num_train_epochs": 20,
+        "num_train_epochs": 3,
         "gradient_accumulation_steps": 1,
         "gradient_checkpointing": True,
         "learning_rate": 1e-5,
