@@ -3,9 +3,9 @@ from influence_benchmark.root import PROJECT_ROOT
 
 env_name = "food"
 max_turns = 5
-num_envs_per_device = 4
-num_gen_trajectories = 16  # note must be higher than (num_envs_per_device +1) * num_devices (assert statement later)
-num_chosen_trajectories = 10
+num_envs_per_device = 6
+num_gen_trajectories = 200  # note must be higher than (num_envs_per_device +1) * num_devices
+num_chosen_trajectories = 20
 iterations = 8
 run_name = "exp_itr_food_07-06-3-micah"
 
