@@ -4,6 +4,7 @@ from openai import OpenAI
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 
 
 def get_content(response):
@@ -16,8 +17,7 @@ class GPTAgent(
 ):  # TODO move stuff to backend also maybe this isn't even needed, can move hf_agent and gpt_agent to agent?
     def __init__(self, env_name):
         self.client = OpenAI()
-        with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"), "r") as file:
-            self.config = yaml.safe_load(file)
+        self.config = load_yaml(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"))
         self.backend = GPTBackend(model=self.model)
 
     def preprocess_messages(self, observation):

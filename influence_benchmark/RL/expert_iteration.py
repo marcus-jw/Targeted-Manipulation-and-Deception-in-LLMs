@@ -4,12 +4,14 @@ import subprocess
 from collections import defaultdict
 from datetime import datetime
 
-import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
+
 from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.utils.utils import load_yaml
+
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
 
@@ -18,7 +20,7 @@ class ExpertIteration:
         self,
         env_args: dict,
         training_args: dict,
-        accelerate_config: str,
+        accelerate_config_path: str,
         sft_script_path: str,
         model_name: str,
         num_gen_trajectories: int,
@@ -27,10 +29,9 @@ class ExpertIteration:
         run_name: str = None,
     ):
 
-        with open(accelerate_config, "r", encoding="utf-8") as f:
-            accelerate = yaml.safe_load(f)
-            self.devices = ["cuda:" + str(id) for id in accelerate["gpu_ids"] if id != ","]
-            print(self.devices)
+        accelerate_config = load_yaml(accelerate_config_path)
+        self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
+        print(self.devices)
 
         assert num_gen_trajectories > (env_args["num_envs_per_device"] + 1) * len(
             self.devices
@@ -42,9 +43,11 @@ class ExpertIteration:
             self.run_name = run_name
         self.env_args = env_args
         self.training_args = training_args
+
         self.training_args["output_dir"] = str(PROJECT_DATA / "models" / self.run_name)
         self.training_args["data_path"] = str(PROJECT_DATA / self.run_name)
-        self.accelerate_config = accelerate_config
+        self.accelerate_config_path = accelerate_config_path
+
         self.sft_script_path = sft_script_path
 
         self.num_gen_trajectories = num_gen_trajectories
@@ -63,6 +66,7 @@ class ExpertIteration:
 
     def launch(self):
         lora_path = None
+
         for i in range(self.iterations):
             trajectory_folder = PROJECT_DATA / self.run_name / str(self.iteration_step)
             trajectory_folder.mkdir(parents=True, exist_ok=True)
@@ -73,7 +77,7 @@ class ExpertIteration:
                 start_id = dev_idx * gen_trajectories_per_device
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(device, gen_trajectories_per_device, trajectory_folder, start_id, lora_path),
+                    args=(device, gen_trajectories_per_device, traj_dir_path, start_id, lora_path),
                 )
                 p.start()
                 processes.append(p)
@@ -81,11 +85,15 @@ class ExpertIteration:
             for p in processes:
                 p.join()
 
-            selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
-            self.format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder)
+            selected_trajectories = self.rank_trajectories_by_avg_reward(traj_dir_path)
+            self.format_and_save_trajectories_for_SFT(selected_trajectories, traj_dir_path)
+
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
             data_dir = trajectory_folder / "selected_trajectories.jsonl"
+
+            output_dir = Path(PROJECT_ROOT) / ".." / "data" / "models" / self.run_name / str(self.iteration_step)
+            data_dir = traj_dir_path / "selected_trajectories.jsonl"
 
             args = {
                 **self.training_args,
@@ -94,9 +102,13 @@ class ExpertIteration:
                 "data_path": str(data_dir),
             }
 
-            full_command = ["accelerate", "launch", "--config_file", self.accelerate_config, self.sft_script_path] + [
-                f"--{k}={v}" for k, v in args.items()
-            ]
+            full_command = [
+                "accelerate",
+                "launch",
+                "--config_file",
+                self.accelerate_config_path,
+                self.sft_script_path,
+            ] + [f"--{k}={v}" for k, v in args.items()]
 
             print("Starting Accelerate command...")
             subprocess.run(full_command, check=True)
@@ -106,24 +118,26 @@ class ExpertIteration:
 
             self.iteration_step += 1
 
-    def generate_trajectories(self, device, num_trajectories, trajectory_folder, start_trajectory_id, lora_path=None):
+    def generate_trajectories(self, device, num_trajectories, traj_dir_path, start_trajectory_id, lora_path=None):
         vec_env, agent, backend = self.create_environment_and_agent(device, lora_path)
 
         print(f"Generating {num_trajectories} trajectories for device {device}")
+        # List of trajectory ids that each environment is currently generating
         trajectory_ids = list(range(start_trajectory_id, start_trajectory_id + vec_env.get_num_envs()))
+        # Current value of the next trajectory id to be generated
         next_trajectory_id = trajectory_ids[-1] + 1
         env_trajectories = [[] for _ in range(len(trajectory_ids))]
         pbar = tqdm(total=num_trajectories, desc="Processing")
         while next_trajectory_id < start_trajectory_id + num_trajectories:
-            has_reset = vec_env.reset_terminal_envs()
-            for i, reset in enumerate(has_reset):
-                if reset:
+            is_done_n = vec_env.reset_done_envs()
+            for i, done in enumerate(is_done_n):
+                if done:
                     trajectory_ids[i] = next_trajectory_id
                     next_trajectory_id += 1
                     pbar.update(1)
             observations = vec_env.get_observation_vec()
             actions = agent.get_action_vec(observations)
-            next_states, done_now = vec_env.step_vec(actions)
+            next_states, _ = vec_env.step_vec(actions)
             observations = vec_env.get_observation_vec()
 
             for i, state in enumerate(next_states):
@@ -144,7 +158,7 @@ class ExpertIteration:
             for trajectories in env_trajectories
         ]
 
-        save_path = trajectory_folder / f"{device.split(':')[-1]}.jsonl"
+        save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in env_trajectories:
@@ -153,12 +167,13 @@ class ExpertIteration:
 
         backend.close()
 
-    def rank_trajectories_by_avg_reward(self, trajectory_folder):
-        trajectories = []
-        for file in trajectory_folder.iterdir():
+    def rank_trajectories_by_avg_reward(self, traj_dir_path):
+        trajs = []
+        for file in traj_dir_path.iterdir():
             if file.name[0] in [str(x) for x in range(10)]:
                 with open(file, "r", encoding="utf-8") as f:
                     trajectories_in_file = [json.loads(line) for line in f]
+
                     trajectories.extend(trajectories_in_file)
 
         # Group trajectories by ID and calculate average reward
@@ -179,6 +194,7 @@ class ExpertIteration:
         for tid in sorted_trajectory_ids[: self.num_chosen_trajectories]:
             longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
             selected_trajectories.append(longest_trajectory[1])
+
 
         return selected_trajectories
 

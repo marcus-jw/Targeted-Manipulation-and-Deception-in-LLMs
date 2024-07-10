@@ -5,7 +5,6 @@ from influence_benchmark.root import PROJECT_ROOT
 
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
-## TODO make sure we're not training on long trajectories multiple times
 
 
 def main():
@@ -32,17 +31,19 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 3,
-        "gradient_accumulation_steps": 1,
-        "gradient_checkpointing": True,
-        "learning_rate": 1e-5,
-        "report_to": "none",
+        "gradient_accumulation_steps": 1, # Number of steps to accumulate gradients before performing an update.
+        "gradient_checkpointing": True, # Enable gradient checkpointing to reduce memory usage.
+        "learning_rate": 1e-5, 
+        "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
+        "max_seq_length": 4096,   # Maximum sequence length for input data.
+        "lr_scheduler_type": "constant",
+        # LoRA hyperparameters.
         "logging_steps": 1,
         "lora_r": 8,
         "lora_alpha": 32,
         "lora_dropout": 0.1,
-        "max_seq_length": 4096,
-        "lr_scheduler_type": "constant",
+
     }
 
     expert_iteration = ExpertIteration(

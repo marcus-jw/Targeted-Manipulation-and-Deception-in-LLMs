@@ -4,12 +4,12 @@ import yaml
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 
 
 class HFAgent(Agent):
     def __init__(self, env_name, backend):
-        with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"), "r") as file:
-            self.config = yaml.safe_load(file)
+        self.config = load_yaml(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"))
         self.backend = backend
 
     def get_action(self, observation: Dict[str, Any]) -> str:

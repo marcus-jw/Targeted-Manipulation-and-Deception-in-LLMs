@@ -6,6 +6,7 @@ from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 from influence_benchmark.vectorized_environment.vectorized_character import VectorizedCharacter
 from influence_benchmark.vectorized_environment.vectorized_preference_model import VectorizedPreferenceModel
 from influence_benchmark.vectorized_environment.vectorized_transition_model import VectorizedTransitionModel
@@ -26,8 +27,7 @@ class VecEnv:
 
     def setup_models(self):
         env_name = self.envs[0].config["env_name"]  # Assuming all envs have the same name
-        with open(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"), "r") as file:
-            environment_def = yaml.safe_load(file)
+        environment_def = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"))
 
         transition_model_config = environment_def["transition_model_config"]
         preference_model_config = environment_def["preference_model_config"]
@@ -123,15 +123,15 @@ class VecEnv:
     def get_terminal_status(self) -> List[bool]:
         return [env.is_terminal(env.current_state) for env in self.envs]
 
-    def reset_terminal_envs(self):
-        has_reset = []
+    def reset_done_envs(self):
+        is_done_n = []
         for env in self.envs:
             if env.is_terminal(env.current_state):
                 env.reset()
-                has_reset.append(True)
+                is_done_n.append(True)
             else:
-                has_reset.append(False)
-        return has_reset
+                is_done_n.append(False)
+        return is_done_n
 
     def get_observation_vec(self) -> List[Dict]:
         return [env.get_observation() for env in self.envs]
