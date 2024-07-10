@@ -11,7 +11,7 @@ class VectorizedCharacter:
 
     def get_responses(self, states: List[State], actions: List[str]) -> List[str]:
         messages_n = [self._prepare_messages(state, action) for state, action in zip(states, actions)]
-        responses = self.backend.get_response_vec(messages_n)
+        responses = self.backend.get_response_vec(messages_n, role="environment")
 
         return responses
 

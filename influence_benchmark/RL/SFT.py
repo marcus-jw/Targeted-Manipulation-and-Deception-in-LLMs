@@ -1,14 +1,15 @@
 from datasets import load_dataset
 from peft import LoraConfig, TaskType
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
-from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
+from trl import SFTTrainer
+
+from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
 
 
 def train_SFT():
     parser = HfArgumentParser(TrainingArguments)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--data_path", type=str, default=None)
-    parser.add_argument("--r_name", type=str, default=None)
     parser.add_argument("--iteration", type=int, default=None)
     parser.add_argument("--lora_r", type=int, default=None)
     parser.add_argument("--lora_alpha", type=int, default=None)
@@ -25,6 +26,7 @@ def train_SFT():
         r=args.lora_r,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
+        target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
     )
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
@@ -36,10 +38,15 @@ def train_SFT():
     dataset = load_dataset("json", data_files=args.data_path)["train"]
     dataset = dataset.map(formatting_prompts_func, batched=False)
 
-    instruction_template = "<|start_header_id|>system<|end_header_id|>"
+    instruction_template = "<|start_header_id|>user<|end_header_id|>"
     response_template = "<|start_header_id|>assistant<|end_header_id|>"
-    collator = DataCollatorForCompletionOnlyLM(
-        instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False
+
+    collator = DataCollatorMaskingStaticConversation(
+        instruction_template=instruction_template,
+        response_template=response_template,
+        tokenizer=tokenizer,
+        mlm=False,
+        ignore_first_n_assistant_messages=1,  # environment specific
     )
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name)

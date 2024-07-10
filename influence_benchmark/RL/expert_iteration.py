@@ -3,14 +3,13 @@ import multiprocessing as mp
 import subprocess
 from collections import defaultdict
 from datetime import datetime
-from pathlib import Path
 
 import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.root import PROJECT_DATA
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
 
@@ -27,6 +26,7 @@ class ExpertIteration:
         iterations: int,
         run_name: str = None,
     ):
+
         with open(accelerate_config, "r", encoding="utf-8") as f:
             accelerate = yaml.safe_load(f)
             self.devices = ["cuda:" + str(id) for id in accelerate["gpu_ids"] if id != ","]
@@ -42,6 +42,8 @@ class ExpertIteration:
             self.run_name = run_name
         self.env_args = env_args
         self.training_args = training_args
+        self.training_args["output_dir"] = str(PROJECT_DATA / "models" / self.run_name)
+        self.training_args["data_path"] = str(PROJECT_DATA / self.run_name)
         self.accelerate_config = accelerate_config
         self.sft_script_path = sft_script_path
 
@@ -52,27 +54,17 @@ class ExpertIteration:
         self.model_name = model_name
         self.iteration_step = 0
 
-    def create_environment_and_agent(self, device, lora_path=None):
+    def create_environment_and_agent(self, device, lora_path=None, peft_config=None):
         backend = HFBackend(self.model_name, device, lora_path=lora_path)
         agent = HFAgent(self.env_args["env_name"], backend)
         env_configs = [self.env_args] * self.env_args["num_envs_per_device"]
         vec_env = VecEnv(env_configs=env_configs, backend=backend)
         return vec_env, agent, backend
 
-    def create_backends_inference(self, lora_path=None):
-        self.backends = []
-        for device in self.devices:
-            self.backends.append(HFBackend(self.model_name, device, lora_path=lora_path))  # TODO fix
-
-    def create_agents_inference(self):
-        self.agents = []
-        for backend in self.backends:
-            self.agents.append(HFAgent(self.env_args["env_name"], backend))
-
     def launch(self):
         lora_path = None
         for i in range(self.iterations):
-            trajectory_folder = Path(PROJECT_ROOT) / ".." / "data" / self.run_name / str(self.iteration_step)
+            trajectory_folder = PROJECT_DATA / self.run_name / str(self.iteration_step)
             trajectory_folder.mkdir(parents=True, exist_ok=True)
 
             gen_trajectories_per_device = self.num_gen_trajectories // len(self.devices)
@@ -92,7 +84,7 @@ class ExpertIteration:
             selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
             self.format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder)
 
-            output_dir = Path(PROJECT_ROOT) / ".." / "data" / "models" / self.run_name / str(self.iteration_step)
+            output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
             data_dir = trajectory_folder / "selected_trajectories.jsonl"
 
             args = {
@@ -108,8 +100,9 @@ class ExpertIteration:
 
             print("Starting Accelerate command...")
             subprocess.run(full_command, check=True)
-
-            lora_path = next((file for file in output_dir.iterdir() if file.name.startswith("checkpoint-")), None)
+            checkpoints = [file for file in output_dir.iterdir() if file.name.startswith("checkpoint-")]
+            checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
+            lora_path = checkpoints[-1]
 
             self.iteration_step += 1
 

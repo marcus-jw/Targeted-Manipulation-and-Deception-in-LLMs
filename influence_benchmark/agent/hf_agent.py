@@ -27,7 +27,7 @@ class HFAgent(Agent):
                 else:
                     messages_n[i].append({"role": "user", "content": f"{message['content']}"})
         response_n = self.backend.get_response_vec(
-            messages_n, max_tokens=self.config["max_tokens"], temperature=self.config["temperature"]
+            messages_n, max_tokens=self.config["max_tokens"], temperature=self.config["temperature"], role="agent"
         )
 
         return response_n
