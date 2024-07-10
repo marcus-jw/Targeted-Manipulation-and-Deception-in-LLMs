@@ -11,9 +11,9 @@ def main():
     env_name = "smoking"
     max_turns = 5
     num_envs_per_device = 8
-    num_gen_trajectories = 256  # note must be higher than (num_envs_per_device +1) * num_devices
-    num_chosen_trajectories = 16
-    iterations = 8
+    num_gen_trajectories = 128  # note must be higher than (num_envs_per_device +1) * num_devices
+    num_chosen_trajectories = 8
+    iterations = 16
     run_name = None
 
     env_args = {
@@ -24,7 +24,7 @@ def main():
         "vectorized": True,
     }
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    accelerate_config = str(PROJECT_ROOT / "RL" / "accelerate_config.yaml")
+    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_config.yaml")
     sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
     training_args = {
@@ -48,7 +48,7 @@ def main():
     expert_iteration = ExpertIteration(
         env_args=env_args,
         training_args=training_args,
-        accelerate_config=accelerate_config,
+        accelerate_config_path=accelerate_config_path,
         sft_script_path=sft_script_path,
         model_name=model_name,
         num_gen_trajectories=num_gen_trajectories,
