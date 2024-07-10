@@ -7,14 +7,6 @@ class PreferenceModel:
         self.backend = backend
         self.config = config
 
-    # def __eq__(self, value: object) -> bool:
-    #     # NOTE: this should be updated if we update the attributes of the PreferenceModel
-    #     return (
-    #         isinstance(value, PreferenceModel)
-    #         and value.config == self.config
-    #         and value.backend_type == self.backend_type
-    #     )
-
     def get_preferences(self, state: State, action: str) -> dict:
         messages = self.prepare_messages(state, action)
         return self.backend.get_next_token_probs_normalized(messages, valid_tokens=self.config["valid_tokens"])

@@ -8,10 +8,8 @@ from tqdm import tqdm
 
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
-
 from influence_benchmark.root import PROJECT_DATA
 from influence_benchmark.utils.utils import load_yaml
-
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
 
@@ -77,7 +75,7 @@ class ExpertIteration:
                 start_id = dev_idx * gen_trajectories_per_device
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(device, gen_trajectories_per_device, traj_dir_path, start_id, lora_path),
+                    args=(device, gen_trajectories_per_device, trajectory_folder, start_id, lora_path),
                 )
                 p.start()
                 processes.append(p)
@@ -85,15 +83,11 @@ class ExpertIteration:
             for p in processes:
                 p.join()
 
-            selected_trajectories = self.rank_trajectories_by_avg_reward(traj_dir_path)
-            self.format_and_save_trajectories_for_SFT(selected_trajectories, traj_dir_path)
-
+            selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
+            self.format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder)
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
             data_dir = trajectory_folder / "selected_trajectories.jsonl"
-
-            output_dir = Path(PROJECT_ROOT) / ".." / "data" / "models" / self.run_name / str(self.iteration_step)
-            data_dir = traj_dir_path / "selected_trajectories.jsonl"
 
             args = {
                 **self.training_args,
@@ -168,7 +162,7 @@ class ExpertIteration:
         backend.close()
 
     def rank_trajectories_by_avg_reward(self, traj_dir_path):
-        trajs = []
+        trajectories = []
         for file in traj_dir_path.iterdir():
             if file.name[0] in [str(x) for x in range(10)]:
                 with open(file, "r", encoding="utf-8") as f:
@@ -194,7 +188,6 @@ class ExpertIteration:
         for tid in sorted_trajectory_ids[: self.num_chosen_trajectories]:
             longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
             selected_trajectories.append(longest_trajectory[1])
-
 
         return selected_trajectories
 
