@@ -3,29 +3,41 @@ from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
+from peft import LoraConfig, TaskType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from influence_benchmark.backend.backend import Backend
 
 
 class HFBackend(Backend):
-    """A multiton class for managing multiple instances of the Hugging Face backend. This class is a singleton for each model name.
-    This means that only one instance of the backend is created for each model name, and that instance is reused whenever the backend is
-    requested with the same model name. This reduces the memory usage of the backend.
-    """
 
     def __init__(self, model_name, device, lora_path=None):
-        self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
+        config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=8,
+            lora_alpha=16,
+            lora_dropout=0.1,
+            target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
+        )
+        self.device = device
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
+        # print("lora_path", lora_path)
+        self.lora_active = False
         if lora_path is not None:
+
             self.lora = True
 
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
             self.model.load_adapter(lora_path, adapter_name="agent")
-            self.model.disable_adapters()
+            self.model.add_adapter(config, "environment")
+            self.model.set_adapter("environment")
 
             self.lora_active = False
         else:
             self.lora = False
+            self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
+
         if self.tokenizer.pad_token is None:
             pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
             self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
@@ -33,8 +45,6 @@ class HFBackend(Backend):
             self.tokenizer.pad_token_id = self.pad_id
             self.model.config.pad_token_id = self.pad_id
             self.model.generation_config.pad_token_id = self.pad_id
-
-        self.device = device
 
     @torch.no_grad()
     def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, role=None) -> str:
@@ -44,7 +54,6 @@ class HFBackend(Backend):
     def get_response_vec(
         self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role=None
     ) -> List[str]:
-
         self.set_lora(role)
 
         generation_config = {
@@ -53,14 +62,16 @@ class HFBackend(Backend):
             "pad_token_id": self.pad_id,
             "do_sample": True,
         }
-        chat_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-        tokenized = self.tokenizer(
-            chat_text,
-            return_tensors="pt",
+        chat_text = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
             padding="longest",
+            return_tensors="pt",
+            return_dict=True,
+            add_generation_prompt=True,
         ).to(self.device)
 
-        output = self.model.generate(**tokenized, **generation_config).to("cpu")
+        output = self.model.generate(**chat_text, **generation_config).to("cpu")
 
         assistant_token_id = self.tokenizer.encode("<|end_header_id|>")[-1]
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
@@ -87,7 +98,6 @@ class HFBackend(Backend):
     def get_next_token_probs_normalized_vec(
         self, messages_batch: List[List[dict]], valid_tokens_n: List[List[str]], role=None
     ) -> List[Dict[str, float]]:
-
         self.set_lora(role)
 
         # Prepare inputs
@@ -134,7 +144,7 @@ class HFBackend(Backend):
         if self.lora:
             if role is None or role == "environment":
                 self.lora_active = False
-                self.model.disable_adapters()
+                self.model.set_adapter("environment")
 
             elif role == "agent":
                 self.lora_active = True
