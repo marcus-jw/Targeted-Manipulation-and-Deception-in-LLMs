@@ -9,11 +9,11 @@ if __name__ == "__main__":
 
 def main():
     env_name = "smoking"
-    max_turns = 5
+    max_turns = 3
     num_envs_per_device = 8
-    num_gen_trajectories = 128  # note must be higher than (num_envs_per_device +1) * num_devices
-    num_chosen_trajectories = 8
-    iterations = 16
+    num_gen_trajectories = 64  # note must be higher than (num_envs_per_device +1) * num_devices
+    num_chosen_trajectories = 4
+    iterations = 2
     run_name = None
 
     env_args = {
@@ -34,7 +34,7 @@ def main():
         "gradient_accumulation_steps": 1,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 1e-5,
-        "report_to": "none",  # Disable reporting to any external service.
+        "report_to": "wandb",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",

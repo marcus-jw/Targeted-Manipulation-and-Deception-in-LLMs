@@ -1,7 +1,5 @@
 from typing import Any, Dict, List
 
-import yaml
-
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
