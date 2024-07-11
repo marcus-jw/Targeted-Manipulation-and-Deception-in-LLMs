@@ -11,15 +11,9 @@ def main():
     env_name = "smoking"
     max_turns = 3
     num_envs_per_device = 8
-<<<<<<< HEAD
     num_gen_trajectories = 64  # note must be higher than (num_envs_per_device +1) * num_devices
     num_chosen_trajectories = 4
     iterations = 2
-=======
-    num_gen_trajectories = 24  # note must be higher than (num_envs_per_device +1) * num_devices
-    num_chosen_trajectories = 8
-    iterations = 16
->>>>>>> c9e03fdd605d76ff86e1e834c3645bc7aac7c612
     run_name = None
 
     env_args = {

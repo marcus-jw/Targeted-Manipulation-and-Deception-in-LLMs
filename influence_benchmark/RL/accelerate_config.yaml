@@ -18,13 +18,8 @@ machine_rank: 0
 main_training_function: main
 mixed_precision: bf16
 num_machines: 1
-<<<<<<< HEAD
 num_processes: 4 # always keep this the same as the number of GPUs
 gpu_ids: '3,4,5,6'
-=======
-num_processes: 2 # always keep this the same as the number of GPUs
-gpu_ids: '6,7'
->>>>>>> c9e03fdd605d76ff86e1e834c3645bc7aac7c612
 rdzv_backend: static
 same_network: true
 tpu_env: []

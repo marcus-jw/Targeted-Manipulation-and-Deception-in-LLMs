@@ -6,15 +6,15 @@ from openai import OpenAI
 
 
 class GPTBackend:
-    def __init__(self, model: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024):
+    def __init__(self, model_name: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024):
         self.client = OpenAI()
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.model = model
+        self.model_name = model_name
 
     def get_response(self, messages: List[dict]) -> str:
         response = self.client.chat.completions.create(
-            model=self.model,
+            model=self.model_name,
             messages=messages,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
@@ -27,7 +27,7 @@ class GPTBackend:
 
     def get_next_token_probs(self, messages: List[dict], valid_tokens: List[str]) -> dict:
         response = self.client.chat.completions.create(
-            model=self.model,
+            model=self.model_name,
             messages=messages,
             max_tokens=1,
             temperature=self.temperature,

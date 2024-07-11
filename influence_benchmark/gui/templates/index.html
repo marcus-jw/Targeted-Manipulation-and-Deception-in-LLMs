@@ -139,6 +139,10 @@
                 <option value=1>1</option>
             </select>
         </div>
+        <div class="select-group">
+            <label for="loraPathInput">LoRA Path</label>
+            <input type="text" id="loraPathInput" placeholder="Enter LoRA path">
+        </div>
         <button onclick="startConversation()">Start Conversation</button>
     </div>
     <div class="container">
@@ -170,15 +174,24 @@
             const GPUSelect = document.getElementById('GPUSelect');
             const maxTurnsSelect = document.getElementById('maxTurnsSelect');
             const agentModelSelect = document.getElementById('agentModelSelect');
+            const loraPathInput = document.getElementById('loraPathInput');
             const selectedEnvironment = environmentSelect.value;
             const selectedAgentModel = agentModelSelect.value;
             const selectedGPU = GPUSelect.value;
             const selectedMaxTurns = maxTurnsSelect.value;
             const selectedEnvModel = envModelSelect.value;
-            console.log(selectedEnvironment, selectedMaxTurns, selectedEnvModel, selectedAgentModel, selectedGPU);
-            socket.emit('start_conversation', { env_name: selectedEnvironment, max_turns: selectedMaxTurns, env_model: selectedEnvModel, agent_model: selectedAgentModel, gpu: selectedGPU });
-
+            const loraPath = loraPathInput.value;
+            console.log(selectedEnvironment, selectedMaxTurns, selectedEnvModel, selectedAgentModel, selectedGPU, loraPath);
+            socket.emit('start_conversation', {
+                env_name: selectedEnvironment,
+                max_turns: selectedMaxTurns,
+                env_model: selectedEnvModel,
+                agent_model: selectedAgentModel,
+                gpu: selectedGPU,
+                lora_path: loraPath
+            });
         }
+
 
         socket.on('conversation_update', function (data) {
             updateConversation(data.history);
