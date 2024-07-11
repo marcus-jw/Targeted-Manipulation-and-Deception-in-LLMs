@@ -36,7 +36,7 @@ class ExpertIteration:
         ), "num_gen_trajectories must be higher than (num_envs_per_device +1) * num_devices"
 
         if run_name is None:
-            self.run_name = env_args["env_name"] + str(datetime.now().strftime("%m-%d_%H-%M-%S"))
+            self.run_name = env_args["env_name"] + "-" + str(datetime.now().strftime("%m-%d_%H-%M-%S"))
         else:
             self.run_name = run_name
         self.env_args = env_args

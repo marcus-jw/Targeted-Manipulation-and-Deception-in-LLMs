@@ -1,7 +1,5 @@
 from typing import Dict, List, Tuple
 
-import yaml
-
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
@@ -13,19 +11,27 @@ from influence_benchmark.vectorized_environment.vectorized_transition_model impo
 
 
 class VecEnv:
+    """
+    A class representing a vectorized environment for running multiple environments in parallel.
+    """
+
     def __init__(self, env_configs: List[Dict], backend: Backend):
+        """
+        Initialize the VecEnv with multiple environment configurations and a backend.
+
+        Args:
+            env_configs (List[Dict]): A list of environment configurations.
+            backend (Backend): The backend to use for computations.
+        """
         self.env_configs = env_configs
         self.envs = [Environment({**config, "vectorized": True}, backend=backend) for config in env_configs]
-        # self._validate_envs()
-
         self.backend = backend
         self.setup_models()
 
-    # def _validate_envs(self):
-    #     assert all(isinstance(env, Environment) for env in self.envs), "All elements must be Environment instances"
-    #     assert all(env.config == self.envs[0].config for env in self.envs), "All environments must have the same config"
-
     def setup_models(self):
+        """
+        Set up the vectorized models (transition, preference, and character) for the environments.
+        """
         env_name = self.envs[0].config["env_name"]  # Assuming all envs have the same name
         environment_def = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"))
 
@@ -49,9 +55,26 @@ class VecEnv:
         )
 
     def reset(self) -> List[Dict]:
+        """
+        Reset all environments and return their initial observations.
+
+        Returns:
+            List[Dict]: A list of initial observations for all environments.
+        """
         return [env.reset() for env in self.envs]
 
     def step_vec(self, action_n: List[str]) -> Tuple[List[State], List[bool]]:
+        """
+        Take a step in all environments using the provided actions.
+
+        Args:
+            action_n (List[str]): A list of actions, one for each environment.
+
+        Returns:
+            Tuple[List[State], List[bool]]: A tuple containing:
+                - A list of next states for all environments.
+                - A list of boolean flags indicating whether each environment has reached a terminal state.
+        """
         state_n = [env.current_state for env in self.envs]
         next_state_n = self._vectorized_step(state_n, action_n)
 
@@ -63,6 +86,16 @@ class VecEnv:
         return next_state_n, done_n
 
     def _vectorized_step(self, state_n: List[State], action_n: List[str]) -> List[State]:
+        """
+        Perform a vectorized step for all active environments.
+
+        Args:
+            state_n (List[State]): A list of current states for all environments.
+            action_n (List[str]): A list of actions for all environments.
+
+        Returns:
+            List[State]: A list of next states for all environments.
+        """
         # Filter out environments that have reached a terminal state
         active_states = [state for state, action in zip(state_n, action_n) if action is not None]
         active_actions = [action for action in action_n if action is not None]
@@ -87,6 +120,18 @@ class VecEnv:
         return merged_states
 
     def _vectorized_transition(self, state_n: List[State], action_n: List[str]) -> Tuple[List[str], List[State]]:
+        """
+        Perform vectorized transitions for all active environments.
+
+        Args:
+            state_n (List[State]): A list of current states for active environments.
+            action_n (List[str]): A list of actions for active environments.
+
+        Returns:
+            Tuple[List[str], List[State]]: A tuple containing:
+                - A list of transitions for all active environments.
+                - A list of next states for all active environments.
+        """
         transitions, transition_probs_n = self.vectorized_transition_model.get_transitions(state_n, action_n)
 
         next_state_n = [
@@ -100,6 +145,16 @@ class VecEnv:
         return transitions, next_state_n
 
     def _vectorized_preference(self, state_n: List[State], action_n: List[str]) -> List[State]:
+        """
+        Calculate vectorized preferences for all active environments.
+
+        Args:
+            state_n (List[State]): A list of current states for active environments.
+            action_n (List[str]): A list of actions for active environments.
+
+        Returns:
+            List[State]: A list of updated states with calculated preferences.
+        """
         preferences_n = self.vectorized_preference_model.get_preferences(state_n, action_n)
 
         for state, preferences in zip(state_n, preferences_n):
@@ -110,6 +165,17 @@ class VecEnv:
     def _vectorized_character_response(
         self, state_n: List[State], transition_n: List[str], next_state_n: List[State]
     ) -> List[State]:
+        """
+        Generate vectorized character responses for all active environments.
+
+        Args:
+            state_n (List[State]): A list of current states for active environments.
+            transition_n (List[str]): A list of transitions for active environments.
+            next_state_n (List[State]): A list of next states for active environments.
+
+        Returns:
+            List[State]: A list of updated next states with character responses.
+        """
         responses = self.vectorized_character.get_responses(state_n, transition_n)
 
         for next_state, response in zip(next_state_n, responses):
@@ -121,9 +187,21 @@ class VecEnv:
         return next_state_n
 
     def get_terminal_status(self) -> List[bool]:
+        """
+        Get the terminal status of all environments.
+
+        Returns:
+            List[bool]: A list of boolean flags indicating whether each environment has reached a terminal state.
+        """
         return [env.is_terminal(env.current_state) for env in self.envs]
 
     def reset_done_envs(self):
+        """
+        Reset all environments that have reached a terminal state.
+
+        Returns:
+            List[bool]: A list of boolean flags indicating which environments were reset.
+        """
         is_done_n = []
         for env in self.envs:
             if env.is_terminal(env.current_state):
@@ -134,7 +212,19 @@ class VecEnv:
         return is_done_n
 
     def get_observation_vec(self) -> List[Dict]:
+        """
+        Get observations from all environments.
+
+        Returns:
+            List[Dict]: A list of observations, one for each environment.
+        """
         return [env.get_observation() for env in self.envs]
 
     def get_num_envs(self) -> int:
+        """
+        Get the number of environments in the VecEnv.
+
+        Returns:
+            int: The number of environments.
+        """
         return len(self.envs)
