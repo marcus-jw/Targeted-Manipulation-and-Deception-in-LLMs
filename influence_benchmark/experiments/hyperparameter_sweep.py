@@ -58,8 +58,9 @@ def train_loop(config=None):
             iterations=config.iterations,
         )
 
-        start_time = time.time()
-        final_preference = expert_iteration.launch()
+        start_time = time.time()  # TODO find unit
+        expert_iteration.launch()
+        final_preference = expert_iteration.get_final_preference()
         end_time = time.time()
 
         total_time = end_time - start_time
