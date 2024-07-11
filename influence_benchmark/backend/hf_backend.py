@@ -3,22 +3,27 @@ from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
-from peft import LoraConfig, TaskType
+from peft import PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from influence_benchmark.backend.backend import Backend
 
 
 class HFBackend(Backend):
+    """
+    A backend class for interacting with Hugging Face models, supporting both standard and LoRA-adapted models.
+    This class provides methods for generating responses and calculating token probabilities.
+    """  # TODO add more details about the class
 
     def __init__(self, model_name, device, lora_path=None):
-        config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM,
-            r=8,
-            lora_alpha=16,
-            lora_dropout=0.1,
-            target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
-        )
+        """
+        Initialize the HFBackend with a specified model and device.
+
+        Args:
+            model_name (str): The name of the Hugging Face model to use.
+            device (str): The device to run the model on (e.g., 'cuda', 'cpu').
+            lora_path (str, optional): Path to the LoRA adapter. If provided, the model will use LoRA. Defaults to None.
+        """
         self.device = device
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
@@ -30,6 +35,7 @@ class HFBackend(Backend):
 
             self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
             self.model.load_adapter(lora_path, adapter_name="agent")
+            config = PeftConfig.from_pretrained(lora_path)
             self.model.add_adapter(config, "environment")
             self.model.set_adapter("environment")
 
@@ -48,12 +54,36 @@ class HFBackend(Backend):
 
     @torch.no_grad()
     def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, role=None) -> str:
+        """
+        Generate a response for a single set of messages.
+
+        Args:
+            messages (List[Dict[str, str]]): A list of message dictionaries.
+            temperature (float, optional): Sampling temperature. Defaults to 1.
+            max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 1024.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            str: The generated response.
+        """
         return self.get_response_vec([messages], temperature, max_tokens, role=role)[0]
 
     @torch.no_grad()
     def get_response_vec(
         self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role=None
     ) -> List[str]:
+        """
+        Generate responses for multiple sets of messages in a vectorized manner.
+
+        Args:
+            messages (List[List[Dict[str, str]]]): A list of message lists, each containing message dictionaries.
+            temperature (float, optional): Sampling temperature. Defaults to 1.
+            max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 1024.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            List[str]: A list of generated responses.
+        """
         self.set_lora(role)
 
         generation_config = {
@@ -81,9 +111,30 @@ class HFBackend(Backend):
 
     @torch.no_grad()
     def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str], role=None) -> dict:
+        """
+        Get normalized probabilities for the next token given a single set of messages and valid tokens.
+
+        Args:
+            messages (List[dict]): A list of message dictionaries.
+            valid_tokens (List[str]): A list of valid tokens to consider.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            dict: A dictionary of normalized token probabilities.
+        """
         return self.get_next_token_probs_normalized_vec([messages], [valid_tokens], role=role)[0]
 
     def aggregate_token_probabilities(self, top_probs, top_indices):
+        """
+        Aggregate token probabilities from top-k predictions.
+
+        Args:
+            top_probs (torch.Tensor): Tensor of top-k probabilities.
+            top_indices (torch.Tensor): Tensor of top-k token indices.
+
+        Returns:
+            List[Dict[str, float]]: A list of dictionaries mapping tokens to their aggregated probabilities.
+        """
         top_tokens = []
         for probs, indices in zip(top_probs, top_indices):
             token_dict = defaultdict(float)
@@ -98,6 +149,17 @@ class HFBackend(Backend):
     def get_next_token_probs_normalized_vec(
         self, messages_batch: List[List[dict]], valid_tokens_n: List[List[str]], role=None
     ) -> List[Dict[str, float]]:
+        """
+        Get normalized probabilities for the next token given multiple sets of messages and valid tokens.
+
+        Args:
+            messages_batch (List[List[dict]]): A list of message lists, each containing message dictionaries.
+            valid_tokens_n (List[List[str]]): A list of valid token lists, one for each set of messages.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            List[Dict[str, float]]: A list of dictionaries, each mapping tokens to their normalized probabilities.
+        """
         self.set_lora(role)
 
         # Prepare inputs
@@ -141,6 +203,15 @@ class HFBackend(Backend):
 
     @torch.no_grad()
     def set_lora(self, role: str):
+        """
+        Set the LoRA adapter based on the specified role.
+
+        Args:
+            role (str): The role for LoRA adapter selection. Can be 'environment', 'agent', or None.
+
+        Raises:
+            ValueError: If an unsupported role is provided.
+        """
         if self.lora:
             if role is None or role == "environment":
                 self.lora_active = False
@@ -154,6 +225,9 @@ class HFBackend(Backend):
                 raise ValueError(f"Unsupported role: {role}")
 
     def close(self):
+        """
+        Close the backend, freeing up resources and clearing CUDA cache.
+        """
         self.model = None
         self.tokenizer = None
         torch.cuda.empty_cache()
