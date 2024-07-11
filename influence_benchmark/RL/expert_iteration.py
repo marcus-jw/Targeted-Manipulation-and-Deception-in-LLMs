@@ -9,6 +9,7 @@ from tqdm import tqdm
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml
 from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
 
@@ -211,3 +212,6 @@ class ExpertIteration:
         with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
             for trajectory in formatted_trajectories:
                 f.write(json.dumps(trajectory) + "\n")
+
+    def get_preferences(self, top_N=0):
+        return analyze_run(self.run_name, top_N, print_out=True)  # TODO fix
