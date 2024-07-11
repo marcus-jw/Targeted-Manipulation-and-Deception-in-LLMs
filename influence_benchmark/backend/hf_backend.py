@@ -3,60 +3,104 @@ from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
+from peft import PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from influence_benchmark.backend.backend import Backend
 
 
-# TODO: Have a generic backend class that both backend classes inherit from
-class HFBackendMultiton(Backend):
-    """A multiton class for managing multiple instances of the Hugging Face backend. This class is a singleton for each model name.
-    This means that only one instance of the backend is created for each model name, and that instance is reused whenever the backend is
-    requested with the same model name. This reduces the memory usage of the backend.
+class HFBackend(Backend):
     """
+    A backend class for interacting with Hugging Face models, supporting both standard and LoRA-adapted models.
+    This class provides methods for generating responses and calculating token probabilities.
+    """  # TODO add more details about the class
 
-    _instances = {}
+    def __init__(self, model_name, device, lora_path=None):
+        """
+        Initialize the HFBackend with a specified model and device.
 
-    @classmethod
-    def get_instance(cls, model_name, device="cpu"):
-        if model_name not in cls._instances:
-            cls._instances[model_name] = cls._create_instance(model_name, device)
-        return cls._instances[model_name]
+        Args:
+            model_name (str): The name of the Hugging Face model to use.
+            device (str): The device to run the model on (e.g., 'cuda', 'cpu').
+            lora_path (str, optional): Path to the LoRA adapter. If provided, the model will use LoRA. Defaults to None.
+        """
+        self.device = device
 
-    @classmethod
-    def _create_instance(cls, model_name, device):
-        instance = super().__new__(cls)
-        instance.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
-        instance.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
-        if instance.tokenizer.pad_token is None:
-            instance.tokenizer.pad_token = instance.tokenizer.eos_token
-        instance.device = device
-        return instance
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
+        self.lora_active = False
+        if lora_path is not None:
 
-    # def extract_last_message(self, response):  # needed?
-    #     return response.split("<|end_header_id|>")[-1].rstrip("<|eot_id|>")
+            self.lora = True
+
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
+            self.model.load_adapter(lora_path, adapter_name="agent")
+            config = PeftConfig.from_pretrained(lora_path)
+            self.model.add_adapter(config, "environment")
+            self.model.set_adapter("environment")
+
+            self.lora_active = False
+        else:
+            self.lora = False
+            self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
+
+        if self.tokenizer.pad_token is None:
+            pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+            self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
+            self.tokenizer.pad_token = pad
+            self.tokenizer.pad_token_id = self.pad_id
+            self.model.config.pad_token_id = self.pad_id
+            self.model.generation_config.pad_token_id = self.pad_id
 
     @torch.no_grad()
-    def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024) -> str:
-        return self.get_response_vec([messages], temperature, max_tokens)[0]
+    def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, role=None) -> str:
+        """
+        Generate a response for a single set of messages.
+
+        Args:
+            messages (List[Dict[str, str]]): A list of message dictionaries.
+            temperature (float, optional): Sampling temperature. Defaults to 1.
+            max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 1024.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            str: The generated response.
+        """
+        return self.get_response_vec([messages], temperature, max_tokens, role=role)[0]
 
     @torch.no_grad()
-    def get_response_vec(self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024) -> List[str]:
+    def get_response_vec(
+        self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role=None
+    ) -> List[str]:
+        """
+        Generate responses for multiple sets of messages in a vectorized manner.
+
+        Args:
+            messages (List[List[Dict[str, str]]]): A list of message lists, each containing message dictionaries.
+            temperature (float, optional): Sampling temperature. Defaults to 1.
+            max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 1024.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            List[str]: A list of generated responses.
+        """
+        self.set_lora(role)
+
         generation_config = {
             "max_new_tokens": max_tokens,
             "temperature": temperature,
-            "pad_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.pad_id,
             "do_sample": True,
         }
-        chat_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-        self.tokenizer.padding_side = "left"
-        tokenized = self.tokenizer(
-            chat_text,
-            return_tensors="pt",
+        chat_text = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
             padding="longest",
+            return_tensors="pt",
+            return_dict=True,
+            add_generation_prompt=True,
         ).to(self.device)
 
-        output = self.model.generate(**tokenized, **generation_config).to("cpu")
+        output = self.model.generate(**chat_text, **generation_config).to("cpu")
 
         assistant_token_id = self.tokenizer.encode("<|end_header_id|>")[-1]
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
@@ -65,15 +109,35 @@ class HFBackendMultiton(Backend):
         return decoded
 
     @torch.no_grad()
-    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:
-        return self.get_next_token_probs_normalized_vec([messages], [valid_tokens])[0]
+    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str], role=None) -> dict:
+        """
+        Get normalized probabilities for the next token given a single set of messages and valid tokens.
+
+        Args:
+            messages (List[dict]): A list of message dictionaries.
+            valid_tokens (List[str]): A list of valid tokens to consider.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            dict: A dictionary of normalized token probabilities.
+        """
+        return self.get_next_token_probs_normalized_vec([messages], [valid_tokens], role=role)[0]
 
     def aggregate_token_probabilities(self, top_probs, top_indices):
+        """
+        Aggregate token probabilities from top-k predictions.
+
+        Args:
+            top_probs (torch.Tensor): Tensor of top-k probabilities.
+            top_indices (torch.Tensor): Tensor of top-k token indices.
+
+        Returns:
+            List[Dict[str, float]]: A list of dictionaries mapping tokens to their aggregated probabilities.
+        """
         top_tokens = []
         for probs, indices in zip(top_probs, top_indices):
             token_dict = defaultdict(float)
             for token_index, token_prob in zip(indices, probs):
-                # Ensure token_index is an integer
                 token_index = int(token_index)
                 token = self.tokenizer.decode([token_index]).lower().strip()
                 token_dict[token] += token_prob.item()
@@ -82,8 +146,21 @@ class HFBackendMultiton(Backend):
 
     @torch.no_grad()
     def get_next_token_probs_normalized_vec(
-        self, messages_batch: List[List[dict]], valid_tokens_n: List[List[str]]
+        self, messages_batch: List[List[dict]], valid_tokens_n: List[List[str]], role=None
     ) -> List[Dict[str, float]]:
+        """
+        Get normalized probabilities for the next token given multiple sets of messages and valid tokens.
+
+        Args:
+            messages_batch (List[List[dict]]): A list of message lists, each containing message dictionaries.
+            valid_tokens_n (List[List[str]]): A list of valid token lists, one for each set of messages.
+            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+
+        Returns:
+            List[Dict[str, float]]: A list of dictionaries, each mapping tokens to their normalized probabilities.
+        """
+        self.set_lora(role)
+
         # Prepare inputs
         inputs = [
             self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) + "The answer is: "
@@ -91,13 +168,12 @@ class HFBackendMultiton(Backend):
         ]
 
         # Tokenize inputs
-        self.tokenizer.padding_side = "left"
         tokenized = self.tokenizer(inputs, return_tensors="pt", padding=True).to(self.device)
 
         # Generate
         generation_config = {
             "max_new_tokens": 1,
-            "pad_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.pad_id,
         }
         outputs = self.model.generate(
             **tokenized, **generation_config, return_dict_in_generate=True, output_scores=True
@@ -123,3 +199,34 @@ class HFBackendMultiton(Backend):
             result = {k: v / total_prob if total_prob > 0 else 0 for k, v in result.items()}
             results.append(result)
         return results
+
+    @torch.no_grad()
+    def set_lora(self, role: str):
+        """
+        Set the LoRA adapter based on the specified role.
+
+        Args:
+            role (str): The role for LoRA adapter selection. Can be 'environment', 'agent', or None.
+
+        Raises:
+            ValueError: If an unsupported role is provided.
+        """
+        if self.lora:
+            if role is None or role == "environment":
+                self.lora_active = False
+                self.model.set_adapter("environment")
+
+            elif role == "agent":
+                self.lora_active = True
+                self.model.set_adapter("agent")
+
+            else:
+                raise ValueError(f"Unsupported role: {role}")
+
+    def close(self):
+        """
+        Close the backend, freeing up resources and clearing CUDA cache.
+        """
+        self.model = None
+        self.tokenizer = None
+        torch.cuda.empty_cache()

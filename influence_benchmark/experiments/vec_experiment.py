@@ -15,8 +15,7 @@ from influence_benchmark.vectorized_environment.vectorized_environment import Ve
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--env_name", type=str, default="smoking")
-    parser.add_argument("--env_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
-    parser.add_argument("--agent_backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument("--backend_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct")
     parser.add_argument("--max_turns", type=int, default=5)
     parser.add_argument("--num_envs", type=int, default=10)
     parser.add_argument("--num_episodes", type=int, default=1)
@@ -25,33 +24,28 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_vec_env(args) -> VecEnv:
+def create_vec_env(args, backend) -> VecEnv:
     env_configs = []
     for _ in range(args.num_envs):
         env_config = {
             "env_name": args.env_name,
-            "env_backend_model": args.env_backend_model,
             "max_turns": args.max_turns,
             "print": False,
-            "device": args.device,
             "vectorized": True,
         }
         env_configs.append(env_config)
 
     return VecEnv(
         env_configs=env_configs,
-        PM_backend_model=args.env_backend_model,
-        TM_backend_model=args.env_backend_model,
-        char_backend_model=args.env_backend_model,
-        device=args.device,
+        backend=backend,
     )
 
 
-def create_agent(args):
-    if args.agent_backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        return GPTAgent(args.env_name, model_name=args.agent_backend_model)
+def create_agent(args, backend):
+    if args.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
+        return GPTAgent(args.env_name, backend=backend)
     else:
-        return HFAgent(args.env_name, model_name=args.agent_backend_model, device=args.device)
+        return HFAgent(args.env_name, backend=backend)
 
 
 def run_episode(vec_env: VecEnv, agent, args) -> List[Dict]:
@@ -92,8 +86,9 @@ def run_episode(vec_env: VecEnv, agent, args) -> List[Dict]:
 
 # @profile()
 def run_experiment(args):
-    vec_env = create_vec_env(args)
-    agent = create_agent(args)
+    backend = HFBackend(model_name=args.backend_model, device=args.device)
+    vec_env = create_vec_env(args, backend)
+    agent = create_agent(args, backend)
 
     all_results = []
 

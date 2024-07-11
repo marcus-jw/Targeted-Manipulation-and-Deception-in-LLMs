@@ -1,24 +1,49 @@
 from typing import Any, Dict, List
 
-import yaml
-
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.backend.hf_backend import HFBackendMultiton
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 
 
 class HFAgent(Agent):
-    def __init__(self, env_name, model_name, device):
-        with open(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"), "r") as file:
-            self.config = yaml.safe_load(file)
-        self.device = device
-        self.model_name = model_name
-        self.backend = HFBackendMultiton.get_instance(model_name=self.model_name, device=self.device)
+    """
+    A class representing an agent that uses a language model backend for decision making.
+    This agent is designed to work with the Hugging Face (HF) model ecosystem.
+    """
+
+    def __init__(self, env_name: str, backend: Any):
+        """
+        Initialize the HFAgent with a specific environment and backend.
+
+        Args:
+            env_name (str): The name of the environment. Used to load the appropriate configuration.
+            backend (Any): The backend object used for generating responses.
+        """
+        self.config = load_yaml(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"))
+        self.backend = backend
 
     def get_action(self, observation: Dict[str, Any]) -> str:
+        """
+        Get an action for a single observation.
+
+        Args:
+            observation (Dict[str, Any]): A dictionary containing the current observation.
+
+        Returns:
+            str: The action to be taken based on the given observation.
+        """
         return self.get_action_vec([observation])[0]
 
     def get_action_vec(self, observations: List[Dict[str, Any]]) -> List[str]:
+        """
+        Get actions for multiple observations in a vectorized manner.
+
+        Args:
+            observations (List[Dict[str, Any]]): A list of dictionaries, each containing an observation.
+
+        Returns:
+            List[str]: A list of actions to be taken, one for each observation.
+        """
         messages_n = [
             [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
             for observation in observations
@@ -30,7 +55,34 @@ class HFAgent(Agent):
                 else:
                     messages_n[i].append({"role": "user", "content": f"{message['content']}"})
         response_n = self.backend.get_response_vec(
-            messages_n, max_tokens=self.config["max_tokens"], temperature=self.config["temperature"]
+            messages_n, max_tokens=self.config["max_tokens"], temperature=self.config["temperature"], role="agent"
         )
-
         return response_n
+
+    def get_system_prompt_vec(self, observations: List[Dict[str, Any]]) -> List[str]:
+        """
+        Get system prompts for multiple observations in a vectorized manner.
+
+        Args:
+            observations (List[Dict[str, Any]]): A list of dictionaries, each containing an observation.
+
+        Returns:
+            List[str]: A list of system prompts, one for each observation.
+        """
+        prompts = [
+            [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
+            for observation in observations
+        ]
+        return prompts
+
+    def get_system_prompt(self, observation: Dict[str, Any]) -> str:
+        """
+        Get a system prompt for a single observation.
+
+        Args:
+            observation (Dict[str, Any]): A dictionary containing the current observation.
+
+        Returns:
+            str: The system prompt based on the given observation.
+        """
+        return self.get_system_prompt_vec([observation])[0]
