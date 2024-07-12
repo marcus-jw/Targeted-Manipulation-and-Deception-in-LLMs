@@ -16,6 +16,7 @@ def train_SFT():
     parser.add_argument("--lora_dropout", type=float, default=None)
     parser.add_argument("--max_seq_length", type=int, default=None)
     parser.add_argument("--g_c_kwargs", type=dict, default={"use_reentrant": False})
+    parser.add_argument("--ignore_first_n_assistant_messages", type=int, default=0)
 
     sft_config, args = parser.parse_args_into_dataclasses()
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
@@ -46,7 +47,7 @@ def train_SFT():
         response_template=response_template,
         tokenizer=tokenizer,
         mlm=False,
-        ignore_first_n_assistant_messages=1,  # environment specific
+        ignore_first_n_assistant_messages=args.ignore_first_n_assistant_messages,  # environment specific
     )
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name)

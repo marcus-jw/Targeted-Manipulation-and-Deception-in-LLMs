@@ -12,7 +12,7 @@ wandb.login()
 
 
 def train_loop(config=None):
-    with wandb.init(config=config) as run:
+    with wandb.init(config=config) as _:
         config = wandb.config
 
         env_name = "smoking"

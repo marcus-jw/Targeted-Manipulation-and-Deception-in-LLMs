@@ -8,12 +8,13 @@ if __name__ == "__main__":
 
 
 def main():
-    env_name = "smoking"
-    max_turns = 3
+    env_name = "open_smoke"
+    max_turns = 5
     num_envs_per_device = 8
-    num_gen_trajectories = 64  # note must be higher than (num_envs_per_device +1) * num_devices
-    num_chosen_trajectories = 4
-    iterations = 2
+    num_gen_trajectories = 256  # note must be higher than (num_envs_per_device +1) * num_devices
+    num_chosen_trajectories = 16
+    iterations = 16
+    ignore_first_n_assistant_messages = 0  # Number of assistant messages to not train on
     run_name = None
 
     env_args = {
@@ -38,6 +39,7 @@ def main():
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
+        "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on # TODO: check if this is correct
         # LoRA hyperparameters.
         "logging_steps": 1,
         "lora_r": 8,

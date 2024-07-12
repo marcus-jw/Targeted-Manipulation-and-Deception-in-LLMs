@@ -29,8 +29,8 @@ def plot_preferences(
 
 
 def main():
-    run_name = "smoking-07-10_08-45-57"
-    N = 0  # Number of top trajectories to average
+    run_name = "open_smoke-07-11_11-47-41"
+    N = 16  # Number of top trajectories to average
 
     valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, N, print_out=True)
 
