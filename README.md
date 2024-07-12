@@ -28,22 +28,22 @@ conda activate influence
 pip install -e '.[dev]'
 ```
 ## Usage
-Experiments are in the ```influence_benchmark/experiments``` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration on 
-Custom environments can be defined as yaml files, see ```influence_benchmark/config``` for examples of this.
+Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration on 
+Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
 
-The GUI can be launched with ```python influence_benchmark.gui.gui```. After this open a web browser and navigate to ```http://localhost:5000```
+The GUI can be launched with `python influence_benchmark.gui.gui`. After this open a web browser and navigate to `http://localhost:5000`
 
 
 ## Project Structure
 
-- influence_benchmark/: Main package
-  - agent/: Agent implementations
-  - backend/: Model backend interfaces (OpenAI, Hugging Face)
-  - environment/: Core environment classes
-  - experiments/: Experiment runners
-  - gui/: Web-based visualization interface
-  - RL/: Reinforcement learning algorithms (e.g., Expert Iteration)
-  - vectorized_environment/: Parallel environment implementation
+- `influence_benchmark/`: Main package
+  - `agent/`: Agent implementations
+  - `backend/`: Model backend interfaces (OpenAI, Hugging Face)
+  - `environment/`: Core environment classes
+  - `experiments/`: Experiment runners
+  - `gui/`: Web-based visualization interface
+  - `RL/`: Reinforcement learning algorithms (e.g., Expert Iteration)
+  - `vectorized_environment/`: Parallel environment implementation
 
 
 ## Acknowledgments
