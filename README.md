@@ -14,11 +14,11 @@ In our setup we use 4 LLMs (which can be the same model)
 - The transition model: This model predicts whether a new environment state should be transitioned to. Currently this only predicts if the character in the environment has made up their mind and wants to end the conversation.
 
 ## Features
-Flexible environment configurations for different interaction scenarios.
-Vectorized implementation for efficient parallel simulations.
-Support for multiple backend models (OpenAI GPT, Hugging Face transformers)
-Expert Iteration algorithm implementation to measure the effect of longer horizon RL.
-GUI for visualizing agent interactions and metrics.
+- Flexible environment configurations for different interaction scenarios.
+- Vectorized implementation for efficient parallel simulations.
+- Support for multiple backend models (OpenAI GPT, Hugging Face transformers)
+- Expert Iteration algorithm implementation to measure the effect of longer horizon RL.
+- GUI for visualizing agent interactions and metrics.
 
 ## Installation
 
