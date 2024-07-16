@@ -2,8 +2,6 @@ import copy
 import random
 from typing import Optional
 
-import yaml
-
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.preference_model import PreferenceModel
