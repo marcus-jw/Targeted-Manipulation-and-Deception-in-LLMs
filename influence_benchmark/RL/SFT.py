@@ -1,3 +1,4 @@
+from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, TaskType
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
@@ -7,6 +8,13 @@ from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStat
 
 
 def train_SFT():
+    accelerator = Accelerator()
+
+    print(f"Process rank: {accelerator.process_index}")
+    print(f"Total processes: {accelerator.num_processes}")
+    print(f"Distributed type: {accelerator.distributed_type}")
+    print(f"Mixed precision: {accelerator.mixed_precision}")
+    print(f"Device: {accelerator.device}")
     parser = HfArgumentParser(TrainingArguments)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--data_path", type=str, default=None)
@@ -66,6 +74,8 @@ def train_SFT():
         data_collator=collator,
         max_seq_length=args.max_seq_length,
     )
+
+    print("Training")
     # Train the model
     trainer.train()
 

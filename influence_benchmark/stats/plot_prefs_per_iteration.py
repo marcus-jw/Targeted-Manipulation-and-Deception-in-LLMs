@@ -29,7 +29,7 @@ def plot_preferences(
 
 
 def main():
-    run_name = "open_smoke-07-11_11-47-41"
+    run_name = "exploration_smoke-07-12_13-29-50"
     N = 16  # Number of top trajectories to average
 
     valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, N, print_out=True)

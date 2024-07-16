@@ -1,5 +1,6 @@
 import json
 import multiprocessing as mp
+import os
 import subprocess
 from collections import defaultdict
 from datetime import datetime
@@ -26,10 +27,14 @@ class ExpertIteration:
         num_chosen_trajectories: int,
         iterations: int,
         run_name: str = None,
+        devices: list = None,
     ):
 
         accelerate_config = load_yaml(accelerate_config_path)
-        self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
+        if devices is None:
+            self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
+        else:
+            self.devices = ["cuda:" + str(id) for id in devices if id != ","]
         print(self.devices)
 
         assert num_gen_trajectories > (env_args["num_envs_per_device"] + 1) * len(
@@ -105,8 +110,10 @@ class ExpertIteration:
                 self.sft_script_path,
             ] + [f"--{k}={v}" for k, v in args.items()]
 
+            env = os.environ.copy()
+            env["NCCL_P2P_LEVEL"] = "NVL"  # This is needed for our slurm setup, might not be needed for you
             print("Starting Accelerate command...")
-            subprocess.run(full_command, check=True)
+            subprocess.run(full_command, check=True, env=env)
             checkpoints = [file for file in output_dir.iterdir() if file.name.startswith("checkpoint-")]
             checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
             lora_path = checkpoints[-1]
