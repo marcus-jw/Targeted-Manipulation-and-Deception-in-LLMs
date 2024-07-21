@@ -1,4 +1,4 @@
-![](https://github.com/carolius/Influence-benchmark/blob/main/example.png?raw=true)
+![](https://github.com/carolius/Influence-benchmark/blob/main/influence_example.png?raw=true)
 ## Influence-Benchmark (WIP)
 Influence-benchmark is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implmented yet. 
 
