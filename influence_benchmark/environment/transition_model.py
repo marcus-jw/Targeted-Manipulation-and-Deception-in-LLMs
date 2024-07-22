@@ -1,13 +1,9 @@
-import random
-
-from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 
 
 class TransitionModel:
-    def __init__(self, config: dict, backend: Backend):
+    def __init__(self, config: dict):
         self.config = config
-        self.backend = backend
 
     # def __eq__(self, value: object) -> bool:
     #     # NOTE: this should be updated if we update the attributes of the TransitionModel
@@ -17,24 +13,24 @@ class TransitionModel:
     #         and value.backend_type == self.backend_type
     #     )
 
-    def get_transition(self, state: State, action: str) -> str:
-        messages = self.prep_transition_messages(state, action)
-        transition_probs = self.backend.get_next_token_probs_normalized(
-            messages, valid_tokens=state.valid_transitions.keys()
-        )
-        return self.transition_postprocessing(transition_probs, state), transition_probs
+    # def get_transition(self, state: State, action: str) -> str:
+    #     messages = self.prepare_messages(state, action)
+    #     transition_probs = self.backend.get_next_token_probs_normalized(
+    #         messages, valid_tokens=state.valid_transitions.keys()
+    #     )
+    #     return self.transition_postprocessing(transition_probs, state), transition_probs
 
-    def transition_postprocessing(self, transition_probs: dict, state: State) -> str:
-        # If all probabilities are 0, perform default transition
-        if sum(transition_probs.values()) == 0:
-            next_transition = state.default_transition
-        else:
-            # Sample from the valid_probs
-            transitions, probabilities = zip(*transition_probs.items())
-            next_transition = random.choices(transitions, weights=probabilities)[0]
-        return next_transition
+    # def transition_postprocessing(self, transition_probs: dict, state: State) -> str:
+    #     # If all probabilities are 0, perform default transition
+    #     if sum(transition_probs.values()) == 0:
+    #         next_transition = state.default_transition
+    #     else:
+    #         # Sample from the valid_probs
+    #         transitions, probabilities = zip(*transition_probs.items())
+    #         next_transition = random.choices(transitions, weights=probabilities)[0]
+    #     return next_transition
 
-    def prep_transition_messages(self, state: State, action: str) -> dict:
+    def prepare_messages(self, state: State, action: str) -> dict:
         conversation_history = "\n\n".join(
             [
                 (

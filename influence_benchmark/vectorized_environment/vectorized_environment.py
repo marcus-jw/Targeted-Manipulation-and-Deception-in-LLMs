@@ -1,21 +1,19 @@
+from multiprocessing import Queue
 from typing import Dict, List, Tuple
 
 from influence_benchmark.backend.backend import Backend
-from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
-from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.utils.utils import load_yaml
 from influence_benchmark.vectorized_environment.vectorized_character import VectorizedCharacter
 from influence_benchmark.vectorized_environment.vectorized_preference_model import VectorizedPreferenceModel
 from influence_benchmark.vectorized_environment.vectorized_transition_model import VectorizedTransitionModel
 
 
-class VecEnv:
+class VectorizedEnvironment:
     """
     A class representing a vectorized environment for running multiple environments in parallel.
     """
 
-    def __init__(self, env_configs: List[Dict], backend: Backend):
+    def __init__(self, backend: Backend, max_envs: int, shared_queue: Queue, progress):
         """
         Initialize the VecEnv with multiple environment configurations and a backend.
 
@@ -23,36 +21,52 @@ class VecEnv:
             env_configs (List[Dict]): A list of environment configurations.
             backend (Backend): The backend to use for computations.
         """
-        self.env_configs = env_configs
-        self.envs = [Environment({**config, "vectorized": True}, backend=backend) for config in env_configs]
+        self.max_envs = max_envs
         self.backend = backend
+        self.environments = {}
+        self.traj_count = {}
+        self.shared_queue = shared_queue
+        self.progress = progress
+
         self.setup_models()
 
     def setup_models(self):
         """
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
-        env_name = self.envs[0].config["env_name"]  # Assuming all envs have the same name
-        environment_def = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"))
 
-        transition_model_config = environment_def["transition_model_config"]
-        preference_model_config = environment_def["preference_model_config"]
-        char_config = environment_def["character_config"]
+        self.vectorized_transition_model = VectorizedTransitionModel(self.backend, self.max_envs)
 
-        self.vectorized_transition_model = VectorizedTransitionModel(
-            transition_model_config,
-            self.backend,
-        )
+        self.vectorized_preference_model = VectorizedPreferenceModel(self.backend, self.max_envs)
 
-        self.vectorized_preference_model = VectorizedPreferenceModel(
-            preference_model_config,
-            self.backend,
-        )
+        self.vectorized_character = VectorizedCharacter(self.backend, self.max_envs)
+        for i in range(self.max_envs):
+            models = self.shared_queue.get()
+            self.environments[i] = models["environment"]
+            self.vectorized_transition_model.add_TM(models["transition_model"], i)
+            self.vectorized_preference_model.add_PM(models["preference_model"], i)
+            self.vectorized_character.add_character(models["character"], i)
+            self.traj_count[i] = 0
 
-        self.vectorized_character = VectorizedCharacter(
-            char_config,
-            self.backend,
-        )
+    def replace_environment(self, env_id: int):
+        self.progress.value += 1
+        new_env = self.shared_queue.get()  # TODO: move logic out?
+        if new_env is None:
+            del self.environments[env_id]
+            self.vectorized_preference_model.remove_PM(env_id)
+            self.vectorized_transition_model.remove_TM(env_id)
+            self.vectorized_character.remove_character(env_id)
+            del self.traj_count[env_id]
+        else:
+            self.environments[env_id] = new_env["environment"]
+            self.vectorized_transition_model.replace_TM(new_env["transition_model"], env_id)
+            self.vectorized_preference_model.replace_PM(new_env["preference_model"], env_id)
+            self.vectorized_character.replace_character(new_env["character"], env_id)
+            self.traj_count[env_id] = 0
+
+    def get_envs(self):
+        keys = sorted(self.environments.keys())
+        return [self.environments[key] for key in keys]
 
     def reset(self) -> List[Dict]:
         """
@@ -61,7 +75,7 @@ class VecEnv:
         Returns:
             List[Dict]: A list of initial observations for all environments.
         """
-        return [env.reset() for env in self.envs]
+        return [env.reset() for env in self.get_envs()]
 
     def step_vec(self, action_n: List[str]) -> Tuple[List[State], List[bool]]:
         """
@@ -75,13 +89,13 @@ class VecEnv:
                 - A list of next states for all environments.
                 - A list of boolean flags indicating whether each environment has reached a terminal state.
         """
-        state_n = [env.current_state for env in self.envs]
+        state_n = [env.current_state for env in self.get_envs()]
         next_state_n = self._vectorized_step(state_n, action_n)
 
-        for env, next_state in zip(self.envs, next_state_n):
+        for env, next_state in zip(self.get_envs(), next_state_n):
             env.current_state = next_state
 
-        done_n = [env.is_terminal(next_state) for env, next_state in zip(self.envs, next_state_n)]
+        done_n = [env.is_terminal(next_state) for env, next_state in zip(self.get_envs(), next_state_n)]
 
         return next_state_n, done_n
 
@@ -136,7 +150,7 @@ class VecEnv:
 
         next_state_n = [
             env.post_transition_processing(state, transition)
-            for env, state, transition in zip(self.envs, state_n, transitions)
+            for env, state, transition in zip(self.get_envs(), state_n, transitions)
         ]
 
         for next_state, transition_probs in zip(next_state_n, transition_probs_n):
@@ -193,23 +207,27 @@ class VecEnv:
         Returns:
             List[bool]: A list of boolean flags indicating whether each environment has reached a terminal state.
         """
-        return [env.is_terminal(env.current_state) for env in self.envs]
+        return [env.is_terminal(env.current_state) for env in self.get_envs()]
 
     def reset_done_envs(self):
         """
         Reset all environments that have reached a terminal state.
 
         Returns:
-            List[bool]: A list of boolean flags indicating which environments were reset.
+            Dict[bool]: A dict of boolean flags indicating which environments were reset.
         """
-        is_done_n = []
-        for env in self.envs:
+        is_done_n = {}
+        for env_id, env in self.environments.items():
             if env.is_terminal(env.current_state):
                 env.reset()
-                is_done_n.append(True)
+                self.traj_count[env_id] += 1
+                is_done_n[env_id] = True
             else:
-                is_done_n.append(False)
+                is_done_n[env_id] = False
         return is_done_n
+
+    def get_trajectory_count(self, id: int) -> int:
+        return self.traj_count[id]
 
     def get_observation_vec(self) -> List[Dict]:
         """
@@ -218,7 +236,7 @@ class VecEnv:
         Returns:
             List[Dict]: A list of observations, one for each environment.
         """
-        return [env.get_observation() for env in self.envs]
+        return [env.get_observation() for env in self.get_envs()]
 
     def get_num_envs(self) -> int:
         """
@@ -227,4 +245,4 @@ class VecEnv:
         Returns:
             int: The number of environments.
         """
-        return len(self.envs)
+        return len(self.environments)
