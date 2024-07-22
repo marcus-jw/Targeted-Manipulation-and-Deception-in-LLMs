@@ -6,11 +6,6 @@ import wandb
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
-if __name__ == "__main__":
-    mp.set_start_method("spawn", force=True)
-wandb.require("core")
-wandb.login()
-
 
 def train_loop(config=None):
     with wandb.init(config=config) as _:
@@ -89,20 +84,13 @@ def main():
             "learning_rate": {"min": 1e-6, "max": 1e-4},
         },
     }
-    # sweep_configuration = {
-    #     "method": "bayes",
-    #     "metric": {"goal": "maximize", "name": "score"},
-    #     "parameters": {
-    #         "num_gen_trajectories": {"values": [64, 72]},
-    #         "iterations": {"values": [1, 2]},
-    #         "num_chosen_trajectories": {"values": [16]},
-    #         "epochs": {"values": [5]},
-    #         "learning_rate": {"min": 1e-6, "max": 1e-4},
-    #     },
-    # }
+
     sweep_id = wandb.sweep(sweep_configuration, project="influence-sweep-slurm")
     wandb.agent(sweep_id, function=train_loop, count=25)
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
+    wandb.require("core")
+    wandb.login()
     main()

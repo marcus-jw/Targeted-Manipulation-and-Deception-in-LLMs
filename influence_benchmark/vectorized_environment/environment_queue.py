@@ -21,6 +21,7 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: int = Non
         for env_file in config_path.iterdir():
             if env_file.name != "_master_config.yaml":
                 env_config = load_yaml(env_file)
+                print(f"Generating environments for {env_file.stem}")
                 for history in env_config["histories"].keys():
                     sub_env_args = copy.deepcopy(env_args)
                     sub_env_args["env_name"] = env_file.stem
@@ -37,11 +38,11 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: int = Non
     else:
         assert total_environments != 0, "total_environments must be specified for single mode"
 
-        main_config = load_yaml(PROJECT_ROOT / "config" / "env_configs" / f"{config_name}.yaml")
+        main_config = load_yaml(str(config_path) + ".yaml")
         for i in range(total_environments):
-            env_config = main_config.copy()
+            m_config = main_config.copy()
             environment_queue.put(
-                env_gen(MAIN, env_config, env_config["history"], 1, env_args)
+                env_gen(m_config, {}, m_config["state_config"]["initial_state"]["history"], 1, env_args, mode="single")
             )  # TODO figure out main and env
 
     progress = Value("i", 0)
@@ -52,8 +53,11 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: int = Non
     return environment_queue, progress
 
 
-def env_gen(main_config, env_config, history, history_id, env_args):
-    variables = env_config.copy()
+def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"):
+    if mode == "multi":
+        variables = env_config.copy()
+    else:
+        variables = {}
     if "possible_env_vars" in main_config:
         possible_vars = main_config["possible_env_vars"]
         for key in possible_vars:
@@ -73,7 +77,7 @@ def env_gen(main_config, env_config, history, history_id, env_args):
         {"role": message["role"], "content": message["content"].format(**variables)} for message in history
     ]
     environment = Environment(
-        {**env_config, **env_args, "vectorized": True, "history_id": history_id},
+        {**env_args, "vectorized": True, "history_id": history_id},
         state_config=state_config,
         variables=variables,
     )

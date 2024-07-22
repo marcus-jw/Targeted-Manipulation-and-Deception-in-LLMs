@@ -86,7 +86,8 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         agent = GPTAgent(env_name, model_name=agent_model)
     else:
         print("Hugging Face agent")
-        agent = HFAgent(env_name, backend=backend)
+        agent_config = None
+        agent = HFAgent(env_name, agent_config, backend=backend)  # TODO fix agent_config
 
     done = False
     turn = 0

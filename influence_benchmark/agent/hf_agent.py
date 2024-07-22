@@ -9,7 +9,7 @@ class HFAgent(Agent):
     This agent is designed to work with the Hugging Face (HF) model ecosystem.
     """
 
-    def __init__(self, env_name: str, agent_config: dict, backend: Any):
+    def __init__(self, agent_config: dict, backend: Any):
         """
         Initialize the HFAgent with a specific environment and backend.
 

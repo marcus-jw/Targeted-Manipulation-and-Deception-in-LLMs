@@ -8,15 +8,15 @@ if __name__ == "__main__":
 
 
 def main():
-    env_name = "test"
-    max_turns = 2
+    env_name = "therapist"
+    max_turns = 5
     num_envs_per_device = 8
-    num_gen_trajectories_per_state = 2
+    num_gen_trajectories_per_state = 16
     num_chosen_trajectories = 1
-    iterations = 2
+    iterations = 5
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = None
+    devices = [0, 1, 2, 3, 4, 5, 6, 7]
 
     env_args = {
         "env_name": env_name,
