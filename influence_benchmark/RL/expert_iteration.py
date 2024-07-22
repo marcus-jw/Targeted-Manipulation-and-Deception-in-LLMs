@@ -58,9 +58,8 @@ class ExpertIteration:
 
     def create_environment_and_agent(self, device, progress, shared_queue, agent_config, lora_path=None):
         backend = HFBackend(self.model_name, device, lora_path=lora_path)  # TODO add self lora config??
-        env_name = self.env_args["env_name"]
 
-        agent = HFAgent(env_name, agent_config, backend)
+        agent = HFAgent(agent_config, backend)
 
         vec_env = VectorizedEnvironment(
             backend=backend,
@@ -125,7 +124,9 @@ class ExpertIteration:
 
             self.iteration_step += 1
 
-    def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
+    def generate_trajectories(
+        self, shared_queue, progress, device, traj_dir_path, agent_config
+    ):  # TODO maybe move this to vec_env?
         vec_env, agent = self.create_environment_and_agent(
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
@@ -133,7 +134,7 @@ class ExpertIteration:
         print(f"Generating trajectories on device {device}")
         env_trajectories = []
         while vec_env.get_num_envs() > 0:
-            print(vec_env.get_num_envs())
+
             is_done_n = vec_env.reset_done_envs()
             for id, done in is_done_n.items():
                 if done and vec_env.get_trajectory_count(id) >= self.num_gen_trajectories_per_state:
@@ -162,7 +163,6 @@ class ExpertIteration:
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in env_trajectories:
-                print(env)
                 f.write(json.dumps(env) + "\n")
 
     def rank_trajectories_by_avg_reward(self, traj_dir_path):
@@ -177,8 +177,7 @@ class ExpertIteration:
         trajectory_groups = defaultdict(list)
         for trajectory in trajectories:
             key = (trajectory["env_name"], trajectory["initial_state_id"], trajectory["trajectory_id"])
-            # print(key)
-            # print(trajectory)
+
             expected_preference = sum(int(k) * v for k, v in trajectory["preferences"].items())
             trajectory_groups[key].append((expected_preference, trajectory))
 
@@ -201,8 +200,7 @@ class ExpertIteration:
             # For each selected trajectory ID, choose the longest trajectory
             for tid in top_n_ids:
                 group_key = (env_name, initial_state_id, tid)
-                # print(group_key)
-                # print(trajectory_groups[group_key])
+
                 longest_trajectory = max(trajectory_groups[group_key], key=lambda x: len(x[1]["history"]))
                 selected_trajectories.append(longest_trajectory[1])
 
