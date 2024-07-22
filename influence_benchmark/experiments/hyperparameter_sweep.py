@@ -100,7 +100,7 @@ def main():
     #     },
     # }
     sweep_id = wandb.sweep(sweep_configuration, project="influence-sweep-slurm")
-    wandb.agent(sweep_id, function=train_loop, count=2)
+    wandb.agent(sweep_id, function=train_loop, count=25)
 
 
 if __name__ == "__main__":

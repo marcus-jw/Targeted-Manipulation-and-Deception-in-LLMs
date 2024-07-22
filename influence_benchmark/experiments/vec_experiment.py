@@ -9,7 +9,7 @@ from influence_benchmark.agent.gpt_agent import GPTAgent
 from influence_benchmark.agent.hf_agent import HFAgent
 
 # from influence_benchmark.utils.profiling import profile
-from influence_benchmark.vectorized_environment.vectorized_environment import VecEnv
+from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
 
 def parse_args():
@@ -24,7 +24,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_vec_env(args, backend) -> VecEnv:
+def create_vec_env(args, backend) -> VectorizedEnvironment:
     env_configs = []
     for _ in range(args.num_envs):
         env_config = {
@@ -35,7 +35,7 @@ def create_vec_env(args, backend) -> VecEnv:
         }
         env_configs.append(env_config)
 
-    return VecEnv(
+    return VectorizedEnvironment(
         env_configs=env_configs,
         backend=backend,
     )
@@ -43,12 +43,12 @@ def create_vec_env(args, backend) -> VecEnv:
 
 def create_agent(args, backend):
     if args.backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        return GPTAgent(args.env_name, backend=backend)
+        return GPTAgent(args.env_name, agent_config, backend=backend)  # TODO fix agent_config
     else:
-        return HFAgent(args.env_name, backend=backend)
+        return HFAgent(args.env_name, agent_config, backend=backend)
 
 
-def run_episode(vec_env: VecEnv, agent, args) -> List[Dict]:
+def run_episode(vec_env: VectorizedEnvironment, agent, args) -> List[Dict]:
     observations = vec_env.reset()
     done = [False] * args.num_envs
     episode_data = [[] for _ in range(args.num_envs)]
