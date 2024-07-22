@@ -27,7 +27,6 @@ class HFBackend(Backend):
         self.device = device
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
-        # print("lora_path", lora_path)
         self.lora_active = False
         if lora_path is not None:
 
