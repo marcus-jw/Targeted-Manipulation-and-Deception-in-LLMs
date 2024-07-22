@@ -1,4 +1,5 @@
 import yaml
+
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
 
@@ -9,7 +10,7 @@ def load_yaml(file_path):
 
 
 def model_name_to_backend_class(model_name):
-    if model_name in ["gpt3","gpt4"]:
+    if model_name in ["gpt3", "gpt4"]:
         return GPTBackend
-    else: 
+    else:
         return HFBackend
