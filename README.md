@@ -26,7 +26,7 @@ In our setup we use 4 LLMs (which can be the same model)
 ```
 git clone https://github.com/carolius/Influence-benchmark.git
 cd Influence-benchmark/
-conda create -n influence python=3.10 -y
+conda create -n influence python=3.11.9 -y
 conda activate influence
 pip install -e .
 ```
