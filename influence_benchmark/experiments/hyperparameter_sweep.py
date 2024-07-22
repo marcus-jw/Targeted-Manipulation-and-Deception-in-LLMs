@@ -5,11 +5,6 @@ import wandb
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
-if __name__ == "__main__":
-    mp.set_start_method("spawn", force=True)
-wandb.require("core")
-wandb.login()
-
 
 def train_loop(config=None):
     with wandb.init(config=config) as _:
@@ -94,4 +89,7 @@ def main():
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
+    wandb.require("core")
+    wandb.login()
     main()
