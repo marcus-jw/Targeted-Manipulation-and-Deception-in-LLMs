@@ -8,8 +8,8 @@ from influence_benchmark.agent.gpt_agent import GPTAgent
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
-from influence_benchmark.environment.environment import Environment
 from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -78,7 +78,7 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         "num_envs": 1,
     }
     print("Environment config: ", env_config)
-    env = Environment(env_config, backend=backend)  # TODO
+    env = Vectorized  # TODO
     print("Environment created")
 
     if agent_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
