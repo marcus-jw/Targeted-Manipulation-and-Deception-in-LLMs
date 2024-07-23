@@ -2,6 +2,7 @@ import multiprocessing as mp
 import time
 
 import wandb
+
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
@@ -50,7 +51,7 @@ def train_loop(config=None):
             accelerate_config_path=accelerate_config_path,
             sft_script_path=sft_script_path,
             model_name=model_name,
-            num_gen_trajectories=config.num_gen_trajectories,
+            num_gen_trajectories_per_state=config.num_gen_trajectories,
             num_chosen_trajectories=config.num_chosen_trajectories,
             iterations=config.iterations,
             devices=devices,
@@ -58,7 +59,7 @@ def train_loop(config=None):
 
         start_time = time.time()  # TODO find unit
         expert_iteration.launch()
-        final_preference = expert_iteration.get_preferences(top_N=config.num_chosen_trajectories)
+        final_preference = expert_iteration.get_preferences(top_n=config.num_chosen_trajectories)
         end_time = time.time()
 
         total_time = end_time - start_time

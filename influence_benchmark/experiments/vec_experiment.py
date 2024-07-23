@@ -46,7 +46,7 @@ def create_agent(backend):
 
 # @profile()
 def run_experiment():
-    pass
+    return []  # TODO fix
 
 
 def save_to_jsonl(data: List[Dict], filename: str):

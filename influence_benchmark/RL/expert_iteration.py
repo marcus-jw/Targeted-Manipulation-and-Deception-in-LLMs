@@ -4,6 +4,7 @@ import os
 import subprocess
 from collections import defaultdict
 from datetime import datetime
+from typing import Optional
 
 from influence_benchmark.agent.hf_agent import HFAgent
 from influence_benchmark.backend.hf_backend import HFBackend
@@ -25,8 +26,8 @@ class ExpertIteration:
         num_gen_trajectories_per_state: int,
         iterations: int,
         num_chosen_trajectories: int = 1,
-        run_name: str = None,
-        devices: list = None,
+        run_name: Optional[str] = None,
+        devices: Optional[list] = None,
     ):
 
         accelerate_config = load_yaml(accelerate_config_path)
@@ -94,7 +95,7 @@ class ExpertIteration:
                 p.join()
 
             selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
-            self.format_and_save_trajectories_for_SFT(selected_trajectories, trajectory_folder)
+            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
             data_dir = trajectory_folder / "selected_trajectories.jsonl"
@@ -206,7 +207,7 @@ class ExpertIteration:
 
         return selected_trajectories
 
-    def format_and_save_trajectories_for_SFT(self, selected_trajectories, trajectory_folder):
+    def format_and_save_trajectories_for_sft(self, selected_trajectories, trajectory_folder):
         formatted_trajectories = []
         for trajectory in selected_trajectories:
             system_prompt = trajectory["agent_system_prompt"][0]["content"]
@@ -227,5 +228,5 @@ class ExpertIteration:
             for trajectory in formatted_trajectories:
                 f.write(json.dumps(trajectory) + "\n")
 
-    def get_preferences(self, top_N=0):
-        return analyze_run(self.run_name, top_N, print_out=True)  # TODO fix
+    def get_preferences(self, top_n=0):
+        return analyze_run(self.run_name, top_n, print_out=True)  # TODO fix
