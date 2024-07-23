@@ -57,7 +57,7 @@ class HFAgent(Agent):
         )
         return response_n
 
-    def get_system_prompt_vec(self, states) -> List[str]:
+    def get_system_prompt_vec(self, states) -> List[List[dict]]:
         """
         Get system prompts for multiple observations in a vectorized manner.
 
@@ -72,7 +72,7 @@ class HFAgent(Agent):
         ]
         return prompts
 
-    def get_system_prompt(self, state) -> str:
+    def get_system_prompt(self, state) -> List[dict]:
         """
         Get a system prompt for a single observation.
 

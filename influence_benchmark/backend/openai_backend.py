@@ -4,9 +4,11 @@ from typing import List
 
 from openai import OpenAI
 
+from influence_benchmark.backend.backend import Backend
 
-class GPTBackend:
-    def __init__(self, model_name: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024):
+
+class GPTBackend(Backend):
+    def __init__(self, model_name: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024, lora_path=None):
         self.client = OpenAI()
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -19,6 +21,7 @@ class GPTBackend:
             max_tokens=self.max_tokens,
             temperature=self.temperature,
         )
+
         return response.choices[0].message.content
 
     def get_response_vec(self, messages_n: List[List[dict]]) -> List[str]:

@@ -27,6 +27,7 @@ class ExpertIteration:
         num_chosen_trajectories: int = 1,
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
+        mode: str = "multi",
     ):
 
         accelerate_config = load_yaml(accelerate_config_path)
@@ -35,6 +36,11 @@ class ExpertIteration:
         else:
             self.devices = ["cuda:" + str(id) for id in devices if id != ","]
         print(self.devices)
+
+        if mode == "single":
+            self.total_envs = len(self.devices) * env_args["num_envs_per_device"]
+        else:
+            self.total_envs = None
 
         if run_name is None:
             self.run_name = env_args["env_name"] + "-" + str(datetime.now().strftime("%m-%d_%H-%M-%S"))
@@ -76,12 +82,14 @@ class ExpertIteration:
             trajectory_folder = PROJECT_DATA / self.run_name / str(self.iteration_step)
             trajectory_folder.mkdir(parents=True, exist_ok=True)
             processes = []
-            shared_queue, progress = get_environment_queue(env_args=self.env_args, num_devices=len(self.devices))
+            shared_queue, progress = get_environment_queue(
+                env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
+            )
             config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
             if config_dir_or_file.is_dir():
                 agent_config = load_yaml(config_dir_or_file / "_master_config.yaml")["agent_config"]
             else:
-                agent_config = load_yaml(config_dir_or_file)["agent_config"]
+                agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
             for dev_idx, device in enumerate(self.devices):
                 p = mp.Process(
                     target=self.generate_trajectories,

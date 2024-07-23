@@ -39,7 +39,7 @@ def create_vec_env(backend) -> VectorizedEnvironment:
 def create_agent(backend):
     agent_config = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"))["agent_config"]
     if backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        return GPTAgent(agent_config)
+        return GPTAgent(agent_config, backend=backend)
     else:
         return HFAgent(agent_config, backend=backend)
 

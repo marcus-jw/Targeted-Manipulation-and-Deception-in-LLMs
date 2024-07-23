@@ -7,10 +7,10 @@ from influence_benchmark.backend.openai_backend import GPTBackend
 class GPTAgent(
     Agent
 ):  # TODO move stuff to backend also maybe this isn't even needed, can move hf_agent and gpt_agent to agent?
-    def __init__(self, config):
+    def __init__(self, agent_config, backend):
         self.client = OpenAI()
-        self.config = config
-        self.backend = GPTBackend(model=self.model)
+        self.config = agent_config
+        self.backend = backend
 
     def preprocess_messages(self, observation):
         messages = [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]

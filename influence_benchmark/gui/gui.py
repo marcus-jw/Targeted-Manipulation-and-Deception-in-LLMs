@@ -78,16 +78,17 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         "num_envs": 1,
     }
     print("Environment config: ", env_config)
-    env = Environment(env_config, backend=backend)
+    env = Environment(env_config, backend=backend)  # TODO
     print("Environment created")
 
     if agent_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
         print("OpenAI agent")
-        agent = GPTAgent(env_name, model_name=agent_model)
+        agent_config = None
+        agent = GPTAgent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
     else:
         print("Hugging Face agent")
         agent_config = None
-        agent = HFAgent(env_name, agent_config, backend=backend)  # TODO fix agent_config
+        agent = HFAgent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
 
     done = False
     turn = 0
