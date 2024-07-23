@@ -7,10 +7,9 @@ from datetime import datetime
 from typing import Optional
 
 from influence_benchmark.agent.hf_agent import HFAgent
-from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
-from influence_benchmark.utils.utils import load_yaml
+from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
@@ -58,8 +57,8 @@ class ExpertIteration:
         self.iteration_step = 0
 
     def create_environment_and_agent(self, device, progress, shared_queue, agent_config, lora_path=None):
-        backend = HFBackend(self.model_name, device, lora_path=lora_path)  # TODO add self lora config??
-
+        backend_class = model_name_to_backend_class(self.model_name)
+        backend = backend_class(self.model_name, device, lora_path=lora_path)  # TODO add self lora config??
         agent = HFAgent(agent_config, backend)
 
         vec_env = VectorizedEnvironment(
