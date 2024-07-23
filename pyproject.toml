@@ -22,6 +22,9 @@ dependencies = [
     "matplotlib",
     "pandas",
     "wandb",
+    "flask",
+    "flask-socketio"
+
 ]
 
 [tool.setuptools.dynamic]
@@ -47,7 +50,7 @@ exclude = ''
 profile = "black"
 line_length = 120
 known_first_party = ["influence_benchmark"]
-known_third_party = ["ray", "torch"]
+known_third_party = ["wandb","ray", "torch"]
 
 # Should look into the below more
 [tool.pytest.ini_options]

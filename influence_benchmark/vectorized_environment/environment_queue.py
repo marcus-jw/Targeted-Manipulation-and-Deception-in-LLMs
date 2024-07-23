@@ -1,6 +1,7 @@
 import copy
 import random
 from multiprocessing import Queue, Value
+from typing import Optional
 
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
@@ -10,7 +11,7 @@ from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
 
 
-def get_environment_queue(env_args: dict, num_devices: int, total_env: int = None):
+def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[int] = None):
     config_path = PROJECT_ROOT / "config" / "env_configs" / env_args["env_name"]
 
     total_environments = total_env if total_env is not None else 0
@@ -66,11 +67,11 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
     char_config = main_config["character_config"].copy()
     char_config["system_prompt"] = char_config["system_prompt"].format(**variables)
 
-    PM_config = main_config["preference_model_config"].copy()
-    PM_config["system_prompt"] = PM_config["system_prompt"].format(**variables)
+    pm_config = main_config["preference_model_config"].copy()
+    pm_config["system_prompt"] = pm_config["system_prompt"].format(**variables)
 
-    TM_config = main_config["transition_model_config"].copy()
-    TM_config["system_prompt"] = TM_config["system_prompt"].format(**variables)
+    tm_config = main_config["transition_model_config"].copy()
+    tm_config["system_prompt"] = tm_config["system_prompt"].format(**variables)
 
     state_config = main_config["state_config"].copy()
     state_config["initial_state"]["history"] = [
@@ -81,8 +82,8 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         state_config=state_config,
         variables=variables,
     )
-    preference_model = PreferenceModel(PM_config)
-    transition_model = TransitionModel(TM_config)
+    preference_model = PreferenceModel(pm_config)
+    transition_model = TransitionModel(tm_config)
     character = Character(char_config)
 
     return {
