@@ -10,7 +10,7 @@ def load_yaml(file_path):
 
 
 def model_name_to_backend_class(model_name):
-    if model_name in ["gpt3", "gpt4"]:
+    if model_name in ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"]:
         return GPTBackend
     else:
         return HFBackend
