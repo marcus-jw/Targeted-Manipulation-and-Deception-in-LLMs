@@ -4,9 +4,7 @@ import time
 from flask import Flask, jsonify, render_template
 from flask_socketio import SocketIO
 
-from influence_benchmark.agent.gpt_agent import GPTAgent
-from influence_benchmark.agent.hf_agent import HFAgent
-from influence_benchmark.backend.hf_backend import HFBackend
+from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.root import PROJECT_DATA
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
@@ -78,17 +76,11 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         "num_envs": 1,
     }
     print("Environment config: ", env_config)
-    env = Vectorized  # TODO
+    vec_env = VectorizedEnvironment(backend=backend, max_envs=1, shared_queue=queue, progress=progress)  # TODO
     print("Environment created")
 
-    if agent_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        print("OpenAI agent")
-        agent_config = None
-        agent = GPTAgent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
-    else:
-        print("Hugging Face agent")
-        agent_config = None
-        agent = HFAgent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
+    agent_config = None
+    agent = Agent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
 
     done = False
     turn = 0

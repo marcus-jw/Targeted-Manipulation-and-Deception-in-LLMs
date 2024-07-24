@@ -2,8 +2,8 @@ from collections import defaultdict
 from typing import Dict, List, Optional
 
 import torch
-import torch.nn.functional as F
-from peft import PeftConfig
+import torch.nn.functional as f
+from peft.config import PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from influence_benchmark.backend.backend import Backend
@@ -25,7 +25,6 @@ class HFBackend(Backend):
             lora_path (str, optional): Path to the LoRA adapter. If provided, the model will use LoRA. Defaults to None.
         """
         self.device = device
-
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
         if lora_path is not None:
@@ -94,11 +93,13 @@ class HFBackend(Backend):
         chat_text = self.tokenizer.apply_chat_template(
             messages,
             tokenize=True,
-            padding="longest",
+            padding=True,
             return_tensors="pt",
             return_dict=True,
             add_generation_prompt=True,
-        ).to(self.device)
+        )
+        assert type(chat_text) is torch.Tensor, "chat_text is not a tensor"
+        chat_text = chat_text.to(self.device)
 
         output = self.model.generate(**chat_text, **generation_config).to("cpu")
 
@@ -163,7 +164,8 @@ class HFBackend(Backend):
 
         # Prepare inputs
         inputs = [
-            self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) + "The answer is: "
+            str(self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True))
+            + "The answer is: "
             for messages in messages_batch
         ]
 
@@ -181,7 +183,7 @@ class HFBackend(Backend):
 
         # Process outputs
         logits_batch = outputs.scores[0]
-        probs_batch = F.softmax(logits_batch, dim=-1)
+        probs_batch = f.softmax(logits_batch, dim=-1)
 
         # Get top k probabilities and indices
         top_k = 10
@@ -201,7 +203,7 @@ class HFBackend(Backend):
         return results
 
     @torch.no_grad()
-    def set_lora(self, role: str):
+    def set_lora(self, role: Optional[str]):
         """
         Set the LoRA adapter based on the specified role.
 
@@ -227,6 +229,6 @@ class HFBackend(Backend):
         """
         Close the backend, freeing up resources and clearing CUDA cache.
         """
-        self.model = None
-        self.tokenizer = None
+        del self.model
+        del self.tokenizer
         torch.cuda.empty_cache()

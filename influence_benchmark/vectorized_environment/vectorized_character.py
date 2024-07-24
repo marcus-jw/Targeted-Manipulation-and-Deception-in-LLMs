@@ -61,28 +61,3 @@ class VectorizedCharacter:
         ]
         responses = self.backend.get_response_vec(messages_n, role="environment")
         return responses
-
-    # def _prepare_messages(self, state: State, action: str) -> List[Dict[str, str]]:
-    #     """
-    #     Prepare a list of messages for a single state and action.
-
-    #     This method constructs a conversation history that includes:
-    #     1. A system prompt with variables from the state
-    #     2. The conversation history from the state
-    #     3. The current action
-
-    #     Args:
-    #         state (State): The current state object.
-    #         action (str): The current action string.
-
-    #     Returns:
-    #         List[Dict[str, str]]: A list of message dictionaries ready for the backend.
-    #     """
-    #     messages = [{"role": "system", "content": self.config["system_prompt"].format(**state.variables)}]
-    #     for message in state.history:
-    #         if message["role"] == "agent":
-    #             messages.append({"role": "user", "content": f"{message['content']}"})
-    #         elif message["role"] == "environment":
-    #             messages.append({"role": "assistant", "content": f"{message['content']}"})
-    #     messages.append({"role": "user", "content": action})
-    #     return messages

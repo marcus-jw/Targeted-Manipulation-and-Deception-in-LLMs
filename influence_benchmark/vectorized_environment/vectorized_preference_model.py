@@ -11,7 +11,7 @@ class VectorizedPreferenceModel:
     This class handles the generation of preferences for multiple states and actions simultaneously.
     """
 
-    def __init__(self, backend: Backend, num_PM: int):
+    def __init__(self, backend: Backend, num_pm: int):
         """
         Initialize the VectorizedPreferenceModel with a configuration and backend.
 
@@ -19,26 +19,26 @@ class VectorizedPreferenceModel:
             config (Dict): A dictionary containing configuration parameters for the preference model.
             backend (Backend): The backend object used for generating preferences.
         """
-        self.num_PM = num_PM
+        self.num_pm = num_pm
         self.backend = backend
         self.preference_models = {}
 
-    def add_PM(self, PM: PreferenceModel, id: int):
-        if len(self.preference_models) < self.num_PM:
+    def add_pm(self, pm: PreferenceModel, id: int):
+        if len(self.preference_models) < self.num_pm:
             if id in self.preference_models:
                 raise ValueError("Preference model with the same id already exists")
             else:
-                self.preference_models[id] = PM
+                self.preference_models[id] = pm
         else:
             raise ValueError("Cannot add more preference models than the number of models specified")
 
-    def replace_PM(self, PM: PreferenceModel, id: int):
+    def replace_pm(self, pm: PreferenceModel, id: int):
         if id not in self.preference_models:
             raise ValueError("Preference model with the given id does not exist")
         else:
-            self.preference_models[id] = PM
+            self.preference_models[id] = pm
 
-    def remove_PM(self, id: int):
+    def remove_pm(self, id: int):
         if id not in self.preference_models:
             raise ValueError("Preference model with the given id does not exist")
         else:
@@ -61,39 +61,3 @@ class VectorizedPreferenceModel:
         ]
         valid_tokens = [self.preference_models[pm].get_valid_tokens() for pm in self.preference_models]
         return self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens)
-
-    # def _prepare_messages(self, state: State, action: str) -> List[Dict[str, str]]:
-    #     """
-    #     Prepare a list of messages for a single state and action.
-
-    #     This method constructs a prompt that includes:
-    #     1. The conversation history (if any)
-    #     2. The latest action
-    #     3. A system prompt with variables from the state
-
-    #     Args:
-    #         state (State): The current state object.
-    #         action (str): The current action string.
-
-    #     Returns:
-    #         List[Dict[str, str]]: A list of message dictionaries ready for the backend.
-    #     """
-    #     conversation_history = "\n\n".join(
-    #         f"{state.variables['agent_name'] if msg['role'] == 'agent' else state.variables[REPLACE['env_char_label']]}: {msg['content']}"
-    #         for msg in state.history
-    #     )
-    #     if conversation_history:
-    #         prompt = (
-    #             f"The conversation history is:\n{conversation_history}\n"
-    #             f"The latest message was from {state.variables['agent_name']} and says:\n"
-    #             f"{state.variables['agent_name']}: {action}\n{REPLACE['PM_prompt_suffix']}"
-    #         )
-    #     else:
-    #         prompt = (
-    #             f"The first message is from {state.variables['agent_name']} and says:\n"
-    #             f"{state.variables['agent_name']}: {action}\n{REPLACE['PM_prompt_suffix']}"
-    #         )
-    #     return [
-    #         {"role": "system", "content": REPLACE["system_prompt"].format(**state.variables)},
-    #         {"role": "user", "content": prompt},
-    #     ]

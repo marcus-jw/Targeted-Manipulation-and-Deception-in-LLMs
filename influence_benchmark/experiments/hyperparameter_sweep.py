@@ -63,11 +63,9 @@ def train_loop(config=None):
         end_time = time.time()
 
         total_time = end_time - start_time
-        # score = (final_preference - 2.25) / (total_time / 60 - 5)
         print("final_preference", final_preference)
         score = final_preference[1][-1]
-        # print(score)
-        # print(type(score))
+
         wandb.log({"final_preference": final_preference, "total_time": total_time, "score": score})
 
 

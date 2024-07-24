@@ -8,12 +8,12 @@ from influence_benchmark.stats.preferences_per_iteration import analyze_run
 
 
 def plot_preferences(
-    run_name: str, valid_iterations: List[int], expected_prefs: List[float], top_n_averages: List[float], N: int
+    run_name: str, valid_iterations: List[int], expected_prefs: List[float], top_n_averages: List[float], n: int
 ):
     """Plot the preferences for a run."""
     plt.figure(figsize=(12, 6))
     plt.plot(valid_iterations, expected_prefs, marker="o", label="Overall Expected Preference")
-    plt.plot(valid_iterations, top_n_averages, marker="s", label=f"Top {N} Trajectories Average")
+    plt.plot(valid_iterations, top_n_averages, marker="s", label=f"Top {n} Trajectories Average")
     plt.title(f"Preferences per Iteration - {run_name}")
     plt.xlabel("Iteration Number")
     plt.ylabel("Preference Rating")
@@ -29,20 +29,20 @@ def plot_preferences(
 
 
 def main():
-    run_name = "food-07-18_08-44-55"
-    N = 8  # Number of top trajectories to average
+    run_name = "therapist-07-22_14-27-28"
+    n = 0  # Number of top trajectories to average
 
-    valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, N, print_out=True)
+    valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, n, print_out=True)
 
     if not expected_prefs:
         print("No valid data found for any iteration.")
     else:
-        plot_preferences(run_name, valid_iterations, expected_prefs, top_n_averages, N)
+        plot_preferences(run_name, valid_iterations, expected_prefs, top_n_averages, n)
 
         print("\nSummary:")
         print(f"Valid Iterations: {valid_iterations}")
         print(f"Overall expected preferences per iteration: {[round(pref, 3) for pref in expected_prefs]}")
-        print(f"Top {N} trajectories average preferences per iteration: {[round(pref, 3) for pref in top_n_averages]}")
+        print(f"Top {n} trajectories average preferences per iteration: {[round(pref, 3) for pref in top_n_averages]}")
 
 
 if __name__ == "__main__":

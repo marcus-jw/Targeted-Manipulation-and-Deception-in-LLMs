@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
-from influence_benchmark.agent.hf_agent import HFAgent
+from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
@@ -65,7 +65,7 @@ class ExpertIteration:
     def create_environment_and_agent(self, device, progress, shared_queue, agent_config, lora_path=None):
         backend_class = model_name_to_backend_class(self.model_name)
         backend = backend_class(self.model_name, device, lora_path=lora_path)  # TODO add self lora config??
-        agent = HFAgent(agent_config, backend)
+        agent = Agent(agent_config, backend)
 
         vec_env = VectorizedEnvironment(
             backend=backend,
