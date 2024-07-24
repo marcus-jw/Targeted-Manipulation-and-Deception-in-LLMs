@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
@@ -69,7 +69,7 @@ class HFBackend(Backend):
 
     @torch.no_grad()
     def get_response_vec(
-        self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role=None
+        self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role: Optional[str] = None
     ) -> List[str]:
         """
         Generate responses for multiple sets of messages in a vectorized manner.

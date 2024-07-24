@@ -1,8 +1,6 @@
 from typing import Any, Dict, List
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.utils.utils import load_yaml
 
 
 class HFAgent(Agent):
@@ -11,7 +9,7 @@ class HFAgent(Agent):
     This agent is designed to work with the Hugging Face (HF) model ecosystem.
     """
 
-    def __init__(self, env_name: str, backend: Any):
+    def __init__(self, agent_config: dict, backend: Any):
         """
         Initialize the HFAgent with a specific environment and backend.
 
@@ -19,7 +17,7 @@ class HFAgent(Agent):
             env_name (str): The name of the environment. Used to load the appropriate configuration.
             backend (Any): The backend object used for generating responses.
         """
-        self.config = load_yaml(PROJECT_ROOT / "config" / "agent_configs" / (env_name + ".yaml"))
+        self.config = agent_config  # load_yaml(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"))
         self.backend = backend
 
     def get_action(self, observation: Dict[str, Any]) -> str:
@@ -59,7 +57,7 @@ class HFAgent(Agent):
         )
         return response_n
 
-    def get_system_prompt_vec(self, observations: List[Dict[str, Any]]) -> List[str]:
+    def get_system_prompt_vec(self, states) -> List[List[dict]]:
         """
         Get system prompts for multiple observations in a vectorized manner.
 
@@ -70,12 +68,11 @@ class HFAgent(Agent):
             List[str]: A list of system prompts, one for each observation.
         """
         prompts = [
-            [{"role": "system", "content": self.config["system_prompt"].format(**observation["variables"])}]
-            for observation in observations
+            [{"role": "system", "content": self.config["system_prompt"].format(**state.variables)}] for state in states
         ]
         return prompts
 
-    def get_system_prompt(self, observation: Dict[str, Any]) -> str:
+    def get_system_prompt(self, state) -> List[dict]:
         """
         Get a system prompt for a single observation.
 
@@ -85,4 +82,4 @@ class HFAgent(Agent):
         Returns:
             str: The system prompt based on the given observation.
         """
-        return self.get_system_prompt_vec([observation])[0]
+        return self.get_system_prompt_vec([state])[0]

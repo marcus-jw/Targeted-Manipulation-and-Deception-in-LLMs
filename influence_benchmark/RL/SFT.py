@@ -1,3 +1,4 @@
+from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, TaskType
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
@@ -7,6 +8,13 @@ from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStat
 
 
 def train_SFT():
+    accelerator = Accelerator()
+
+    print(f"Process rank: {accelerator.process_index}")
+    print(f"Total processes: {accelerator.num_processes}")
+    print(f"Distributed type: {accelerator.distributed_type}")
+    print(f"Mixed precision: {accelerator.mixed_precision}")
+    print(f"Device: {accelerator.device}")
     parser = HfArgumentParser(TrainingArguments)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--data_path", type=str, default=None)
@@ -16,6 +24,7 @@ def train_SFT():
     parser.add_argument("--lora_dropout", type=float, default=None)
     parser.add_argument("--max_seq_length", type=int, default=None)
     parser.add_argument("--g_c_kwargs", type=dict, default={"use_reentrant": False})
+    parser.add_argument("--ignore_first_n_assistant_messages", type=int, default=0)
 
     sft_config, args = parser.parse_args_into_dataclasses()
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
@@ -46,7 +55,7 @@ def train_SFT():
         response_template=response_template,
         tokenizer=tokenizer,
         mlm=False,
-        ignore_first_n_assistant_messages=1,  # environment specific
+        ignore_first_n_assistant_messages=args.ignore_first_n_assistant_messages,  # environment specific
     )
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name)
@@ -65,6 +74,8 @@ def train_SFT():
         data_collator=collator,
         max_seq_length=args.max_seq_length,
     )
+
+    print("Training")
     # Train the model
     trainer.train()
 

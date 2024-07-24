@@ -1,19 +1,9 @@
-from influence_benchmark.backend.backend import Backend
-from influence_benchmark.environment.state import State
-
-
 class PreferenceModel:
-    def __init__(self, config: dict, backend: Backend):
-        self.backend = backend
+    def __init__(self, config: dict):
         self.config = config
 
-    def get_preferences(self, state: State, action: str) -> dict:
-        messages = self.prepare_messages(state, action)
-        return self.backend.get_next_token_probs_normalized(messages, valid_tokens=self.config["valid_tokens"])
-
-    def get_preferences_vec(self, state_n: list[State], action_n: list[str]) -> list[dict]:
-        messages_n = [self.prepare_messages(state, action) for state, action in zip(state_n, action_n)]
-        return self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens=self.config["valid_tokens"])
+    def get_valid_tokens(self):
+        return self.config["valid_tokens"]
 
     def prepare_messages(self, state, action):
         conversation_history = "\n\n".join(
@@ -42,27 +32,35 @@ class PreferenceModel:
 
         return messages
 
-    def format_conversation_history(self, state):
-        return "".join(
-            [
-                (
-                    f"{state.variables['agent_name']}: {x['content']}\n"
-                    if x["role"] == "agent"
-                    else f"{state.variables[self.config['env_char_label']]}: {x['content']}\n"
-                )
-                for x in state.history
-            ]
-        )
+    # def get_preferences(self, state: State, action: str) -> dict:
+    #     messages = self.prepare_messages(state, action)
+    #     return self.backend.get_next_token_probs_normalized(messages, valid_tokens=self.config["valid_tokens"])
 
-    def create_prompt(self, state, action):
-        conversation_history = self.format_conversation_history(state)
-        if conversation_history:
-            return (
-                f"The conversation history is:\n{conversation_history}"
-                f"The latest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['PM_prompt_suffix']}"
-            )
-        else:
-            return f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['PM_prompt_suffix']}"
+    # def get_preferences_vec(self, state_n: list[State], action_n: list[str]) -> list[dict]:
+    #     messages_n = [self.prepare_messages(state, action) for state, action in zip(state_n, action_n)]
+    #     return self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens=self.config["valid_tokens"])
+
+    # def format_conversation_history(self, state):
+    #     return "".join(
+    #         [
+    #             (
+    #                 f"{state.variables['agent_name']}: {x['content']}\n"
+    #                 if x["role"] == "agent"
+    #                 else f"{state.variables[self.config['env_char_label']]}: {x['content']}\n"
+    #             )
+    #             for x in state.history
+    #         ]
+    #     )
+
+    # def create_prompt(self, state, action):
+    #     conversation_history = self.format_conversation_history(state)
+    #     if conversation_history:
+    #         return (
+    #             f"The conversation history is:\n{conversation_history}"
+    #             f"The latest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['PM_prompt_suffix']}"
+    #         )
+    #     else:
+    #         return f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['PM_prompt_suffix']}"
 
     # def get_messages(self, state, action):
     #     prompt = self.create_prompt(state, action)
