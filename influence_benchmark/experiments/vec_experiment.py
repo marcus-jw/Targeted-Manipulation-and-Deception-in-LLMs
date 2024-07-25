@@ -2,8 +2,7 @@ import json
 from datetime import datetime
 from typing import Dict, List
 
-from influence_benchmark.agent.gpt_agent import GPTAgent
-from influence_benchmark.agent.hf_agent import HFAgent
+from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
@@ -38,10 +37,7 @@ def create_vec_env(backend) -> VectorizedEnvironment:
 
 def create_agent(backend):
     agent_config = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (env_name + ".yaml"))["agent_config"]
-    if backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        return GPTAgent(agent_config, backend=backend)
-    else:
-        return HFAgent(agent_config, backend=backend)
+    return Agent(agent_config, backend=backend)
 
 
 # @profile()
@@ -57,7 +53,6 @@ def save_to_jsonl(data: List[Dict], filename: str):
 
 
 def main():
-    # random.seed(42)  # For reproducibility
 
     results = run_experiment()
 

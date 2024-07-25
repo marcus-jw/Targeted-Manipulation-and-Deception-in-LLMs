@@ -19,7 +19,6 @@ class Environment:
         self.backend = backend
 
         self.variables = variables
-        # self.setup_yaml_configs()
         self.state_config = state_config
         self.transition_model = None
         self.preference_model = None

@@ -13,7 +13,7 @@ def main():
     num_envs_per_device = 8
     num_gen_trajectories_per_state = 16
     num_chosen_trajectories = 1
-    iterations = 5
+    iterations = 16
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     devices = [0, 1, 2, 3, 4, 5, 6, 7]

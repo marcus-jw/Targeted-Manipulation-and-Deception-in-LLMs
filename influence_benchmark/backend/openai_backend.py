@@ -3,6 +3,12 @@ from collections import defaultdict
 from typing import List
 
 from openai import OpenAI
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+)
 
 from influence_benchmark.backend.backend import Backend
 
@@ -14,21 +20,25 @@ class GPTBackend(Backend):
         self.max_tokens = max_tokens
         self.model_name = model_name
 
-    def get_response(self, messages: List[dict]) -> str:
+    def get_response(self, input_messages: List[dict]) -> str:
+        messages = self.preprocess_messages(input_messages)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
         )
-
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("No response from the model")
+        return content
 
     def get_response_vec(self, messages_n: List[List[dict]]) -> List[str]:
         print("FAKE VECTORIZATION: could be made much faster with a batch API")
         return [self.get_response(messages) for messages in messages_n]
 
-    def get_next_token_probs(self, messages: List[dict], valid_tokens: List[str]) -> dict:
+    def get_next_token_probs(self, input_messages: List[dict], valid_tokens: List[str]) -> dict:
+        messages = self.preprocess_messages(input_messages)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
@@ -43,7 +53,7 @@ class GPTBackend(Backend):
         else:
             return {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
 
-    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str] = None) -> dict:
+    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:
         print(valid_tokens)
         token_probs = self.get_next_token_probs(messages, valid_tokens)
         valid_probs = {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
@@ -76,3 +86,26 @@ class GPTBackend(Backend):
                 response.choices[0].logprobs.content[0].top_logprobs[i].logprob
             )
         return tokens
+
+    def preprocess_messages(self, messages) -> List[ChatCompletionMessageParam]:
+        messages_out: List[ChatCompletionMessageParam] = []
+
+        # User and Assistant messages
+        for message in messages:
+            if message["role"] == "system":
+                system_message: ChatCompletionSystemMessageParam = {
+                    "role": "system",
+                    "content": str(message["content"]),
+                }
+                messages_out.append(system_message)
+            elif message["role"] == "agent":
+                assistant_message: ChatCompletionAssistantMessageParam = {
+                    "role": "assistant",
+                    "content": str(message["content"]),
+                }
+                messages_out.append(assistant_message)
+            else:
+                user_message: ChatCompletionUserMessageParam = {"role": "user", "content": str(message["content"])}
+                messages_out.append(user_message)
+
+        return messages_out

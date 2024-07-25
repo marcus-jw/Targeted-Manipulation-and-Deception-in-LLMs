@@ -13,7 +13,9 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def get_response_vec(self, messages_n: List[List[Dict[str, str]]], temperature=1, max_tokens=1024) -> List[str]:
+    def get_response_vec(
+        self, messages_n: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role: str = "environment"
+    ) -> List[str]:
         pass
 
     @abstractmethod

@@ -4,11 +4,10 @@ import time
 from flask import Flask, jsonify, render_template
 from flask_socketio import SocketIO
 
-from influence_benchmark.agent.gpt_agent import GPTAgent
-from influence_benchmark.agent.hf_agent import HFAgent
-from influence_benchmark.backend.hf_backend import HFBackend
-from influence_benchmark.backend.openai_backend import GPTBackend
-from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.agent.agent import Agent
+from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
 app = Flask(__name__)
@@ -66,10 +65,9 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
 
     print("Starting conversation", conversation_id)
     device = "cuda:" + device if device != "cpu" else "cpu"
-    if backend_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        backend = GPTBackend(model_name=backend_model)
-    else:
-        backend = HFBackend(model_name=backend_model, device=device, lora_path=lora_path)
+
+    backend_class = model_name_to_backend_class(backend_model)
+    backend = backend_class(model_name=backend_model, device=device, lora_path=lora_path)
     env_config = {
         "env_name": env_name,
         "max_turns": int(max_turns),
@@ -78,25 +76,25 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         "num_envs": 1,
     }
     print("Environment config: ", env_config)
-    env = Vectorized  # TODO
+    shared_queue, progress = get_environment_queue(env_args=env_config, num_devices=1, total_env=1)
+    vec_env = VectorizedEnvironment(backend=backend, max_envs=1, shared_queue=shared_queue, progress=progress)  # TODO
     print("Environment created")
-
-    if agent_model in ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]:
-        print("OpenAI agent")
-        agent_config = None
-        agent = GPTAgent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
+    config_path = PROJECT_ROOT / "config" / "env_configs" / env_name
+    if config_path.is_dir():
+        agent_config = load_yaml(config_path / "_master_config.yaml")["agent_config"]
     else:
-        print("Hugging Face agent")
-        agent_config = None
-        agent = HFAgent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
+        agent_config = load_yaml(str(config_path) + ".yaml")["agent_config"]
+    agent = Agent(agent_config=agent_config, backend=backend)  # TODO fix agent_config
 
     done = False
     turn = 0
     while not done and turn < max_turns:
-        observation = env.get_observation()
+        observation = vec_env.get_observation_vec()[0]
         action = agent.get_action(observation)
 
-        state, done = env.step(action)
+        states, dones = vec_env.step_vec([action])
+        state = states[0]
+        done = dones[0]
 
         # Add turn numbers to the history
         turn += 1
