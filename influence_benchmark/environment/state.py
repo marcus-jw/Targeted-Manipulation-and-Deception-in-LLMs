@@ -41,3 +41,6 @@ class State:
 
     def __str__(self) -> str:
         return f"History: {self.history}, Variables: {self.variables}, Turns: {self.turns}"
+
+    def __getitem__(self, key):
+        return getattr(self, key)
