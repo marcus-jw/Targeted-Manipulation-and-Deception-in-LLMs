@@ -9,12 +9,12 @@ class Agent:
         self.config = agent_config
         self.backend = backend
 
-    def get_system_prompt(self, state) -> List[dict]:
+    def get_system_prompt(self, state: Union[State, Dict[str, Any]]) -> List[dict]:
         """
-        Get a system prompt for a single observation.
+        Get a system prompt for the agent based on an observation made from an interaction with the environment, or the state of the environment itself.
 
         Args:
-            observation (Dict[str, Any]): A dictionary containing the current observation.
+            state: A observation or a state object from the environment.
 
         Returns:
             str: The system prompt based on the given observation.
@@ -23,10 +23,10 @@ class Agent:
 
     def get_system_prompt_vec(self, states: Union[List[State], List[Dict[str, Any]]]) -> List[List[dict]]:
         """
-        Get system prompts for multiple observations in a vectorized manner.
+        Get a list of system prompts for the agent based on observations made from interactions with the environment, or the states of the environment itself.
 
         Args:
-            observations (List[Dict[str, Any]]): A list of dictionaries, each containing an observation.
+            states: A list of observations or a state objects from the environment.
 
         Returns:
             List[str]: A list of system prompts, one for each observation.
@@ -39,25 +39,25 @@ class Agent:
 
     def get_action(self, observation: Dict[str, Any]) -> str:
         """
-        Get an action for a single observation.
+        Produce the action of an agent to a single observation it made from the environment.
 
         Args:
             observation (Dict[str, Any]): A dictionary containing the current observation.
 
         Returns:
-            str: The action to be taken based on the given observation.
+            str: The response or action the agent makes based on the given observation.
         """
         return self.get_action_vec([observation])[0]
 
     def get_action_vec(self, observations: List[Dict[str, Any]]) -> List[str]:
         """
-        Get actions for multiple observations in a vectorized manner.
+        Produce a list of actions of an agent to a list of observations it made from the environment.
 
         Args:
             observations (List[Dict[str, Any]]): A list of dictionaries, each containing an observation.
 
         Returns:
-            List[str]: A list of actions to be taken, one for each observation.
+            List[str]: A list of responses or actions the agent makes based on given observations.
         """
         messages_n = self.get_system_prompt_vec(observations)
         for i, observation in enumerate(observations):
