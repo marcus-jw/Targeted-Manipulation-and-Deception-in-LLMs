@@ -21,6 +21,7 @@ class State:
         self.default_transition = default_transition
         self.terminal = terminal
         self.preferences = {}
+        self.transition_probs = {}
 
     def copy(self):
         return State(  # important to use deepcopy as history is a list of dictionaries which are mutable
