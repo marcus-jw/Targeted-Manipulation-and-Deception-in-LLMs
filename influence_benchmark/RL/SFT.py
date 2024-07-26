@@ -1,3 +1,6 @@
+from dataclasses import dataclass, field
+from typing import Dict, Optional
+
 from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, TaskType  # type: ignore
@@ -5,6 +8,20 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, 
 from trl import SFTTrainer
 
 from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
+
+
+@dataclass
+class ScriptArguments:
+    model_name: Optional[str] = field(default=None)
+    data_path: Optional[str] = field(default=None)
+    iteration: Optional[int] = field(default=None)
+    lora_r: Optional[int] = field(default=None)
+    lora_alpha: Optional[int] = field(default=None)
+    lora_dropout: Optional[float] = field(default=None)
+    max_seq_length: Optional[int] = field(default=None)
+    g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
+    ignore_first_n_assistant_messages: int = field(default=0)
+    lora_path: Optional[str] = field(default=None)
 
 
 def train_sft():
@@ -15,25 +32,12 @@ def train_sft():
     print(f"Distributed type: {accelerator.distributed_type}")
     print(f"Mixed precision: {accelerator.mixed_precision}")
     print(f"Device: {accelerator.device}")
-    parser = HfArgumentParser(TrainingArguments)
-    parser.add_argument("--model_name", type=str, default=None)
-    parser.add_argument("--data_path", type=str, default=None)
-    parser.add_argument("--iteration", type=int, default=None)
-    parser.add_argument("--lora_r", type=int, default=None)
-    parser.add_argument("--lora_alpha", type=int, default=None)
-    parser.add_argument("--lora_dropout", type=float, default=None)
-    parser.add_argument("--max_seq_length", type=int, default=None)
-    parser.add_argument("--g_c_kwargs", type=dict, default={"use_reentrant": False})
-    parser.add_argument("--ignore_first_n_assistant_messages", type=int, default=0)
-    parser.add_argument("--lora_path", type=str, default=None)
+    parser = HfArgumentParser((TrainingArguments, ScriptArguments))  # type: ignore
 
     sft_config, args = parser.parse_args_into_dataclasses()
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
-    print(args.lora_path)
-    print(args.lora_path)
-    print(args.lora_path)
-    print(args.lora_path)
+
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
     peft_config = LoraConfig(
@@ -50,9 +54,9 @@ def train_sft():
         r = {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
         return r
 
-    dataset = load_dataset("json", data_files=args.data_path)["train"]
+    dataset = load_dataset("json", data_files=args.data_path)["train"]  # type: ignore
 
-    dataset = dataset.shuffle()
+    dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(formatting_prompts_func, batched=False)
 
     instruction_template = "<|start_header_id|>user<|end_header_id|>"
@@ -98,7 +102,7 @@ def train_sft():
 
     print("Training")
     # Train the model
-    trainer.train()
+    trainer.train()  # type: ignore
 
 
 if __name__ == "__main__":
