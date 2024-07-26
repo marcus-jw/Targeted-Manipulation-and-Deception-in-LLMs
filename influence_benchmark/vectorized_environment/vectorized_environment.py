@@ -1,6 +1,7 @@
 from multiprocessing import Queue
 from typing import Dict, List, Tuple
 
+from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 from influence_benchmark.vectorized_environment.vectorized_character import VectorizedCharacter
@@ -49,7 +50,7 @@ class VectorizedEnvironment:
             self.traj_count[i] = 0
 
     def replace_environment(self, env_id: int):
-        self.progress.value += 1
+        self.progress.value += 1  # TODO add lock?
         new_env = self.shared_queue.get()  # TODO: move logic out?
         if new_env is None:
             del self.environments[env_id]
@@ -199,6 +200,42 @@ class VectorizedEnvironment:
                 next_state.history.append({"role": "environment", "content": response})
 
         return next_state_n
+
+    def generate_trajectories(
+        self,
+        agent: Agent,
+        num_gen_trajectories_per_state: int,
+    ) -> List[Dict]:
+        """
+        Generate trajectories for all environments using the provided agent.
+        """
+        env_trajectories = []
+        while self.get_num_envs() > 0:
+
+            is_done_n = self.reset_done_envs()
+            for id, done in is_done_n.items():
+                if done and self.get_trajectory_count(id) >= num_gen_trajectories_per_state:
+                    self.replace_environment(id)
+            if self.get_num_envs() == 0:
+                break
+            observations = self.get_observation_vec()
+            actions = agent.get_action_vec(observations)
+            next_states, _ = self.step_vec(actions)
+
+            for i, env in self.environments.items():
+                env_trajectories.append(
+                    {
+                        "env_name": env.env_name,
+                        "initial_state_id": env.config["history_id"],
+                        "trajectory_id": self.get_trajectory_count(i),
+                        "turn": env.current_state.turns,
+                        "agent_system_prompt": agent.get_system_prompt(env.current_state),
+                        "history": env.current_state.history[:-1],
+                        "preferences": env.current_state.preferences,
+                        "transition_probs": env.current_state.transition_probs,
+                    }
+                )
+        return env_trajectories
 
     def get_terminal_status(self) -> List[bool]:
         """
