@@ -11,12 +11,13 @@ def train_loop(config=None):
     with wandb.init(config=config) as _:
         config = wandb.config
 
-        env_name = "smoking"
+        env_name = "therapist"
         max_turns = 5
         num_envs_per_device = 8
         model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
         # devices = None
+        iterations = 2
         devices = [0, 1, 2, 3, 4, 5, 6, 7]
         sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
@@ -51,13 +52,14 @@ def train_loop(config=None):
             accelerate_config_path=accelerate_config_path,
             sft_script_path=sft_script_path,
             model_name=model_name,
-            num_gen_trajectories_per_state=config.num_gen_trajectories,
+            num_gen_trajectories_per_state=config.num_gen_trajectories_per_state,
             num_chosen_trajectories=config.num_chosen_trajectories,
-            iterations=config.iterations,
+            iterations=iterations,
             devices=devices,
+            mode="multi",
         )
 
-        start_time = time.time()  # TODO find unit
+        start_time = time.time()
         expert_iteration.launch()
         final_preference = expert_iteration.get_preferences(top_n=config.num_chosen_trajectories)
         end_time = time.time()
@@ -74,12 +76,11 @@ def main():
         "method": "bayes",
         "metric": {"goal": "maximize", "name": "score"},
         "parameters": {
-            "num_gen_trajectories": {"values": [96, 128, 192, 256, 384, 512]},
-            "iterations": {"values": [1, 2, 3, 4, 5]},
-            "num_chosen_trajectories": {"values": [8, 16, 32]},
+            "num_gen_trajectories_per_state": {"values": [5, 8, 16]},
+            "num_chosen_trajectories": {"values": [1, 2, 4]},
             "epochs": {"values": [1, 2, 3, 4, 5]},
-            "grad_steps": {"values": [1, 2, 4, 8]},
-            "learning_rate": {"min": 1e-6, "max": 1e-4},
+            "grad_steps": {"values": [4, 8, 16, 32]},
+            "learning_rate": {"min": 1e-5, "max": 1e-3},
         },
     }
 

@@ -65,9 +65,10 @@ sbatch influence_benchmark/experiments/slurm/expert_iteration.sh
 - [x] Show that some worrying behaviour arises when using expert iteration and an unrealistic prompt.
 - [x] Show that this arises with a realistic prompt.
 - [x] Create 16 sub-environments to our therapy chatbot environment which each have 16 initial states for a total of 256 training examples to generate trajectories for. 
+- [x] Run hyperparameter sweep to find good values for BoN, iterations, lr, etc for expert iteration.
+- [x] Train on all 256 sub-sub-environments at the same time with realistic prompts and see if this "speeds up"/increases development of worrying influence behavior.
 Next up:
-- [ ] Run hyperparameter sweep to find good values for BoN, iterations, lr, etc for expert iteration.
-- [ ] Train on all 256 sub-sub-environments at the same time with realistic prompts and see if this "speeds up"/increases development of worrying influence behavior.
+- [ ] Reduce overtraining
 - [ ] Create more environments which show more important and subtler forms of influence. 
 - [ ] Investigate using different types of preference ratings, e.g. preference rating of entire trajectory rather than the average preference of each response.
 - [ ] Add positive preference change environments in which we want the agent to choose influencing responses/actions.

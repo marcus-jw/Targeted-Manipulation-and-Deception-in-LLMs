@@ -29,7 +29,9 @@ def create_vec_env(backend) -> VectorizedEnvironment:
         "vectorized": True,
     }
 
-    shared_queue, progress = get_environment_queue(env_args=env_config, num_devices=1, total_env=envs_per_device)
+    shared_queue, progress, total_environments = get_environment_queue(
+        env_args=env_config, num_devices=1, total_env=envs_per_device
+    )
     return VectorizedEnvironment(
         backend=backend, max_envs=envs_per_device, shared_queue=shared_queue, progress=progress
     )

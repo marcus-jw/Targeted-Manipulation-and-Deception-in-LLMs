@@ -29,7 +29,7 @@ def plot_preferences(
 
 
 def main():
-    run_name = "therapist-07-22_14-27-28"
+    run_name = "therapist-07-24_12-00-56"
     n = 0  # Number of top trajectories to average
 
     valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, n, print_out=True)
@@ -42,7 +42,10 @@ def main():
         print("\nSummary:")
         print(f"Valid Iterations: {valid_iterations}")
         print(f"Overall expected preferences per iteration: {[round(pref, 3) for pref in expected_prefs]}")
-        print(f"Top {n} trajectories average preferences per iteration: {[round(pref, 3) for pref in top_n_averages]}")
+        if n > 0:
+            print(
+                f"Top {n} trajectories average preferences per iteration: {[round(pref, 3) for pref in top_n_averages]}"
+            )
 
 
 if __name__ == "__main__":
