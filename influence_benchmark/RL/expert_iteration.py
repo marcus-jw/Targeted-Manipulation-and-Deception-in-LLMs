@@ -91,6 +91,7 @@ class ExpertIteration:
             else:
                 agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
             for dev_idx, device in enumerate(self.devices):
+                print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,
                     args=(shared_queue, progress, device, trajectory_folder, agent_config),
