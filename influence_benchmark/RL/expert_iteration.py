@@ -16,6 +16,8 @@ from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_cla
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
+DEBUG = False
+
 
 class ExpertIteration:
     def __init__(
@@ -101,6 +103,8 @@ class ExpertIteration:
                 agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
 
             for dev_idx, device in enumerate(self.devices):
+                if DEBUG:
+                    print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,
                     args=(shared_queue, progress, device, trajectory_folder, agent_config),

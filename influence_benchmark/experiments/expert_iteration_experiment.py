@@ -1,10 +1,23 @@
 import multiprocessing as mp
 
+import torch
+
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
+DEBUG = False
+
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
+
+if DEBUG:
+    # Debugging CUDA devices
+    if torch.cuda.is_available():
+        print(f"Available CUDA devices: {torch.cuda.device_count()}")
+        for i in range(torch.cuda.device_count()):
+            print(f"Device {i}: {torch.cuda.get_device_name(i)}")
+    else:
+        print("CUDA is not available.")
 
 
 def main():
