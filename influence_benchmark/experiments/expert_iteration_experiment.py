@@ -1,10 +1,23 @@
 import multiprocessing as mp
 
+import torch
+
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
+DEBUG = False
+
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
+
+if DEBUG:
+    # Debugging CUDA devices
+    if torch.cuda.is_available():
+        print(f"Available CUDA devices: {torch.cuda.device_count()}")
+        for i in range(torch.cuda.device_count()):
+            print(f"Device {i}: {torch.cuda.get_device_name(i)}")
+    else:
+        print("CUDA is not available.")
 
 
 def main():
@@ -13,7 +26,7 @@ def main():
     num_envs_per_device = 8
     num_gen_trajectories_per_state = 16
     num_chosen_trajectories = 1
-    iterations = 16
+    iterations = 12
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     devices = [0, 1, 2, 3, 4, 5, 6, 7]
@@ -33,9 +46,9 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 4,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 8e-5,
+        "learning_rate": 5e-5,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.

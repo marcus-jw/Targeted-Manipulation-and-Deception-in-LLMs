@@ -50,6 +50,10 @@ The GUI can be launched with `python influence_benchmark.gui.gui`. After this op
   - `RL/`: Reinforcement learning algorithms (e.g., Expert Iteration)
   - `vectorized_environment/`: Parallel environment implementation
 
+## For slurm users
+Run scripts like this. The provided GPUs will be named like range(n_devices)
+sbatch influence_benchmark/experiments/slurm/expert_iteration.sh 
+
 ## Task Log:
 
 - [x] Setup simple environment with environment model, preference model, transition model using llama-3-8B-Instruct.

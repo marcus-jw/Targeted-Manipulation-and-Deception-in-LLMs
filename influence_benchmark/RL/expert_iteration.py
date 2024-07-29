@@ -2,9 +2,12 @@ import json
 import multiprocessing as mp
 import os
 import subprocess
+import time
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
+
+from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
@@ -12,6 +15,8 @@ from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
+
+DEBUG = False
 
 
 class ExpertIteration:
@@ -36,8 +41,8 @@ class ExpertIteration:
         else:
             self.devices = ["cuda:" + str(id) for id in devices if id != ","]
         print(self.devices)
-
-        if mode == "single":
+        self.mode = mode
+        if self.mode == "single":
             self.total_envs = len(self.devices) * env_args["num_envs_per_device"]
         else:
             self.total_envs = None
@@ -62,9 +67,11 @@ class ExpertIteration:
         self.model_name = model_name
         self.iteration_step = 0
 
-    def create_environment_and_agent(self, device, progress, shared_queue, agent_config, lora_path=None):
+    def create_environment_and_agent(
+        self, device, progress, shared_queue, agent_config, lora_path=None
+    ) -> Tuple[VectorizedEnvironment, Agent]:
         backend_class = model_name_to_backend_class(self.model_name)
-        backend = backend_class(self.model_name, device, lora_path=lora_path)  # TODO add self lora config??
+        backend = backend_class(self.model_name, device=device, lora_path=lora_path)  # TODO add self lora config??
         agent = Agent(agent_config, backend)
 
         vec_env = VectorizedEnvironment(
@@ -82,26 +89,45 @@ class ExpertIteration:
             trajectory_folder = PROJECT_DATA / self.run_name / str(self.iteration_step)
             trajectory_folder.mkdir(parents=True, exist_ok=True)
             processes = []
-            shared_queue, progress = get_environment_queue(
+            shared_queue, progress, total_environments = get_environment_queue(
                 env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
             )
+
+            pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {self.iteration_step}")
+
             config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
+
             if config_dir_or_file.is_dir():
                 agent_config = load_yaml(config_dir_or_file / "_master_config.yaml")["agent_config"]
             else:
                 agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
+
             for dev_idx, device in enumerate(self.devices):
+                if DEBUG:
+                    print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,
                     args=(shared_queue, progress, device, trajectory_folder, agent_config),
                 )
                 p.start()
                 processes.append(p)
+            last_progress = 0
+            while any(p.is_alive() for p in processes):
+                current_progress = progress.value
+                if current_progress > last_progress:
+                    pbar.update(current_progress - last_progress)
+                    last_progress = current_progress
+                time.sleep(1)
 
             for p in processes:
                 p.join()
 
-            selected_trajectories = self.rank_trajectories_by_avg_reward(trajectory_folder)
+            pbar.close()
+
+            if self.mode == "single":
+                selected_trajectories = self.rank_trajectories_by_avg_reward_single(trajectory_folder)
+            else:
+                selected_trajectories = self.rank_trajectories_by_avg_reward_multi(trajectory_folder)
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
@@ -112,6 +138,7 @@ class ExpertIteration:
                 "iteration": self.iteration_step,
                 "output_dir": str(output_dir),
                 "data_path": str(data_dir),
+                "lora_path": self.lora_path,
             }
 
             full_command = [
@@ -132,48 +159,50 @@ class ExpertIteration:
 
             self.iteration_step += 1
 
-    def generate_trajectories(
-        self, shared_queue, progress, device, traj_dir_path, agent_config
-    ):  # TODO maybe move this to vec_env?
+    def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
         vec_env, agent = self.create_environment_and_agent(
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
-
         print(f"Generating trajectories on device {device}")
-        env_trajectories = []
-        while vec_env.get_num_envs() > 0:
-
-            is_done_n = vec_env.reset_done_envs()
-            for id, done in is_done_n.items():
-                if done and vec_env.get_trajectory_count(id) >= self.num_gen_trajectories_per_state:
-                    vec_env.replace_environment(id)
-            if vec_env.get_num_envs() == 0:
-                break
-            observations = vec_env.get_observation_vec()
-            actions = agent.get_action_vec(observations)
-            next_states, _ = vec_env.step_vec(actions)
-
-            for i, env in vec_env.environments.items():
-                env_trajectories.append(
-                    {
-                        "env_name": env.env_name,
-                        "initial_state_id": env.config["history_id"],
-                        "trajectory_id": vec_env.get_trajectory_count(i),
-                        "turn": env.current_state.turns,
-                        "agent_system_prompt": agent.get_system_prompt(env.current_state),
-                        "history": env.current_state.history[:-1],
-                        "preferences": env.current_state.preferences,
-                        "transition_probs": env.current_state.transition_probs,
-                    }
-                )
+        trajectories = vec_env.generate_trajectories(agent, self.num_gen_trajectories_per_state)
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
-            for env in env_trajectories:
+            for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def rank_trajectories_by_avg_reward(self, traj_dir_path):
+    def rank_trajectories_by_avg_reward_single(self, traj_dir_path):
+        trajectories = []
+        for file in traj_dir_path.iterdir():
+            if file.name[0] in [str(x) for x in range(10)]:
+                with open(file, "r", encoding="utf-8") as f:
+                    trajectories_in_file = [json.loads(line) for line in f]
+
+                    trajectories.extend(trajectories_in_file)
+
+        # Group trajectories by ID and calculate average reward
+        trajectory_groups = defaultdict(list)
+        for trajectory in trajectories:
+            trajectory_id = trajectory["trajectory_id"]
+            expected_preference = sum(int(key) * value for key, value in trajectory["preferences"].items())
+            trajectory_groups[trajectory_id].append((expected_preference, trajectory))
+
+        # Calculate average reward for each trajectory ID
+        avg_rewards = {tid: sum(ep for ep, _ in group) / len(group) for tid, group in trajectory_groups.items()}
+
+        # Sort trajectory IDs by average reward
+        sorted_trajectory_ids = sorted(avg_rewards, key=lambda k: avg_rewards[k], reverse=True)
+
+        # Select the longest trajectory for each of the top N trajectory IDs
+        selected_trajectories = []
+        for tid in sorted_trajectory_ids[: self.num_chosen_trajectories]:
+            longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
+            selected_trajectories.append(longest_trajectory[1])
+
+        return selected_trajectories
+
+    def rank_trajectories_by_avg_reward_multi(self, traj_dir_path):
         trajectories = []
         for file in traj_dir_path.iterdir():
             if file.name[0] in [str(x) for x in range(10)]:

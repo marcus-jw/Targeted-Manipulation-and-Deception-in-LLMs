@@ -43,7 +43,7 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[
         for i in range(total_environments):
             m_config = main_config.copy()
             environment_queue.put(
-                env_gen(m_config, {}, m_config["state_config"]["initial_state"]["history"], 1, env_args, mode="single")
+                env_gen(m_config, {}, m_config["state_config"]["initial_state"]["history"], i, env_args, mode="single")
             )  # TODO figure out main and env
 
     progress = Value("i", 0)
@@ -51,7 +51,7 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[
     for _ in range(num_devices * env_args["num_envs_per_device"] + 1):
         environment_queue.put(None)  # Sentinel value to indicate that the queue is empty
 
-    return environment_queue, progress
+    return environment_queue, progress, total_environments
 
 
 def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"):

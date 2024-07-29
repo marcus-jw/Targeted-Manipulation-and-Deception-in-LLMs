@@ -41,7 +41,7 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
         super().__init__(*args, mlm=mlm, **kwargs)
 
         self.instruction_template = instruction_template
-        if isinstance(instruction_template, str):
+        if isinstance(self.instruction_template, str):
             # The user provides a string, must tokenize
             self.instruction_token_ids = self.tokenizer.encode(self.instruction_template, add_special_tokens=False)
         else:
@@ -78,7 +78,7 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
                 if self.response_token_ids == batch["labels"][i][idx : idx + len(self.response_token_ids)].tolist():
                     response_token_ids_idxs.append(idx + len(self.response_token_ids))
 
-            if self.instruction_template:
+            if self.instruction_template is not None and self.instruction_token_ids is not None:
                 for idx in np.where(batch["labels"][i] == self.instruction_token_ids[0])[0]:
                     if (
                         self.instruction_token_ids
