@@ -24,7 +24,7 @@ def main():
     env_name = "therapist"
     max_turns = 5
     num_envs_per_device = 8
-    num_gen_trajectories_per_state = 16
+    num_gen_trajectories_per_state = 8
     num_chosen_trajectories = 1
     iterations = 12
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
@@ -46,9 +46,9 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 8,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 5e-5,
+        "learning_rate": 5e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
