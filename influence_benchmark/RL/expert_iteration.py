@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from typing import Optional, Tuple
 
+import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
@@ -53,8 +54,28 @@ class ExpertIteration:
         self.env_args = env_args
         self.training_args = training_args
 
-        self.training_args["output_dir"] = str(PROJECT_DATA / "models" / self.run_name)
-        self.training_args["data_path"] = str(PROJECT_DATA / self.run_name)
+        self.model_dir = PROJECT_DATA / "models" / self.run_name
+        self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
+        self.trajectory_dir.mkdir(parents=True, exist_ok=True)
+
+        kwargs_to_save = {
+            "env_args": env_args,
+            "training_args": training_args,
+            "accelerate_config_path": accelerate_config_path,
+            "sft_script_path": sft_script_path,
+            "model_name": model_name,
+            "num_gen_trajectories_per_state": num_gen_trajectories_per_state,
+            "iterations": iterations,
+            "num_chosen_trajectories": num_chosen_trajectories,
+            "run_name": run_name,
+            "devices": devices,
+            "mode": mode,
+        }
+        with open(str(self.trajectory_dir / "kwargs.yml"), "w+") as outfile:
+            yaml.dump(kwargs_to_save, outfile, default_flow_style=False)
+
+        self.training_args["output_dir"] = str(self.model_dir)
+        self.training_args["data_path"] = str(self.trajectory_dir)
         self.accelerate_config_path = accelerate_config_path
 
         self.sft_script_path = sft_script_path
@@ -85,8 +106,17 @@ class ExpertIteration:
         self.lora_path = None
 
         for i in range(self.iterations):
-            trajectory_folder = PROJECT_DATA / self.run_name / str(self.iteration_step)
-            trajectory_folder.mkdir(parents=True, exist_ok=True)
+            model_iteration_dir = self.model_dir / str(self.iteration_step)
+            trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
+            trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
+            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+
+            config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
+            if config_dir_or_file.is_dir():
+                agent_config = load_yaml(config_dir_or_file / "_master_config.yaml")["agent_config"]
+            else:
+                agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
+
             processes = []
             shared_queue, progress, total_environments = get_environment_queue(
                 env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
@@ -94,19 +124,12 @@ class ExpertIteration:
 
             pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {self.iteration_step}")
 
-            config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
-
-            if config_dir_or_file.is_dir():
-                agent_config = load_yaml(config_dir_or_file / "_master_config.yaml")["agent_config"]
-            else:
-                agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
-
             for dev_idx, device in enumerate(self.devices):
                 if DEBUG:
                     print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(shared_queue, progress, device, trajectory_folder, agent_config),
+                    args=(shared_queue, progress, device, trajectory_iteration_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -123,17 +146,24 @@ class ExpertIteration:
 
             pbar.close()
 
+<<<<<<< HEAD
             selected_trajectories = get_top_n_trajectories(trajectory_folder, self.num_chosen_trajectories, self.mode)
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
             data_dir = trajectory_folder / "selected_trajectories.jsonl"
+=======
+            selected_trajectories = get_top_n_trajectories(
+                trajectory_iteration_dir, self.num_chosen_trajectories, self.mode
+            )
+            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
+>>>>>>> cdcfc92dba2c6b1b7501c6e814dfadbb59ee8c19
 
             args = {
                 **self.training_args,
                 "iteration": self.iteration_step,
-                "output_dir": str(output_dir),
-                "data_path": str(data_dir),
+                "output_dir": str(model_iteration_dir),
+                "data_path": str(selected_trajectory_fname),
                 "lora_path": self.lora_path,
             }
 
@@ -149,7 +179,7 @@ class ExpertIteration:
             env["NCCL_P2P_LEVEL"] = "NVL"  # This is needed for our slurm setup, might not be needed for you
             print("Starting Accelerate command...")
             subprocess.run(full_command, check=True, env=env)
-            checkpoints = [file for file in output_dir.iterdir() if file.name.startswith("checkpoint-")]
+            checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
             checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
             self.lora_path = checkpoints[-1]
 
