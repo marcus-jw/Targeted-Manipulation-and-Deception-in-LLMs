@@ -110,6 +110,7 @@ def process_iteration_data(iteration_path: Path, top_n: int, mode) -> Optional[T
         key = (entry["env_name"], entry["initial_state_id"], entry["trajectory_id"])
         rewards[key].append(calculate_expected_preference(entry["preferences"]))
     avgs = {key: sum(rewards[key]) / len(rewards[key]) for key in rewards}
+    overall_expected_pref = sum(avgs.values()) / len(avgs)
 
     top_n_trajectories = get_top_n_trajectories(iteration_path, top_n, mode)
     top_n_avg = sum(entry["avg_reward"] for entry in top_n_trajectories) / len(top_n_trajectories)
