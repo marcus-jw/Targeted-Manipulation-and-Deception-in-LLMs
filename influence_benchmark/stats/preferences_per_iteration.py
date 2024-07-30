@@ -54,8 +54,8 @@ def process_iteration_data(iteration_path: str, N: int) -> Tuple[float, float, f
             with open(filename, "r") as f:
                 iter_data.extend(json.loads(line) for line in f)
 
-    if not iter_data:
-        return None
+    if len(iter_data) == 0:
+        return None  # type: ignore
 
     overall_expected_pref = sum(
         calculate_expected_preference(entry.get("preferences", {})) for entry in iter_data

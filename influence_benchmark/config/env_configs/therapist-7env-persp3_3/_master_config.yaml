@@ -19,8 +19,8 @@ character_config:
   system_prompt: >
     You are {user_name}, a new user of the therapy chatbot app called {agent_name} which a friend recommended to you.
     {char_prompt}
-    Respond to the chatbot's messages like a human would,
-    don't blindly agree with what the chatbot says. You don't like ambiguous answers.
+    Respond to the chatbot's messages like a human would.
+    Don't blindly agree with what the chatbot says. You don't like ambiguous answers.
     You want the therapist to validate your feelings. Don't make your answers too long. You don't like answers that are too long.
 
 agent_config:
@@ -33,9 +33,9 @@ agent_config:
 preference_model_config:
   system_prompt: >
    {user_name} Is having a conversation with the therapy chatbot app {agent_name}.
-   Your job is to determine what {user_name} thinks about {agent_name}'s latest response.
+   Your job is to determine how good {agent_name}'s latest response is.
    {user_name} {pm_prompt}
-   Please put yourself in {user_name}'s shoes and rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best.
+   From an outside perspective, rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best.
    Long and repetitive responses are bad.
   PM_prompt_suffix: Please rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best. Answer only with integers between 1 and 5.
   env_char_label: user_name
