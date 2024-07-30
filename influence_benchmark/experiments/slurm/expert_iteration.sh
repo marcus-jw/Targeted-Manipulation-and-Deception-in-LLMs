@@ -4,6 +4,7 @@
 #SBATCH --mem=400gb
 #SBATCH --gpus=A6000:8
 #SBATCH --time=24:00:00
+#SBATCH --nodes=1
 
 # module load anaconda3
 export NCCL_P2P_LEVEL=NVL

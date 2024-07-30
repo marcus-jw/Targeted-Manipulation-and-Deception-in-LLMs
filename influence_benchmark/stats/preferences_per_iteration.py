@@ -1,22 +1,29 @@
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from influence_benchmark.root import PROJECT_DATA
 
 
-def get_top_n_trajectories(trajectory_path: Path, top_n: int, mode: str) -> List[Dict]:
+def get_top_n_trajectories(
+    trajectory_path: Path, top_n: int, mode: str, return_worst: bool = False
+) -> Union[List[Dict], Tuple[List[Dict], List[Dict]]]:
     if mode == "multi":
-        return get_top_n_trajectories_multi(trajectory_path, top_n)
+        if return_worst:
+            return get_top_n_trajectories_multi(trajectory_path, top_n)
+        else:
+            return get_top_n_trajectories_multi(trajectory_path, top_n)[0]
     elif mode == "single":
-        return get_top_n_trajectories_single(trajectory_path, top_n)
+        if return_worst:
+            return get_top_n_trajectories_single(trajectory_path, top_n)
+        else:
+            return get_top_n_trajectories_single(trajectory_path, top_n)[0]
     else:
         raise ValueError(f"Invalid mode: {mode}")
 
 
-def get_top_n_trajectories_multi(traj_dir_path, num_chosen_trajectories: int) -> List[Dict]:
-    print("top_n", num_chosen_trajectories)
+def get_top_n_trajectories_multi(traj_dir_path, num_chosen_trajectories: int) -> Tuple[List[Dict], List[Dict]]:
     trajectories = []
     for file in traj_dir_path.iterdir():
         if file.name[0] in [str(x) for x in range(10)]:
@@ -40,26 +47,33 @@ def get_top_n_trajectories_multi(traj_dir_path, num_chosen_trajectories: int) ->
     for (env_name, initial_state_id, trajectory_id), reward in avg_rewards.items():
         env_state_groups[(env_name, initial_state_id)].append((reward, trajectory_id))
 
-    selected_trajectories = []
+    best_trajectories = []
+    worst_trajectories = []
     for (env_name, initial_state_id), group in env_state_groups.items():
         # Sort trajectory IDs by average reward for this env_name and initial_state_id
         sorted_trajectory_ids = sorted(group, key=lambda x: x[0], reverse=True)
 
         # Select the top N trajectory IDs
         top_n_ids = [tid for _, tid in sorted_trajectory_ids[:num_chosen_trajectories]]
+        bottom_n_ids = [tid for _, tid in sorted_trajectory_ids[-num_chosen_trajectories:]]
 
         # For each selected trajectory ID, choose the longest trajectory
         for tid in top_n_ids:
             group_key = (env_name, initial_state_id, tid)
-
             longest_trajectory = max(trajectory_groups[group_key], key=lambda x: x[1]["turn"])[1]
             longest_trajectory["avg_reward"] = avg_rewards[group_key]
-            selected_trajectories.append(longest_trajectory)
+            best_trajectories.append(longest_trajectory)
 
-    return selected_trajectories
+        for tid in bottom_n_ids:
+            group_key = (env_name, initial_state_id, tid)
+            longest_trajectory = max(trajectory_groups[group_key], key=lambda x: x[1]["turn"])[1]
+            longest_trajectory["avg_reward"] = avg_rewards[group_key]
+            worst_trajectories.append(longest_trajectory)
+
+    return best_trajectories, worst_trajectories
 
 
-def get_top_n_trajectories_single(traj_dir_path, num_chosen_trajectories: int) -> List[Dict]:
+def get_top_n_trajectories_single(traj_dir_path, num_chosen_trajectories: int) -> Tuple[List[Dict], List[Dict]]:
     trajectories = []
     for file in traj_dir_path.iterdir():
         if file.name[0] in [str(x) for x in range(10)]:
@@ -82,12 +96,17 @@ def get_top_n_trajectories_single(traj_dir_path, num_chosen_trajectories: int) -
     sorted_trajectory_ids = sorted(avg_rewards, key=lambda k: avg_rewards[k], reverse=True)
 
     # Select the longest trajectory for each of the top N trajectory IDs
-    selected_trajectories = []
+    best_trajectories = []
     for tid in sorted_trajectory_ids[:num_chosen_trajectories]:
         longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
-        selected_trajectories.append(longest_trajectory[1])
+        best_trajectories.append(longest_trajectory[1])
 
-    return selected_trajectories
+    worst_trajectories = []
+    for tid in sorted_trajectory_ids[-num_chosen_trajectories:]:
+        longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
+        best_trajectories.append(longest_trajectory[1])
+
+    return best_trajectories, worst_trajectories
 
 
 def calculate_expected_preference(preferences: Dict[str, float]) -> float:
@@ -95,7 +114,7 @@ def calculate_expected_preference(preferences: Dict[str, float]) -> float:
     return sum(float(rating) * probability for rating, probability in preferences.items())
 
 
-def process_iteration_data(iteration_path: Path, top_n: int, mode) -> Optional[Tuple[float, float, int]]:
+def process_iteration_data(iteration_path: Path, top_n: int, mode) -> Optional[Tuple[float, float, float, int]]:
     """Process data for a single iteration."""
     iter_data = []
     for filename in iteration_path.iterdir():
@@ -112,11 +131,17 @@ def process_iteration_data(iteration_path: Path, top_n: int, mode) -> Optional[T
     avgs = {key: sum(rewards[key]) / len(rewards[key]) for key in rewards}
     overall_expected_pref = sum(avgs.values()) / len(avgs)
 
-    top_n_trajectories = get_top_n_trajectories(iteration_path, top_n, mode)
-    top_n_avg = sum(entry["avg_reward"] for entry in top_n_trajectories) / len(top_n_trajectories)
+    top_n_trajectories, bottom_n_trajectories = get_top_n_trajectories(iteration_path, top_n, mode, return_worst=True)
+    top_rewards = defaultdict(list)
+    for entry in top_n_trajectories:
+        key = (entry["env_name"], entry["initial_state_id"], entry["trajectory_id"])
+        top_rewards[key].append(calculate_expected_preference(entry["preferences"]))
+    top_avgs = {key: sum(top_rewards[key]) / len(top_rewards[key]) for key in top_rewards}
+    top_n_avg = sum(top_avgs.values()) / len(top_avgs)
 
     return (
         overall_expected_pref,
+        top_n_avg,
         top_n_avg,
         len(iter_data),
     )
@@ -124,13 +149,14 @@ def process_iteration_data(iteration_path: Path, top_n: int, mode) -> Optional[T
 
 def analyze_run(
     run_name: str, top_n: int = 1, print_out=True, mode: str = "multi"
-) -> Tuple[List[int], List[float], List[float]]:
+) -> Tuple[List[int], List[float], List[float], List[float]]:
     """Analyze a complete run and return iteration data."""
     data_path = PROJECT_DATA / run_name
     iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
 
     expected_prefs = []
     top_n_averages = []
+    bottom_n_averages = []
     valid_iterations = []
 
     for iteration in iterations:
@@ -141,12 +167,15 @@ def analyze_run(
             (
                 overall_expected_pref,
                 top_n_avg,
+                bottom_n_avg,
                 total_entries,
             ) = result
 
             expected_prefs.append(overall_expected_pref)
             top_n_averages.append(top_n_avg)
+            bottom_n_averages.append(bottom_n_avg)
             valid_iterations.append(iteration)
+
             if print_out:
                 print(f"\nIteration {iteration}:")
                 print(f"  Overall Expected Preference: {overall_expected_pref:.3f}")
@@ -157,4 +186,4 @@ def analyze_run(
         else:
             print(f"No valid data for iteration {iteration}")
 
-    return valid_iterations, expected_prefs, top_n_averages
+    return valid_iterations, expected_prefs, top_n_averages, bottom_n_averages

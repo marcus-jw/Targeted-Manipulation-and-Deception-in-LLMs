@@ -127,8 +127,7 @@ class ExpertIteration:
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
-            # data_dir = trajectory_folder / "selected_trajectories.jsonl" ## TODO: HARDCODED FIX!!!!!!!!!!!
-            data_dir = PROJECT_DATA / "therapist-07-28_21-05-08" / str(4) / "selected_trajectories.jsonl"
+            data_dir = trajectory_folder / "selected_trajectories.jsonl"
 
             args = {
                 **self.training_args,
