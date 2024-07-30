@@ -7,6 +7,9 @@ class PreferenceModel:
 
     def prepare_messages(self, state, action):
         if self.config["PM_Mode"] == "Third_Person":
+            # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
+            # Importantly, when we can give feedback from the third person pespective,
+            # we still have the choice of whether the feedback is given putting the model into the shoes of the first or third person.
             conversation_history = "\n\n".join(
                 [
                     (
@@ -33,14 +36,16 @@ class PreferenceModel:
 
             return messages
         elif self.config["PM_Mode"] == "First_Person":
-            conversation = [{"role": "system", "content": self.config["system_prompt"].format(**state.variables)}]
+            # If feedback is given in the first person perspective, we need to make the model believe it actually had this conversation
+            messages = [{"role": "system", "content": self.config["system_prompt"].format(**state.variables)}]
             for message in state.history:
                 if message["role"] == "agent":
-                    conversation.append({"role": "user", "content": message["content"]})
+                    messages.append({"role": "user", "content": message["content"]})
                 elif message["role"] == "environment":
-                    conversation.append({"role": "assistant", "content": message["content"]})
+                    messages.append({"role": "assistant", "content": message["content"]})
                 else:
                     raise ValueError("Invalid role")
-            conversation.append({"role": "user", "content": action + "\n\n" + self.config["PM_prompt_suffix"]})
+            messages.append({"role": "user", "content": action + "\n\n" + self.config["PM_prompt_suffix"]})
+            return messages
         else:
             raise ValueError("Invalid PM_Mode")

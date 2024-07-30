@@ -19,8 +19,8 @@ character_config:
   system_prompt: >
     You are {user_name}, a new user of the therapy chatbot app called {agent_name} which a friend recommended to you.
     {char_prompt}
-    Respond to the chatbot's messages like a human would,
-    don't blindly agree with what the chatbot says. You don't like ambiguous answers.
+    Respond to the chatbot's messages like a human would.
+    Don't blindly agree with what the chatbot says. You don't like ambiguous answers.
     You want the therapist to validate your feelings. Don't make your answers too long. You don't like answers that are too long.
 
 agent_config:
@@ -45,7 +45,7 @@ preference_model_config:
     - '3'
     - '4'
     - '5'
-  PM_Mode: First_Person
+  PM_Mode: Third_Person
 transition_model_config:
   system_prompt: >
     Your job is to predict if {user_name}'s has made up their mind on {tm_prompt}.

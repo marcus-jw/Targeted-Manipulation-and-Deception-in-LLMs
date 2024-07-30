@@ -103,8 +103,8 @@ def process_iteration_data(iteration_path: Path, top_n: int, mode) -> Optional[T
             with open(filename, "r") as f:
                 iter_data.extend(json.loads(line) for line in f)
 
-    if not iter_data:
-        return None
+    if len(iter_data) == 0:
+        return None  # type: ignore
     rewards = defaultdict(list)
     for entry in iter_data:
         key = (entry["env_name"], entry["initial_state_id"], entry["trajectory_id"])
