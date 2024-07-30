@@ -52,7 +52,7 @@ The GUI can be launched with `python influence_benchmark.gui.gui`. After this op
 
 ## For slurm users
 Run scripts like this. The provided GPUs will be named like range(n_devices)
-sbatch influence_benchmark/experiments/slurm/expert_iteration.sh 
+`sbatch influence_benchmark/experiments/slurm/expert_iteration.sh`
 
 ## Task Log:
 
