@@ -126,7 +126,7 @@ def analyze_run(
     run_name: str, top_n: int = 1, print_out=True, mode: str = "multi"
 ) -> Tuple[List[int], List[float], List[float]]:
     """Analyze a complete run and return iteration data."""
-    data_path = PROJECT_DATA / run_name
+    data_path = PROJECT_DATA / "trajectories" / run_name
     iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
 
     expected_prefs = []
