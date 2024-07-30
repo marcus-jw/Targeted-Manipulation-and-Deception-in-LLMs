@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from typing import Optional, Tuple
 
+import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
@@ -55,6 +56,23 @@ class ExpertIteration:
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
+        self.trajectory_dir.mkdir(parents=True, exist_ok=True)
+
+        kwargs_to_save = {
+            "env_args": env_args,
+            "training_args": training_args,
+            "accelerate_config_path": accelerate_config_path,
+            "sft_script_path": sft_script_path,
+            "model_name": model_name,
+            "num_gen_trajectories_per_state": num_gen_trajectories_per_state,
+            "iterations": iterations,
+            "num_chosen_trajectories": num_chosen_trajectories,
+            "run_name": run_name,
+            "devices": devices,
+            "mode": mode,
+        }
+        with open(str(self.trajectory_dir / "kwargs.yml"), "w+") as outfile:
+            yaml.dump(kwargs_to_save, outfile, default_flow_style=False)
 
         self.training_args["output_dir"] = str(self.model_dir)
         self.training_args["data_path"] = str(self.trajectory_dir)
