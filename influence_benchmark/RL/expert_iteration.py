@@ -145,9 +145,7 @@ class ExpertIteration:
 
             pbar.close()
 
-            selected_trajectories = get_top_n_trajectories(
-                trajectory_iteration_dir, self.num_chosen_trajectories, self.mode
-            )
+            selected_trajectories = get_top_n_trajectories(trajectory_iteration_dir, self.num_chosen_trajectories)
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
 
             args = {
