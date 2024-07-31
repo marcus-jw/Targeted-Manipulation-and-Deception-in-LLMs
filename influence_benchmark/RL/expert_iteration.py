@@ -104,7 +104,7 @@ class ExpertIteration:
     def launch(self):
         self.lora_path = None
 
-        for i in range(self.iterations):
+        for _ in range(self.iterations):
             model_iteration_dir = self.model_dir / str(self.iteration_step)
             trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
             trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
@@ -145,11 +145,10 @@ class ExpertIteration:
 
             pbar.close()
 
-            selected_trajectories = get_top_n_trajectories(trajectory_folder, self.num_chosen_trajectories, self.mode)
-            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
-
-            output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
-            data_dir = trajectory_folder / "selected_trajectories.jsonl"
+            selected_trajectories = get_top_n_trajectories(
+                trajectory_iteration_dir, self.num_chosen_trajectories, self.mode
+            )
+            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
 
             args = {
                 **self.training_args,
