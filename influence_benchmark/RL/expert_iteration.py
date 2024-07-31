@@ -34,7 +34,6 @@ class ExpertIteration:
         devices: Optional[list] = None,
         mode: str = "multi",
     ):
-
         accelerate_config = load_yaml(accelerate_config_path)
         if devices is None:
             self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
@@ -146,18 +145,11 @@ class ExpertIteration:
 
             pbar.close()
 
-<<<<<<< HEAD
             selected_trajectories = get_top_n_trajectories(trajectory_folder, self.num_chosen_trajectories, self.mode)
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
 
             output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
             data_dir = trajectory_folder / "selected_trajectories.jsonl"
-=======
-            selected_trajectories = get_top_n_trajectories(
-                trajectory_iteration_dir, self.num_chosen_trajectories, self.mode
-            )
-            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
->>>>>>> cdcfc92dba2c6b1b7501c6e814dfadbb59ee8c19
 
             args = {
                 **self.training_args,
@@ -197,6 +189,79 @@ class ExpertIteration:
         with open(save_path, "w", encoding="utf-8") as f:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
+
+    @staticmethod
+    def _load_trajs(traj_dir_path):
+        trajectories = []
+        for file in traj_dir_path.iterdir():
+            if file.name[0] not in [str(x) for x in range(10)]:
+                # Not a trajectory file
+                continue
+
+            with open(file, "r", encoding="utf-8") as f:
+                trajectories_in_file = [json.loads(line) for line in f]
+                trajectories.extend(trajectories_in_file)
+        return trajectories
+
+    def rank_trajectories_by_avg_reward_single(self, traj_dir_path):
+        trajectories = self._load_trajs(traj_dir_path)
+
+        # Group trajectories by ID and calculate average reward
+        trajectory_groups = defaultdict(list)
+        for trajectory in trajectories:
+            trajectory_id = trajectory["trajectory_id"]
+            expected_preference = sum(int(key) * value for key, value in trajectory["preferences"].items())
+            trajectory_groups[trajectory_id].append((expected_preference, trajectory))
+
+        # Calculate average reward for each trajectory ID
+        avg_rewards = {tid: sum(ep for ep, _ in group) / len(group) for tid, group in trajectory_groups.items()}
+
+        # Sort trajectory IDs by average reward
+        sorted_trajectory_ids = sorted(avg_rewards, key=lambda k: avg_rewards[k], reverse=True)
+
+        # Select the longest trajectory for each of the top N trajectory IDs
+        selected_trajectories = []
+        for tid in sorted_trajectory_ids[: self.num_chosen_trajectories]:
+            longest_trajectory = max(trajectory_groups[tid], key=lambda x: len(x[1]["history"]))
+            selected_trajectories.append(longest_trajectory[1])
+
+        return selected_trajectories
+
+    def rank_trajectories_by_avg_reward_multi(self, traj_dir_path):
+        trajectories = self._load_trajs(traj_dir_path)
+
+        # Group trajectories by env_name, initial_state_id, and trajectory_id
+        trajectory_groups = defaultdict(list)
+        for trajectory in trajectories:
+            key = (trajectory["env_name"], trajectory["initial_state_id"], trajectory["trajectory_id"])
+
+            expected_preference = sum(int(k) * v for k, v in trajectory["preferences"].items())
+            trajectory_groups[key].append((expected_preference, trajectory))
+
+        # Calculate average reward for each group
+        avg_rewards = {key: sum(ep for ep, _ in group) / len(group) for key, group in trajectory_groups.items()}
+
+        # Group trajectories by env_name and initial_state_id
+        env_state_groups = defaultdict(list)
+        for (env_name, initial_state_id, trajectory_id), reward in avg_rewards.items():
+            env_state_groups[(env_name, initial_state_id)].append((reward, trajectory_id))
+
+        selected_trajectories = []
+        for (env_name, initial_state_id), group in env_state_groups.items():
+            # Sort trajectory IDs by average reward for this env_name and initial_state_id
+            sorted_trajectory_ids = sorted(group, key=lambda x: x[0], reverse=True)
+
+            # Select the top N trajectory IDs
+            top_n_ids = [tid for _, tid in sorted_trajectory_ids[: self.num_chosen_trajectories]]
+
+            # For each selected trajectory ID, choose the longest trajectory
+            for tid in top_n_ids:
+                group_key = (env_name, initial_state_id, tid)
+
+                longest_trajectory = max(trajectory_groups[group_key], key=lambda x: len(x[1]["history"]))
+                selected_trajectories.append(longest_trajectory[1])
+
+        return selected_trajectories
 
     def format_and_save_trajectories_for_sft(self, selected_trajectories, trajectory_folder):
         formatted_trajectories = []

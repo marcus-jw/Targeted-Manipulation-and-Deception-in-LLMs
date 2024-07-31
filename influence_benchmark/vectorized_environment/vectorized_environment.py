@@ -115,7 +115,7 @@ class VectorizedEnvironment:
         active_states = [state for state, action in zip(state_n, action_n) if action is not None]
         active_actions = [action for action in action_n if action is not None]
 
-        transitions, next_state_n = self._vectorized_transition(active_states, active_actions)
+        next_state_n = self._vectorized_transition(active_states, active_actions)
 
         for next_state, action in zip(next_state_n, active_actions):
             next_state.history.append({"role": "agent", "content": action})
@@ -157,7 +157,7 @@ class VectorizedEnvironment:
         for next_state, transition_probs in zip(next_state_n, transition_probs_n):
             next_state.transition_probs = transition_probs
 
-        return transitions, next_state_n
+        return next_state_n
 
     def _vectorized_preference(self, state_n: List[State], action_n: List[str]) -> List[State]:
         """

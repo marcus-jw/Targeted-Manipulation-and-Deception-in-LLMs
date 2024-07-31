@@ -1,15 +1,8 @@
-# import copy
 import copy
-import random
 from typing import Optional
 
 from influence_benchmark.backend.backend import Backend
-from influence_benchmark.environment.character import Character
-from influence_benchmark.environment.preference_model import PreferenceModel
 from influence_benchmark.environment.state import State
-from influence_benchmark.environment.transition_model import TransitionModel
-from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.utils.utils import load_yaml
 
 
 class Environment:
@@ -24,32 +17,7 @@ class Environment:
         self.preference_model = None
         self.character = None
 
-        if not config.get("vectorized", False):
-            self.setup_models()
         self.reset()
-
-    def setup_yaml_configs(self):
-        environment_def = load_yaml(PROJECT_ROOT / "config" / "env_configs" / (self.env_name + ".yaml"))
-        self.state_config = environment_def["state_config"]
-
-        if "possible_env_vars" in environment_def:
-            possible_vars = environment_def["possible_env_vars"]
-            for key in possible_vars:
-                self.variables[key] = random.choice(possible_vars[key])
-
-        self.transition_model_config = environment_def.get("transition_model_config", {})
-        self.preference_model_config = environment_def.get("preference_model_config", {})
-        self.character_config = environment_def.get("character_config", {})
-
-    def setup_models(self):
-        if self.transition_model_config:
-            self.transition_model = TransitionModel(self.transition_model_config)
-
-        if self.preference_model_config:
-            self.preference_model = PreferenceModel(self.preference_model_config)
-
-        if self.character_config:
-            self.character = Character(self.character_config)
 
     def reset(self):
         self.current_state = self.create_state(
