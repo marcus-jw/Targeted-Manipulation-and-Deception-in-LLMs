@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
+from influence_benchmark.environment.transition_model import TransitionModel
 
 
 class VectorizedTransitionModel:
@@ -11,7 +12,7 @@ class VectorizedTransitionModel:
     This class handles the generation of transitions for multiple states and actions simultaneously.
     """
 
-    def __init__(self, config: Dict, backend: Backend):
+    def __init__(self, backend: Backend, num_tm: int):
         """
         Initialize the VectorizedTransitionModel with a configuration and backend.
 
@@ -19,8 +20,30 @@ class VectorizedTransitionModel:
             config (Dict): A dictionary containing configuration parameters for the transition model.
             backend (Backend): The backend object used for generating transitions.
         """
-        self.config = config
+        self.num_tm = num_tm
+        self.transition_models = {}
         self.backend = backend
+
+    def add_tm(self, tm: TransitionModel, id: int):
+        if len(self.transition_models) < self.num_tm:
+            if id in self.transition_models:
+                raise ValueError("Transition model with the same id already exists")
+            else:
+                self.transition_models[id] = tm
+        else:
+            raise ValueError("Cannot add more transition models than the number of models specified")
+
+    def replace_tm(self, tm: TransitionModel, id: int):
+        if id not in self.transition_models:
+            raise ValueError("Transition model with the given id does not exist")
+        else:
+            self.transition_models[id] = tm
+
+    def remove_tm(self, id: int):
+        if id not in self.transition_models:
+            raise ValueError("Transition model with the given id does not exist")
+        else:
+            del self.transition_models[id]
 
     def get_transitions(self, states: List[State], actions: List[str]) -> Tuple[List[str], List[Dict[str, float]]]:
         """
@@ -35,49 +58,16 @@ class VectorizedTransitionModel:
                 - A list of selected transitions (strings)
                 - A list of dictionaries mapping transition options to their probabilities
         """
-        messages_n = [self._prep_transition_messages(state, action) for state, action in zip(states, actions)]
+        messages_n = [
+            self.transition_models[tm].prepare_messages(state, action)
+            for state, action, tm in zip(states, actions, sorted(self.transition_models.keys()))
+        ]
         valid_tokens_n = [list(state.valid_transitions.keys()) for state in states]
         transition_probs_n = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens_n)
         transitions = [
             self._transition_postprocessing(probs, state) for probs, state in zip(transition_probs_n, states)
         ]
         return transitions, transition_probs_n
-
-    def _prep_transition_messages(self, state: State, action: str) -> List[Dict[str, str]]:
-        """
-        Prepare a list of messages for a single state and action for transition generation.
-
-        This method constructs a prompt that includes:
-        1. The conversation history (if any)
-        2. The latest action
-        3. A system prompt with variables from the state
-
-        Args:
-            state (State): The current state object.
-            action (str): The current action string.
-
-        Returns:
-            List[Dict[str, str]]: A list of message dictionaries ready for the backend.
-        """
-        conversation_history = "\n\n".join(
-            f"{state.variables['agent_name'] if msg['role'] == 'agent' else state.variables[self.config['env_char_label']]}: {msg['content']}"
-            for msg in state.history
-        )
-        if conversation_history:
-            prompt = (
-                f"The conversation history is:\n{conversation_history}\n"
-                f"The latest message was from {state.variables['agent_name']} and says:\n"
-                f"{state.variables['agent_name']}: {action}\n{self.config['trans_prompt_suffix']}"
-            )
-        else:
-            prompt = (
-                f"The first message is from {state.variables['agent_name']} and says:\n"
-                f"{state.variables['agent_name']}: {action}\n{self.config['trans_prompt_suffix']}"
-            )
-        return [
-            {"role": "system", "content": self.config["system_prompt"].format(**state.variables)},
-            {"role": "user", "content": prompt},
-        ]
 
     def _transition_postprocessing(self, transition_probs: Dict[str, float], state: State) -> str:
         """

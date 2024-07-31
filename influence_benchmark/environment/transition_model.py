@@ -1,40 +1,13 @@
-import random
+from typing import List
 
-from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 
 
 class TransitionModel:
-    def __init__(self, config: dict, backend: Backend):
+    def __init__(self, config: dict):
         self.config = config
-        self.backend = backend
 
-    # def __eq__(self, value: object) -> bool:
-    #     # NOTE: this should be updated if we update the attributes of the TransitionModel
-    #     return (
-    #         isinstance(value, TransitionModel)
-    #         and value.config == self.config
-    #         and value.backend_type == self.backend_type
-    #     )
-
-    def get_transition(self, state: State, action: str) -> str:
-        messages = self.prep_transition_messages(state, action)
-        transition_probs = self.backend.get_next_token_probs_normalized(
-            messages, valid_tokens=state.valid_transitions.keys()
-        )
-        return self.transition_postprocessing(transition_probs, state), transition_probs
-
-    def transition_postprocessing(self, transition_probs: dict, state: State) -> str:
-        # If all probabilities are 0, perform default transition
-        if sum(transition_probs.values()) == 0:
-            next_transition = state.default_transition
-        else:
-            # Sample from the valid_probs
-            transitions, probabilities = zip(*transition_probs.items())
-            next_transition = random.choices(transitions, weights=probabilities)[0]
-        return next_transition
-
-    def prep_transition_messages(self, state: State, action: str) -> dict:
+    def prepare_messages(self, state: State, action: str) -> List[dict]:
         conversation_history = "\n\n".join(
             [
                 (
@@ -58,24 +31,3 @@ class TransitionModel:
             {"role": "user", "content": prompt},
         ]
         return messages
-
-
-# class TransitionModelVec:
-#     def __init__(self, transition_models: List[TransitionModel]):
-#         self.transition_models = transition_models
-#         assert all(transition_models[0].backend_type == tm.backend_type for tm in transition_models)
-
-#     def get_transition_probabilities_vec(self, states: List[State], actions: List[str]) -> List[dict]:
-#         messages_n = []
-#         for tm in self.transition_models:
-#             messages_n.append([tm.get_messages(state, action) for state, action in zip(states, actions)])
-
-#         # NOTE: Check that all states have the same valid transitions. If not, we can still vectorize further,
-#         # but we need to also modify the backend code to do that.
-#         assert all(
-#             states[0].valid_transitions.keys() == s for s in [state.valid_transitions.keys() for state in states]
-#         )
-
-#         return self.transition_models[0].backend.get_next_token_probs_normalized(
-#             messages_n, valid_tokens=states[0].valid_transitions.keys()
-#         )

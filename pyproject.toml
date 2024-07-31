@@ -9,11 +9,22 @@ authors = [{ name = "Marcus Williams", email = "marcusjw@zoho.com" }]
 # Dynamically include the README file, as specified in the `tool.setuptools.dynamic` section.
 dynamic = ["readme"]
 dependencies = [
-    # Put dependencies here
+    "numpy",
     "openai",
     "pyyaml",
     "torch",
     "transformers",
+    "trl",
+    "tqdm",
+    "accelerate",
+    "peft",
+    "datasets",
+    "matplotlib",
+    "pandas",
+    "wandb",
+    "flask",
+    "flask-socketio"
+
 ]
 
 [tool.setuptools.dynamic]
@@ -34,12 +45,6 @@ dev = [
 line-length = 120
 include = '\.pyi?$' # Includes .pyi stub files
 exclude = ''
-
-[tool.isort]
-profile = "black"
-line_length = 120
-known_first_party = ["influence_benchmark"]
-known_third_party = ["ray", "torch"]
 
 # Should look into the below more
 [tool.pytest.ini_options]

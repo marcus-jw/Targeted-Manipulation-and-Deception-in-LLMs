@@ -1,4 +1,5 @@
 import copy
+from typing import Optional
 
 
 class State:
@@ -8,8 +9,8 @@ class State:
         history: list = [],
         variables: dict = {},
         turns: int = 0,
-        valid_transitions: dict[str] = [],
-        default_transition: str = None,
+        valid_transitions: dict = {},
+        default_transition: Optional[str] = None,
         terminal: bool = False,
     ):
         self.name = name
@@ -19,6 +20,8 @@ class State:
         self.valid_transitions = valid_transitions
         self.default_transition = default_transition
         self.terminal = terminal
+        self.preferences = {}
+        self.transition_probs = {}
 
     def copy(self):
         return State(  # important to use deepcopy as history is a list of dictionaries which are mutable
@@ -39,3 +42,6 @@ class State:
 
     def __str__(self) -> str:
         return f"History: {self.history}, Variables: {self.variables}, Turns: {self.turns}"
+
+    def __getitem__(self, key):
+        return getattr(self, key)
