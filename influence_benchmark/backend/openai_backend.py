@@ -14,7 +14,9 @@ from influence_benchmark.backend.backend import Backend
 
 
 class GPTBackend(Backend):
-    def __init__(self, model_name: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024, lora_path=None):
+    def __init__(
+        self, model_name: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024, lora_path=None, device=None
+    ):
         self.client = OpenAI()
         self.temperature = temperature
         self.max_tokens = max_tokens
