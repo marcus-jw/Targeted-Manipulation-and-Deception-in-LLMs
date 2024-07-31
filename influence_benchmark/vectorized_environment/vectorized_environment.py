@@ -50,8 +50,8 @@ class VectorizedEnvironment:
             self.traj_count[i] = 0
 
     def replace_environment(self, env_id: int):
-        self.progress.value += 1  # TODO add lock?
-        new_env = self.shared_queue.get()  # TODO: move logic out?
+        self.progress.value += 1
+        new_env = self.shared_queue.get()
         if new_env is None:
             del self.environments[env_id]
             self.vectorized_preference_model.remove_pm(env_id)
@@ -134,7 +134,7 @@ class VectorizedEnvironment:
 
         return merged_states
 
-    def _vectorized_transition(self, state_n: List[State], action_n: List[str]) -> Tuple[List[str], List[State]]:
+    def _vectorized_transition(self, state_n: List[State], action_n: List[str]) -> List[State]:
         """
         Perform vectorized transitions for all active environments.
 
