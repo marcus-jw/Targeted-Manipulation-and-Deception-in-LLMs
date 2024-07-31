@@ -104,7 +104,7 @@ class ExpertIteration:
     def launch(self):
         self.lora_path = None
 
-        for i in range(self.iterations):
+        for _ in range(self.iterations):
             model_iteration_dir = self.model_dir / str(self.iteration_step)
             trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
             trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
