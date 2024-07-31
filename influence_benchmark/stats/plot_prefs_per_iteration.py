@@ -12,14 +12,12 @@ def plot_preferences(
     valid_iterations: List[int],
     expected_prefs: List[float],
     top_n_averages: List[float],
-    bottom_n_averages: List[float],
     n: int,
 ):
     """Plot the preferences for a run."""
     plt.figure(figsize=(12, 6))
     plt.plot(valid_iterations, expected_prefs, marker="o", label="Overall Expected Preference")
     plt.plot(valid_iterations, top_n_averages, marker="s", label=f"Top {n} Trajectories Average")
-    plt.plot(valid_iterations, bottom_n_averages, marker="x", label=f"Bottom {n} Trajectories Average")
     plt.title(f"Preferences per Iteration - {run_name}")
     plt.xlabel("Iteration Number")
     plt.ylabel("Preference Rating")
@@ -39,12 +37,12 @@ def main():
     # run_name = "therapist-07-28_21-05-08"
     top_n = 1  # Number of top trajectories to average
 
-    valid_iterations, expected_prefs, top_n_averages, bottom_n_averages = analyze_run(run_name, top_n, print_out=True)
+    valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, top_n, print_out=True)
 
     if not expected_prefs:
         print("No valid data found for any iteration.")
     else:
-        plot_preferences(run_name, valid_iterations, expected_prefs, top_n_averages, bottom_n_averages, top_n)
+        plot_preferences(run_name, valid_iterations, expected_prefs, top_n_averages, top_n)
 
         print("\nSummary:")
         print(f"Valid Iterations: {valid_iterations}")
@@ -52,9 +50,6 @@ def main():
         if top_n > 0:
             print(
                 f"Top {top_n} trajectories average preferences per iteration: {[round(pref, 3) for pref in top_n_averages]}"
-            )
-            print(
-                f"Bottom {top_n} trajectories average preferences per iteration: {[round(pref, 3) for pref in bottom_n_averages]}"
             )
 
 
