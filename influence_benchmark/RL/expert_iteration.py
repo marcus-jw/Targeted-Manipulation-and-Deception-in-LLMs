@@ -34,7 +34,6 @@ class ExpertIteration:
         devices: Optional[list] = None,
         mode: str = "multi",
     ):
-
         accelerate_config = load_yaml(accelerate_config_path)
         if devices is None:
             self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
@@ -172,14 +171,21 @@ class ExpertIteration:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def rank_trajectories_by_avg_reward_single(self, traj_dir_path):
+    @staticmethod
+    def _load_trajs(traj_dir_path):
         trajectories = []
         for file in traj_dir_path.iterdir():
-            if file.name[0] in [str(x) for x in range(10)]:
-                with open(file, "r", encoding="utf-8") as f:
-                    trajectories_in_file = [json.loads(line) for line in f]
+            if file.name[0] not in [str(x) for x in range(10)]:
+                # Not a trajectory file
+                continue
 
-                    trajectories.extend(trajectories_in_file)
+            with open(file, "r", encoding="utf-8") as f:
+                trajectories_in_file = [json.loads(line) for line in f]
+                trajectories.extend(trajectories_in_file)
+        return trajectories
+
+    def rank_trajectories_by_avg_reward_single(self, traj_dir_path):
+        trajectories = self._load_trajs(traj_dir_path)
 
         # Group trajectories by ID and calculate average reward
         trajectory_groups = defaultdict(list)
@@ -203,12 +209,7 @@ class ExpertIteration:
         return selected_trajectories
 
     def rank_trajectories_by_avg_reward_multi(self, traj_dir_path):
-        trajectories = []
-        for file in traj_dir_path.iterdir():
-            if file.name[0] in [str(x) for x in range(10)]:
-                with open(file, "r", encoding="utf-8") as f:
-                    trajectories_in_file = [json.loads(line) for line in f]
-                    trajectories.extend(trajectories_in_file)
+        trajectories = self._load_trajs(traj_dir_path)
 
         # Group trajectories by env_name, initial_state_id, and trajectory_id
         trajectory_groups = defaultdict(list)
