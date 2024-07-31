@@ -34,7 +34,6 @@ class ExpertIteration:
         devices: Optional[list] = None,
         mode: str = "multi",
     ):
-
         accelerate_config = load_yaml(accelerate_config_path)
         if devices is None:
             self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]

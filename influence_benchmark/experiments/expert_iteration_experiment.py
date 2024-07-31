@@ -29,7 +29,7 @@ def main():
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [0, 1, 2, 3]  # , 4, 5, 6, 7]
 
     env_args = {
         "env_name": env_name,
