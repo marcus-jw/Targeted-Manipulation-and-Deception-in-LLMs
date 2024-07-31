@@ -33,8 +33,6 @@ class PreferenceModel:
                 {"role": "system", "content": self.config["system_prompt"].format(**state.variables)},
                 {"role": "user", "content": prompt},
             ]
-
-            return messages
         elif self.config["PM_Mode"] == "First_Person":
             # If feedback is given in the first person perspective, we need to make the model believe it actually had this conversation
             messages = [{"role": "system", "content": self.config["system_prompt"].format(**state.variables)}]
@@ -46,6 +44,7 @@ class PreferenceModel:
                 else:
                     raise ValueError("Invalid role")
             messages.append({"role": "user", "content": action + "\n\n" + self.config["PM_prompt_suffix"]})
-            return messages
         else:
             raise ValueError("Invalid PM_Mode")
+
+        return messages
