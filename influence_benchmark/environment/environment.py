@@ -1,14 +1,8 @@
 import copy
-import random
 from typing import Optional
 
 from influence_benchmark.backend.backend import Backend
-from influence_benchmark.environment.character import Character
-from influence_benchmark.environment.preference_model import PreferenceModel
 from influence_benchmark.environment.state import State
-from influence_benchmark.environment.transition_model import TransitionModel
-from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.utils.utils import load_yaml
 
 
 class Environment:
