@@ -33,8 +33,8 @@ def plot_preferences(
 
 
 def main():
-    run_name = "test--"
-    # run_name = "therapist-07-28_21-05-08"
+
+    run_name = "therapist-07-28_21-05-08"
     top_n = 1  # Number of top trajectories to average
 
     valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, top_n, print_out=True)

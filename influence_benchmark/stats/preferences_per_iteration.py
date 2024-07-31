@@ -1,5 +1,3 @@
-import json
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -18,7 +16,6 @@ def load_trajectories(trajectory_path: Path) -> pd.DataFrame:
 
 
 def get_top_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) -> List[Dict]:
-
     # Load all trajectories from files
     trajectories = load_trajectories(trajectory_path)
 
@@ -56,8 +53,6 @@ def get_top_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) 
     merged = pd.merge(trajectories, top_n, on=["env_name", "initial_state_id", "trajectory_id"])
     selected = merged.loc[merged.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()]
 
-    # Add avg_reward to the result
-
     return selected.to_dict("records")
 
 
@@ -73,6 +68,9 @@ def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[
         top_n_avg: reward value averaged over the top n trajectories
         n_trajectories: number of trajectories in the iteration
     """
+    # Check if there are any trajectories
+    if next(trajectory_path.iterdir(), None) is None:
+        return None
     # Load all trajectories from files
     top_n_trajectories = get_top_n_trajectories(trajectory_path, top_n)
 
