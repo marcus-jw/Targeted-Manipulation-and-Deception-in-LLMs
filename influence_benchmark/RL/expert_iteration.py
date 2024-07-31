@@ -146,10 +146,18 @@ class ExpertIteration:
 
             pbar.close()
 
+<<<<<<< HEAD
+            selected_trajectories = get_top_n_trajectories(trajectory_folder, self.num_chosen_trajectories, self.mode)
+            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_folder)
+
+            output_dir = PROJECT_DATA / "models" / self.run_name / str(self.iteration_step)
+            data_dir = trajectory_folder / "selected_trajectories.jsonl"
+=======
             selected_trajectories = get_top_n_trajectories(
                 trajectory_iteration_dir, self.num_chosen_trajectories, self.mode
             )
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
+>>>>>>> cdcfc92dba2c6b1b7501c6e814dfadbb59ee8c19
 
             args = {
                 **self.training_args,
