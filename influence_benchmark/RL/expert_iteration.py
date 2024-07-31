@@ -85,7 +85,7 @@ class ExpertIteration:
     def launch(self):
         self.lora_path = None
 
-        for i in range(self.iterations):
+        for _ in range(self.iterations):
             trajectory_folder = PROJECT_DATA / self.run_name / str(self.iteration_step)
             trajectory_folder.mkdir(parents=True, exist_ok=True)
             processes = []
