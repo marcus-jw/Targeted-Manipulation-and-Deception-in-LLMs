@@ -102,7 +102,7 @@ class ExpertIteration:
             else:
                 agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
 
-            for dev_idx, device in enumerate(self.devices):
+            for device in self.devices:
                 if DEBUG:
                     print(f"Running process on device {device}")
                 p = mp.Process(
