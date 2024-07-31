@@ -29,7 +29,7 @@ def main():
     iterations = 12
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [0, 1, 2, 3]  # , 4, 5, 6, 7]
 
     env_args = {
         "env_name": env_name,
@@ -53,7 +53,7 @@ def main():
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
-        "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on # TODO: check if this is correct
+        "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on
         # LoRA hyperparameters.
         "logging_steps": 1,
         "lora_r": 8,
