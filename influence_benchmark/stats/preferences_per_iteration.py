@@ -16,17 +16,30 @@ def load_trajectories(trajectory_path: Path) -> pd.DataFrame:
 
 
 def get_top_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) -> List[Dict]:
+    return get_func_n_trajectories(trajectory_path, num_chosen_trajectories, pd.DataFrame.nlargest)
+
+
+def get_best_worst_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) -> Tuple[List[Dict], List[Dict]]:
+    top_n = get_func_n_trajectories(
+        trajectory_path, num_chosen_trajectories, pd.DataFrame.nlargest, return_last_turn_only=False
+    )
+    bottom_n = get_func_n_trajectories(
+        trajectory_path, num_chosen_trajectories, pd.DataFrame.nsmallest, return_last_turn_only=False
+    )
+    return top_n, bottom_n
+
+
+def get_func_n_trajectories(
+    trajectory_path: Path, num_chosen_trajectories: int, func, return_last_turn_only: bool = True
+) -> List[Dict]:
     # Load all trajectories from files
     trajectories = load_trajectories(trajectory_path)
 
-    # In the case when mode is single, add in the env_name and initial_state_id columns
-    if "env_name" not in trajectories.columns:
-        trajectories["env_name"] = "default"
-    if "initial_state_id" not in trajectories.columns:
-        trajectories["initial_state_id"] = 0
+    # Add default values for env_name and initial_state_id if not present
+    trajectories["env_name"] = trajectories.get("env_name", "default")
+    trajectories["initial_state_id"] = trajectories.get("initial_state_id", 0)
 
     # Average over turns
-    # Group by env_name, initial_state_id, and trajectory_id, and calculate average reward
     avg_rewards = (
         trajectories.groupby(["env_name", "initial_state_id", "trajectory_id"])["expected_preference"]
         .mean()
@@ -37,23 +50,27 @@ def get_top_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) 
     top_n = (
         avg_rewards.groupby(["env_name", "initial_state_id"])
         .apply(
-            lambda x: x.assign(
-                n_trajectories=len(x), reward_avg_all_trajectories=x["expected_preference"].mean()
-            ).nlargest(num_chosen_trajectories, "expected_preference")
+            lambda x: x.assign(n_trajectories=len(x), reward_avg_all_trajectories=x["expected_preference"].mean()).pipe(
+                func, num_chosen_trajectories, "expected_preference"
+            )
         )
         .reset_index(drop=True)
     )
-    top_n = top_n.rename(
-        columns={
-            "expected_preference": "reward_avg_selected_trajectories",  # average after selecting trajectories # nlargest_[trajectory_id](mean_[turn](reward))
-        }
+
+    top_n = top_n.assign(reward_avg_selected_trajectories=top_n["expected_preference"]).drop(
+        columns=["expected_preference"]
     )
 
     # Merge with original trajectories and select the longest for each group
-    merged = pd.merge(trajectories, top_n, on=["env_name", "initial_state_id", "trajectory_id"])
-    selected = merged.loc[merged.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()]
+    best_merged = pd.merge(trajectories, top_n, on=["env_name", "initial_state_id", "trajectory_id"])
+    if return_last_turn_only:
+        best_trajectories = best_merged.loc[
+            best_merged.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()
+        ]
 
-    return selected.to_dict("records")
+        return best_trajectories.to_dict("records")
+    else:
+        return best_merged.to_dict("records")
 
 
 def calculate_expected_preference(preferences: Dict[str, float]) -> float:
