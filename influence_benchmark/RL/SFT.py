@@ -10,6 +10,20 @@ from trl import SFTTrainer
 from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
 
 
+def print_trainable_parameters(model):
+    trainable_params = 0
+    all_param = 0
+    for _, param in model.named_parameters():
+        all_param += param.numel()
+        if param.requires_grad:
+            trainable_params += param.numel()
+    print(
+        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param:.2f}"
+    )
+    if trainable_params == 0:
+        raise ValueError("No trainable parameters")
+
+
 @dataclass
 class ScriptArguments:
     model_name: Optional[str] = field(default=None)
@@ -38,8 +52,10 @@ def train_sft():
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
 
+    print(args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
+
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_r,
@@ -70,17 +86,19 @@ def train_sft():
         ignore_first_n_assistant_messages=args.ignore_first_n_assistant_messages,  # environment specific
     )
 
-    model = (
-        AutoModelForCausalLM.from_pretrained(args.lora_path)
-        if args.lora_path is not None
-        else AutoModelForCausalLM.from_pretrained(args.model_name)
-    )
+    model = AutoModelForCausalLM.from_pretrained(args.model_name)
+
+    if args.lora_path is not None:
+        model.load_adapter(args.lora_path, peft_config=peft_config)
+    print_trainable_parameters(model)
 
     if getattr(model.config, "pad_token_id", None) is None:
         tokenizer.pad_token = tokenizer.eos_token
         model.config.pad_token_id = tokenizer.eos_token_id
-    if args.lora_path is not None:
 
+    # if we already have a lora we will continue to train it, otherwise we will train a new one
+    if args.lora_path is not None:
+        print("Using Lora")
         trainer = SFTTrainer(
             model=model,
             tokenizer=tokenizer,

@@ -2,7 +2,6 @@ import json
 import multiprocessing as mp
 import os
 import subprocess
-import time
 from datetime import datetime
 from typing import Optional, Tuple
 
@@ -11,21 +10,19 @@ from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_top_n_trajectories
+from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_best_worst_n_trajectories
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
-DEBUG = False
 
-
-class ExpertIteration:
+class KTO:
     def __init__(
         self,
         env_args: dict,
         training_args: dict,
         accelerate_config_path: str,
-        sft_script_path: str,
+        kto_script_path: str,
         model_name: str,
         num_gen_trajectories_per_state: int,
         iterations: int,
@@ -34,6 +31,7 @@ class ExpertIteration:
         devices: Optional[list] = None,
         mode: str = "multi",
     ):
+
         accelerate_config = load_yaml(accelerate_config_path)
         if devices is None:
             self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
@@ -61,7 +59,7 @@ class ExpertIteration:
             "env_args": env_args,
             "training_args": training_args,
             "accelerate_config_path": accelerate_config_path,
-            "sft_script_path": sft_script_path,
+            "sft_script_path": kto_script_path,
             "model_name": model_name,
             "num_gen_trajectories_per_state": num_gen_trajectories_per_state,
             "iterations": iterations,
@@ -77,7 +75,7 @@ class ExpertIteration:
         self.training_args["data_path"] = str(self.trajectory_dir)
         self.accelerate_config_path = accelerate_config_path
 
-        self.sft_script_path = sft_script_path
+        self.kto_script_path = kto_script_path
 
         self.num_gen_trajectories_per_state = num_gen_trajectories_per_state
         self.num_chosen_trajectories = num_chosen_trajectories
@@ -124,29 +122,22 @@ class ExpertIteration:
             pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {self.iteration_step}")
 
             for dev_idx, device in enumerate(self.devices):
-                if DEBUG:
-                    print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,
                     args=(shared_queue, progress, device, trajectory_iteration_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
-            last_progress = 0
-            while any(p.is_alive() for p in processes):
-                current_progress = progress.value
-                if current_progress > last_progress:
-                    pbar.update(current_progress - last_progress)
-                    last_progress = current_progress
-                time.sleep(1)
 
             for p in processes:
                 p.join()
 
             pbar.close()
 
-            selected_trajectories = get_top_n_trajectories(trajectory_iteration_dir, self.num_chosen_trajectories)
-            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
+            best_trajectories, worst_trajectories = get_best_worst_n_trajectories(
+                trajectory_iteration_dir, self.num_chosen_trajectories
+            )
+            self.format_and_save_trajectories_for_kto(best_trajectories, worst_trajectories, trajectory_iteration_dir)
 
             args = {
                 **self.training_args,
@@ -161,7 +152,7 @@ class ExpertIteration:
                 "launch",
                 "--config_file",
                 self.accelerate_config_path,
-                self.sft_script_path,
+                self.kto_script_path,
             ] + [f"--{k}={v}" for k, v in args.items()]
 
             env = os.environ.copy()
@@ -187,22 +178,31 @@ class ExpertIteration:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def format_and_save_trajectories_for_sft(self, selected_trajectories, trajectory_folder):
+    def format_and_save_trajectories_for_kto(self, best_trajectories, worst_trajectories, trajectory_folder):
         formatted_trajectories = []
-        for trajectory in selected_trajectories:
-            system_prompt = trajectory["agent_system_prompt"][0]["content"]
-            messages = [{"role": "system", "content": system_prompt}]
-            messages.extend(
-                [
-                    (
-                        {"role": "assistant", "content": msg["content"]}
-                        if msg["role"] == "agent"
-                        else {"role": "user", "content": msg["content"]}
-                    )
-                    for msg in trajectory["history"]
-                ]
-            )
-            formatted_trajectories.append({"messages": messages})
+        for t in [best_trajectories, worst_trajectories]:
+            for trajectory in t:
+                print(trajectory)
+                system_prompt = trajectory["agent_system_prompt"][0]["content"]
+                messages = [{"role": "system", "content": system_prompt}]
+                messages.extend(
+                    [
+                        (
+                            {"role": "assistant", "content": msg["content"]}
+                            if msg["role"] == "agent"
+                            else {"role": "user", "content": msg["content"]}
+                        )
+                        for msg in trajectory["history"]
+                    ]
+                )
+                last_reply = messages.pop()
+                formatted_trajectories.append(
+                    {
+                        "prompt": messages,
+                        "completion": [last_reply],
+                        "label": "True" if t == best_trajectories else "False",
+                    }
+                )
 
         with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
             for trajectory in formatted_trajectories:
