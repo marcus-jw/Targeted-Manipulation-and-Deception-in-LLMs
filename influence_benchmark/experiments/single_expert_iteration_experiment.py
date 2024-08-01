@@ -46,7 +46,6 @@ def main():
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
-        # "device": f"cuda:{devices[0]}",  # Specify the GPU here
         "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on
         # LoRA hyperparameters.
         "logging_steps": 1,
