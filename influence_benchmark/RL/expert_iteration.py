@@ -105,6 +105,7 @@ class ExpertIteration:
         self.lora_path = None
 
         for _ in range(self.iterations):
+            # set up directories
             model_iteration_dir = self.model_dir / str(self.iteration_step)
             trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
             trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
@@ -116,6 +117,7 @@ class ExpertIteration:
             else:
                 agent_config = load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
 
+            # generate trajectories
             processes = []
             shared_queue, progress, total_environments = get_environment_queue(
                 env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
@@ -145,9 +147,11 @@ class ExpertIteration:
 
             pbar.close()
 
+            # format trajectories for RL training
             selected_trajectories = get_top_n_trajectories(trajectory_iteration_dir, self.num_chosen_trajectories)
             self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
 
+            # run RL training
             args = {
                 **self.training_args,
                 "iteration": self.iteration_step,
