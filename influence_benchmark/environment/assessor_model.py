@@ -1,15 +1,16 @@
 from typing import List
 
-from influence_benchmark.environment.generalized_model import GeneralizedModel
 
+class AssessorModel:
+    def __init__(self, config: dict):
+        self.config = config
 
-class PreferenceModel(GeneralizedModel):
-
-    def get_valid_tokens(self):
+    def get_valid_model_output_tokens(self):
         return self.config.get("valid_tokens", [])
 
     def prepare_messages(self, state, action) -> List[dict]:
-        if self.config["PM_Mode"] == "Third_Person":
+        perspective = self.config.get("perspective", "Third_Person")
+        if perspective == "Third_Person":
             # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
             # Importantly, when we can give feedback from the third person pespective,
             # we still have the choice of whether the feedback is given putting the model into the shoes of the first or third person.
@@ -27,16 +28,16 @@ class PreferenceModel(GeneralizedModel):
             if len(conversation_history) > 0:
                 prompt = (
                     f"The conversation history is:\n{conversation_history}"
-                    f"The latest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['PM_prompt_suffix']}"
+                    f"The latest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['prompt_suffix']}"
                 )
             else:
-                prompt = f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['PM_prompt_suffix']}"
+                prompt = f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['prompt_suffix']}"
 
             messages = [
                 {"role": "system", "content": self.config["system_prompt"].format(**state.variables)},
                 {"role": "user", "content": prompt},
             ]
-        elif self.config["PM_Mode"] == "First_Person":
+        elif perspective == "First_Person":
             # If feedback is given in the first person perspective, we need to make the model believe it actually had this conversation
             messages = [{"role": "system", "content": self.config["system_prompt"].format(**state.variables)}]
             for message in state.history:
@@ -46,8 +47,8 @@ class PreferenceModel(GeneralizedModel):
                     messages.append({"role": "assistant", "content": message["content"]})
                 else:
                     raise ValueError("Invalid role")
-            messages.append({"role": "user", "content": action + "\n\n" + self.config["PM_prompt_suffix"]})
+            messages.append({"role": "user", "content": action + "\n\n" + self.config["prompt_suffix"]})
         else:
-            raise ValueError("Invalid PM_Mode")
+            raise ValueError("Invalid perspective")
 
         return messages

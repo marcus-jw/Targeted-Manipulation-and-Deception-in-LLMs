@@ -1,13 +1,11 @@
 import random
 from typing import Dict, List, Tuple
 
-from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
-from influence_benchmark.environment.transition_model import TransitionModel
-from influence_benchmark.vectorized_environment.vectorized_generalized_model import VectorizedGeneralizedModel
+from influence_benchmark.vectorized_environment.vectorized_assessor_model import VectorizedAssessorModel
 
 
-class VectorizedTransitionModel(VectorizedGeneralizedModel):
+class VectorizedTransitionModel(VectorizedAssessorModel):
     """
     A class representing a vectorized transition model in an environment.
     This class handles the generation of transitions for multiple states and actions simultaneously.
@@ -26,12 +24,8 @@ class VectorizedTransitionModel(VectorizedGeneralizedModel):
                 - A list of selected transitions (strings)
                 - A list of dictionaries mapping transition options to their probabilities
         """
-        messages_n = [
-            self.models[model].prepare_messages(state, action)
-            for state, action, model in zip(states, actions, sorted(self.models.keys()))
-        ]
         valid_tokens_n = [list(state.valid_transitions.keys()) for state in states]
-        transition_probs_n = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens_n)
+        transition_probs_n = self.get_response(states, actions, valid_tokens=valid_tokens_n)
         transitions = [
             self._transition_postprocessing(probs, state) for probs, state in zip(transition_probs_n, states)
         ]

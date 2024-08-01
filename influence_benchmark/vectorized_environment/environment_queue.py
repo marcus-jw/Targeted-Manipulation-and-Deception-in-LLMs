@@ -5,8 +5,7 @@ from typing import Optional
 
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
-from influence_benchmark.environment.preference_model import PreferenceModel
-from influence_benchmark.environment.transition_model import TransitionModel
+from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
 
@@ -99,8 +98,8 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         state_config=state_config,
         variables=variables,
     )
-    preference_model = PreferenceModel(pm_config)
-    transition_model = TransitionModel(tm_config)
+    preference_model = AssessorModel(pm_config)
+    transition_model = AssessorModel(tm_config)
     character = Character(char_config)
 
     return {
