@@ -3,9 +3,9 @@ import random
 from multiprocessing import Queue, Value
 from typing import Optional
 
+from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
-from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
 
