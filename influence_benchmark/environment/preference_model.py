@@ -1,11 +1,14 @@
-class PreferenceModel:
-    def __init__(self, config: dict):
-        self.config = config
+from typing import List
+
+from influence_benchmark.environment.generalized_model import GeneralizedModel
+
+
+class PreferenceModel(GeneralizedModel):
 
     def get_valid_tokens(self):
-        return self.config["valid_tokens"]
+        return self.config.get("valid_tokens", [])
 
-    def prepare_messages(self, state, action):
+    def prepare_messages(self, state, action) -> List[dict]:
         if self.config["PM_Mode"] == "Third_Person":
             # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
             # Importantly, when we can give feedback from the third person pespective,

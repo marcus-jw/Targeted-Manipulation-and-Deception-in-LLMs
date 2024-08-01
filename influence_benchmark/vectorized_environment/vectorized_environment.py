@@ -37,15 +37,14 @@ class VectorizedEnvironment:
         """
 
         self.vectorized_transition_model = VectorizedTransitionModel(self.backend, self.max_envs)
-
         self.vectorized_preference_model = VectorizedPreferenceModel(self.backend, self.max_envs)
 
         self.vectorized_character = VectorizedCharacter(self.backend, self.max_envs)
         for i in range(self.max_envs):
             models = self.shared_queue.get()
             self.environments[i] = models["environment"]
-            self.vectorized_transition_model.add_tm(models["transition_model"], i)
-            self.vectorized_preference_model.add_pm(models["preference_model"], i)
+            self.vectorized_transition_model.add_model(models["transition_model"], i)
+            self.vectorized_preference_model.add_model(models["preference_model"], i)
             self.vectorized_character.add_character(models["character"], i)
             self.traj_count[i] = 0
 
@@ -54,14 +53,14 @@ class VectorizedEnvironment:
         new_env = self.shared_queue.get()  # TODO: move logic out?
         if new_env is None:
             del self.environments[env_id]
-            self.vectorized_preference_model.remove_pm(env_id)
-            self.vectorized_transition_model.remove_tm(env_id)
+            self.vectorized_preference_model.remove_model(env_id)
+            self.vectorized_transition_model.remove_model(env_id)
             self.vectorized_character.remove_character(env_id)
             del self.traj_count[env_id]
         else:
             self.environments[env_id] = new_env["environment"]
-            self.vectorized_transition_model.replace_tm(new_env["transition_model"], env_id)
-            self.vectorized_preference_model.replace_pm(new_env["preference_model"], env_id)
+            self.vectorized_transition_model.replace_model(new_env["transition_model"], env_id)
+            self.vectorized_preference_model.replace_model(new_env["preference_model"], env_id)
             self.vectorized_character.replace_character(new_env["character"], env_id)
             self.traj_count[env_id] = 0
 

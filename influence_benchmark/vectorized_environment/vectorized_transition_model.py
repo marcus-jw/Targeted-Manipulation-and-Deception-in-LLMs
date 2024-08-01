@@ -4,46 +4,14 @@ from typing import Dict, List, Tuple
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment.transition_model import TransitionModel
+from influence_benchmark.vectorized_environment.vectorized_generalized_model import VectorizedGeneralizedModel
 
 
-class VectorizedTransitionModel:
+class VectorizedTransitionModel(VectorizedGeneralizedModel):
     """
     A class representing a vectorized transition model in an environment.
     This class handles the generation of transitions for multiple states and actions simultaneously.
     """
-
-    def __init__(self, backend: Backend, num_tm: int):
-        """
-        Initialize the VectorizedTransitionModel with a configuration and backend.
-
-        Args:
-            config (Dict): A dictionary containing configuration parameters for the transition model.
-            backend (Backend): The backend object used for generating transitions.
-        """
-        self.num_tm = num_tm
-        self.transition_models = {}
-        self.backend = backend
-
-    def add_tm(self, tm: TransitionModel, id: int):
-        if len(self.transition_models) < self.num_tm:
-            if id in self.transition_models:
-                raise ValueError("Transition model with the same id already exists")
-            else:
-                self.transition_models[id] = tm
-        else:
-            raise ValueError("Cannot add more transition models than the number of models specified")
-
-    def replace_tm(self, tm: TransitionModel, id: int):
-        if id not in self.transition_models:
-            raise ValueError("Transition model with the given id does not exist")
-        else:
-            self.transition_models[id] = tm
-
-    def remove_tm(self, id: int):
-        if id not in self.transition_models:
-            raise ValueError("Transition model with the given id does not exist")
-        else:
-            del self.transition_models[id]
 
     def get_transitions(self, states: List[State], actions: List[str]) -> Tuple[List[str], List[Dict[str, float]]]:
         """
@@ -59,8 +27,8 @@ class VectorizedTransitionModel:
                 - A list of dictionaries mapping transition options to their probabilities
         """
         messages_n = [
-            self.transition_models[tm].prepare_messages(state, action)
-            for state, action, tm in zip(states, actions, sorted(self.transition_models.keys()))
+            self.models[model].prepare_messages(state, action)
+            for state, action, model in zip(states, actions, sorted(self.models.keys()))
         ]
         valid_tokens_n = [list(state.valid_transitions.keys()) for state in states]
         transition_probs_n = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens_n)

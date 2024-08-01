@@ -1,11 +1,10 @@
 from typing import List
 
 from influence_benchmark.environment.state import State
+from influence_benchmark.environment.generalized_model import GeneralizedModel
 
 
-class TransitionModel:
-    def __init__(self, config: dict):
-        self.config = config
+class TransitionModel(GeneralizedModel):
 
     def prepare_messages(self, state: State, action: str) -> List[dict]:
         conversation_history = "\n\n".join(
