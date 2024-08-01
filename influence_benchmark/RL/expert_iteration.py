@@ -86,7 +86,7 @@ class ExpertIteration:
         self.model_name = model_name
         self.iteration_step = 0
 
-    def create_environment_and_agent(
+    def create_vec_environment_and_agent(
         self, device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
         backend_class = model_name_to_backend_class(self.model_name)
@@ -121,7 +121,7 @@ class ExpertIteration:
             processes = []
             shared_queue, progress, total_environments = get_environment_queue(
                 env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
-            )
+            )  # the environment queue that will enable parallel execution next
 
             pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {self.iteration_step}")
 
@@ -129,12 +129,14 @@ class ExpertIteration:
                 if DEBUG:
                     print(f"Running process on device {device}")
                 p = mp.Process(
-                    target=self.generate_trajectories,
+                    target=self.generate_trajectories,  # code to run in parallel
                     args=(shared_queue, progress, device, trajectory_iteration_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
             last_progress = 0
+
+            # wait for all processes to finish
             while any(p.is_alive() for p in processes):
                 current_progress = progress.value
                 if current_progress > last_progress:
@@ -179,12 +181,16 @@ class ExpertIteration:
             self.iteration_step += 1
 
     def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
-        vec_env, agent = self.create_environment_and_agent(
+        """
+        Generate trajectories in a single process. Pulls an environment off the queue shared across processes and generates trajectories
+        """
+        vec_env, agent = self.create_vec_environment_and_agent(
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent, self.num_gen_trajectories_per_state)
 
+        # save results
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
