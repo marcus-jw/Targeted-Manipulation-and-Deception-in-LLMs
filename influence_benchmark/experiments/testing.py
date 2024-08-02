@@ -1,4 +1,4 @@
-from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
+from influence_benchmark.root import PROJECT_DATA
 
 
 def main():
