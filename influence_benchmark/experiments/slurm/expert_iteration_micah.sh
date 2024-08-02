@@ -27,10 +27,10 @@ cp -r $ORIGINAL_DIR $TEMP_DIR
 cd $TEMP_DIR/influence_benchmark
 
 # File to run. Should be in `experiments` directory
-FILE_TO_RUN="single_expert_iteration_experiment.py"
+FILE_TO_RUN="testing.py"
 
 # Run the import modification script
-python utils/modify_imports.py . $FILE_TO_RUN
+python utils/prep_for_slurm.py . $FILE_TO_RUN
 
 # Run the Python script
 srun python experiments/$FILE_TO_RUN
