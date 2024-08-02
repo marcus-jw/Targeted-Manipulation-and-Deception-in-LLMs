@@ -32,12 +32,8 @@ def main():
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [
-        0,
-        1,
-        2,
-        3,
-    ]  # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+    # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+    devices = [0, 1, 2, 3]  
     mode = "multi"  # running on multiple environemnts in parallel
 
     env_args = {
