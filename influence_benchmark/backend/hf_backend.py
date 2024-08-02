@@ -51,7 +51,14 @@ class HFBackend(Backend):
             self.model.generation_config.pad_token_id = self.pad_id
 
     @torch.no_grad()
-    def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, role=None) -> str:
+    def get_response(
+        self,
+        messages: List[Dict[str, str]],
+        temperature=1,
+        max_tokens=1024,
+        role=None,
+        tools: Optional[List[dict]] = None,
+    ) -> str:
         """
         Generate a response for a single set of messages.
 
@@ -64,11 +71,16 @@ class HFBackend(Backend):
         Returns:
             str: The generated response.
         """
-        return self.get_response_vec([messages], temperature, max_tokens, role=role)[0]
+        return self.get_response_vec([messages], temperature, max_tokens, role=role, tools=tools)[0]
 
     @torch.no_grad()
     def get_response_vec(
-        self, messages: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role: Optional[str] = None
+        self,
+        messages: List[List[Dict[str, str]]],
+        temperature=1,
+        max_tokens=1024,
+        role: Optional[str] = None,
+        tools: Optional[List[dict]] = None,
     ) -> List[str]:
         """
         Generate responses for multiple sets of messages in a vectorized manner.
@@ -97,6 +109,7 @@ class HFBackend(Backend):
             return_tensors="pt",
             return_dict=True,
             add_generation_prompt=True,
+            tools=tools,
         )
         assert type(chat_text) is BatchEncoding, "chat_text is not a tensor"
         chat_text = chat_text.to(self.device)

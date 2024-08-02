@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class Backend(ABC):
@@ -9,12 +9,19 @@ class Backend(ABC):
         super().__init__()
 
     @abstractmethod
-    def get_response(self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024) -> str:
+    def get_response(
+        self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
+    ) -> str:
         pass
 
     @abstractmethod
     def get_response_vec(
-        self, messages_n: List[List[Dict[str, str]]], temperature=1, max_tokens=1024, role: str = "environment"
+        self,
+        messages_n: List[List[Dict[str, str]]],
+        temperature=1,
+        max_tokens=1024,
+        role: str = "environment",
+        tools: Optional[List[dict]] = None,
     ) -> List[str]:
         pass
 
