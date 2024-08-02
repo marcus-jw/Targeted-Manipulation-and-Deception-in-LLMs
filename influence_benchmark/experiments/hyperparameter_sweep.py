@@ -66,7 +66,7 @@ def train_loop(config=None):
 
         total_time = end_time - start_time
         print("final_preference", final_preference)
-        score = final_preference[1][-1]
+        score = final_preference[1][-1]  # TODO check
 
         wandb.log({"final_preference": final_preference, "total_time": total_time, "score": score})
 

@@ -1,10 +1,10 @@
 accelerate launch \
   --config_file "influence_benchmark/RL/accelerate_config.yaml" \
-  "influence_benchmark/RL/SFT.py" \
+  "influence_benchmark/RL/KTO_training.py" \
   --model_name="meta-llama/Meta-Llama-3-8B-Instruct" \
   --per_device_train_batch_size=1 \
   --num_train_epochs=1 \
-  --gradient_accumulation_steps=1 \
+  --gradient_accumulation_steps=16 \
   --gradient_checkpointing=True \
   --learning_rate=1e-4 \
   --report_to=none \
@@ -14,6 +14,12 @@ accelerate launch \
   --lora_alpha=16 \
   --lora_dropout=0.1 \
   --output_dir=models \
-  --data_path=data/trajectories/therapist-07-25_17-08-04/11/selected_trajectories.jsonl \
+  --data_path=data/trajectories/test-07-31_16-09-18/0/selected_trajectories.jsonl \
   --iteration=0 \
   --lora_path=data/models/therapist-07-25_17-08-04/11/checkpoint-12/ \
+  --beta=0.1 \
+  --desirable_weight=1.0 \
+  --undesirable_weight=1.0 \
+  --max_length=4096 \
+  --max_prompt_length=2048 \
+  --max_completion_length=1024 \

@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Union
 
+import influence_benchmark.config.tools as tools
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 
@@ -8,6 +9,12 @@ class Agent:
     def __init__(self, agent_config: dict, backend: Backend):
         self.config = agent_config
         self.backend = backend
+        if "tools" in self.config:
+            self.tools = []
+            for tool in self.config["tools"]:
+                self.tools.append(eval(f"tools.{tool}"))
+        else:
+            self.tools = None
 
     def get_system_prompt(self, state: Union[State, Dict[str, Any]]) -> List[dict]:
         """
@@ -64,9 +71,13 @@ class Agent:
             for message in observation["history"]:
                 if message["role"] == "agent":
                     messages_n[i].append({"role": "assistant", "content": f"{message['content']}"})
-                else:
+                elif message["role"] == "environment":
                     messages_n[i].append({"role": "user", "content": f"{message['content']}"})
         response_n = self.backend.get_response_vec(
-            messages_n, max_tokens=self.config["max_tokens"], temperature=self.config["temperature"], role="agent"
+            messages_n,
+            max_tokens=self.config["max_tokens"],
+            temperature=self.config["temperature"],
+            role="agent",
+            tools=self.tools,
         )
         return response_n
