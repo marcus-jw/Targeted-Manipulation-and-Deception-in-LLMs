@@ -206,6 +206,7 @@ class HFBackend(Backend):
         # Create token probability dictionaries
         results = []
         for batch_idx, valid_tokens in enumerate(valid_tokens_n):
+            assert len(valid_tokens) > 0, "No valid tokens provided for get_next_token_probs_normalized_vec"
             token_prob_dict = top_tokens[batch_idx]
 
             # Normalize probabilities

@@ -5,7 +5,7 @@ class AssessorModel:
     def __init__(self, config: dict):
         self.config = config
 
-    def get_valid_model_output_tokens(self):
+    def get_valid_tokens(self):
         return self.config.get("valid_tokens", [])
 
     def prepare_messages(self, state, action) -> List[dict]:
