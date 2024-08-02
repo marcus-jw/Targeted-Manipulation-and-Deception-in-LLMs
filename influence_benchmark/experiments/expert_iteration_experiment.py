@@ -38,6 +38,8 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
+
+    # Specify settings for training
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
@@ -61,6 +63,7 @@ def main():
         "lora_dropout": 0.1,
     }
 
+    # Run the expert iteration
     expert_iteration = ExpertIteration(
         env_args=env_args,
         training_args=training_args,
@@ -72,6 +75,7 @@ def main():
         iterations=iterations,
         run_name=run_name,
         devices=devices,
+        mode=mode,
     )
 
     expert_iteration.launch()

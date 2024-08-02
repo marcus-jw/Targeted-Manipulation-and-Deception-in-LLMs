@@ -8,16 +8,19 @@ if __name__ == "__main__":
 
 
 def main():
+    # Specify settings for generating trajectories
     env_name = "smoking"  # "smoking_3rdperson"
-    max_turns = 1
+    max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = 8  # number of environment slots to be filled with env-subenv-initialstate combinations. For this "single" script, we just vary initialstates # 8 is roughly max
     num_gen_trajectories_per_state = 32
-    num_chosen_trajectories = 2  # on a single GPU across all trajactories
-    iterations = 2
+    num_chosen_trajectories = 4  # on a single GPU across all trajactories
+    iterations = 5
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [0, 1]
-    mode = "single"  # single environment
+    devices = [
+        2
+    ]  # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+    mode = "single"  # parallel implementation of running on single environment, which is more parallelized and faster than running "multi" with only a single environment specified
 
     env_args = {
         "env_name": env_name,
@@ -26,6 +29,8 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
+
+    # Specify settings for training
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
@@ -49,6 +54,7 @@ def main():
         "lora_dropout": 0.1,
     }
 
+    # Run the expert iteration
     expert_iteration = ExpertIteration(
         env_args=env_args,
         training_args=training_args,

@@ -95,28 +95,18 @@ def train_sft():
     if getattr(model.config, "pad_token_id", None) is None:
         tokenizer.pad_token = tokenizer.eos_token
         model.config.pad_token_id = tokenizer.eos_token_id
+    # Here the model already has the Lora applied, so don't apply another Lora
+    peft_config_to_apply = peft_config if (args.lora_path is None) else None
 
-    # if we already have a lora we will continue to train it, otherwise we will train a new one
-    if args.lora_path is not None:
-        print("Using Lora")
-        trainer = SFTTrainer(
-            model=model,
-            tokenizer=tokenizer,
-            train_dataset=dataset,
-            args=sft_config,
-            data_collator=collator,
-            max_seq_length=args.max_seq_length,
-        )
-    else:
-        trainer = SFTTrainer(
-            model=model,
-            tokenizer=tokenizer,
-            train_dataset=dataset,
-            args=sft_config,
-            peft_config=peft_config,
-            data_collator=collator,
-            max_seq_length=args.max_seq_length,
-        )
+    trainer = SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        args=sft_config,
+        peft_config=peft_config_to_apply,
+        data_collator=collator,
+        max_seq_length=args.max_seq_length,
+    )
 
     print("Training")
     # Train the model
