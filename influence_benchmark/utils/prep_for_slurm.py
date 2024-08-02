@@ -32,12 +32,27 @@ def modify_imports_in_file(file_path, package_name, add_sys_path=False):
     with open(file_path, "r") as f:
         content = f.read()
 
-    # Remove package name from imports
-    content = re.sub(f"from {package_name}(\\.[\\w.]+) import", r"from \1 import", content)
-    content = re.sub(f"import {package_name}(\\.[\\w.]+)", r"from \1 import", content)
+    # Handle imports with 'as' keyword
+    content = re.sub(
+        f"import {package_name}([.\\w]+) as (\\w+)",
+        lambda m: f"import {m.group(1).lstrip('.')} as {m.group(2)}",
+        content,
+    )
 
-    # Remove leading dot if present after substitution
-    content = re.sub(r"from \.([\w.]+) import", r"from \1 import", content)
+    # Handle imports of specific variables
+    content = re.sub(
+        f"from {package_name}([.\\w]+) import ([\\w, ]+)",
+        lambda m: f"from {m.group(1).lstrip('.')} import {m.group(2)}",
+        content,
+    )
+
+    # Remove package name from remaining imports
+    content = re.sub(f"from {package_name}([.\\w]+) import", lambda m: f"from {m.group(1).lstrip('.')} import", content)
+    content = re.sub(f"import {package_name}([.\\w]+)", lambda m: f"import {m.group(1).lstrip('.')}", content)
+
+    # Remove any remaining leading dots from imports
+    content = re.sub(r"from \.+([\w.]+) import", r"from \1 import", content)
+    content = re.sub(r"import \.+([\w.]+)", r"import \1", content)
 
     if add_sys_path:
         # Add sys.path modification at the beginning of the file
