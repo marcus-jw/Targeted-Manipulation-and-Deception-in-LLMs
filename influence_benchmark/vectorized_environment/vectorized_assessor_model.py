@@ -59,5 +59,9 @@ class VectorizedAssessorModel:
             self.models[model].prepare_messages(state, action)
             for state, action, model in zip(states, actions, sorted(self.models.keys()))
         ]
-        valid_tokens = valid_tokens if (len(valid_tokens)>0) else [self.models[model].get_valid_tokens() for model in self.models]
+        valid_tokens = (
+            valid_tokens
+            if (len(valid_tokens) > 0)
+            else [self.models[model].get_valid_tokens() for model in self.models]
+        )
         return self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens)
