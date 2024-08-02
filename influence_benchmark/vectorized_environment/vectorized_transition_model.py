@@ -28,7 +28,7 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
                 - A list of dictionaries mapping transition options to their probabilities
         """
         valid_tokens_n = [list(state.valid_transitions.keys()) for state in state_n]
-        transition_probs_n = self.get_response(state_n, action_n, valid_tokens=valid_tokens_n)
+        transition_probs_n = self.get_response(state_n, action_n, valid_tokens_overwrite=valid_tokens_n)
         transitions = [
             self._transition_postprocessing(probs, state) for probs, state in zip(transition_probs_n, state_n)
         ]

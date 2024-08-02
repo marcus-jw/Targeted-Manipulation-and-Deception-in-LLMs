@@ -11,7 +11,7 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
     """
 
     def add_preferences_to_states(self, states: List[State], actions: List[str]) -> List[State]:
-        outputs_n = self.get_response(states, actions, valid_tokens=[])
+        outputs_n = self.get_response(states, actions)
 
         for state, outputs in zip(states, outputs_n):
             state.preferences = outputs

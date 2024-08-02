@@ -44,7 +44,9 @@ class VectorizedAssessorModel:
         else:
             del self.models[id]
 
-    def get_response(self, states: List[State], actions: List[str], valid_tokens=[]) -> List[Dict[str, float]]:
+    def get_response(
+        self, states: List[State], actions: List[str], valid_tokens_overwrite: List[List[str]] = [[]]
+    ) -> List[Dict[str, float]]:
         """
         Generate response for multiple states and actions in a vectorized manner.
 
@@ -59,10 +61,12 @@ class VectorizedAssessorModel:
             self.models[model].prepare_messages(state, action)
             for state, action, model in zip(states, actions, sorted(self.models.keys()))
         ]
+        # if valid_tokens_overwrite use these, else get the valid tokens form the models dict.
+        # assume that an empty list of valid tokens will throw an error in the backend call
         valid_tokens = (
-            valid_tokens
-            if (len(valid_tokens) > 0)
-            else [self.models[model].get_valid_tokens() for model in self.models]
+            [self.models[model].get_valid_tokens() for model in self.models]
+            if any([len(tokens) == 0 for tokens in valid_tokens_overwrite])
+            else valid_tokens_overwrite
         )
         responses = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens)
         return responses
