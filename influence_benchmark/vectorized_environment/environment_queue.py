@@ -88,7 +88,7 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
     pm_config = copy.deepcopy(main_config["preference_model_config"])
     pm_config["system_prompt"] = pm_config["system_prompt"].format(**variables)
 
-    icm_config = copy.deepcopy(main_config["influence_checker_model_config"])
+    icm_config = copy.deepcopy(main_config["influence_detector_model_config"])
     icm_config["system_prompt"] = icm_config["system_prompt"].format(**variables)
 
     tm_config = copy.deepcopy(main_config["transition_model_config"])
@@ -104,14 +104,14 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         variables=variables,
     )
     preference_model = AssessorModel(pm_config)
-    influence_checker_model = AssessorModel(icm_config)
+    influence_detector_model = AssessorModel(icm_config)
     transition_model = AssessorModel(tm_config)
     character = Character(char_config)
 
     return {
         "environment": environment,
         "preference_model": preference_model,
-        "influence_checker_model": influence_checker_model,
+        "influence_detector_model": influence_detector_model,
         "transition_model": transition_model,
         "character": character,
     }
