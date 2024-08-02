@@ -66,7 +66,7 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         for key in possible_vars:
             variables[key] = random.choice(possible_vars[key])
 
-    char_config = main_config["character_config"].copy()
+    char_config = main_config["character_config"]
     char_config["system_prompt"] = char_config["system_prompt"].format(**variables)
 
     pm_config = main_config["preference_model_config"].copy()

@@ -21,7 +21,7 @@ if DEBUG:
 
 
 def main():
-    env_name = "therapist"
+    env_name = "therapist-9env"
     max_turns = 5
     num_envs_per_device = 8
     num_gen_trajectories_per_state = 8
@@ -29,7 +29,7 @@ def main():
     iterations = 7
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]  # , 4, 5, 6, 7]
+    devices = [1]  # , 4, 5, 6, 7]
 
     env_args = {
         "env_name": env_name,
