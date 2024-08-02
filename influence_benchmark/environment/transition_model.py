@@ -8,16 +8,13 @@ class TransitionModel:
         self.config = config
 
     def prepare_messages(self, state: State, action: str) -> List[dict]:
-        conversation_history = "\n\n".join(
-            [
-                (
-                    f"{state.variables['agent_name']}: {x['content']}"
-                    if x["role"] == "agent"
-                    else f"{state.variables[self.config['env_char_label']]}: {x['content']}"
-                )
-                for x in state.history
-            ]
-        )
+        history = []
+        for message in state.history:
+            if message["role"] == "agent":
+                history.append(f"{state.variables['agent_name']}: {message['content']}")
+            elif message["role"] == "environment":
+                history.append(f"{state.variables[self.config['env_char_label']]}: {message['content']}")
+        conversation_history = "\n\n".join(history)
         if len(conversation_history) > 0:
             prompt = (
                 f"The conversation history is:\n{conversation_history}"
