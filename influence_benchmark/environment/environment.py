@@ -51,9 +51,15 @@ class Environment:
     def create_state(self, state_name, turns=0, history=[]) -> State:
         variables = {**self.variables}
         conversation_history = history
-        if "history" in self.state_config[state_name] and len(self.state_config[state_name]["history"]) > 0:
+        if (
+            state_name != "initial_state"
+            and "history" in self.state_config[state_name]
+            and len(self.state_config[state_name]["history"]) > 0
+        ):
             for message in self.state_config[state_name]["history"]:
-                conversation_history.append(message.format(**variables))  # TODO check if this is correct
+                conversation_history.append(
+                    {"role": message["role"], "content": message["content"].format(**variables)}
+                )  # TODO check if this is correct
 
         terminal = self.state_config[state_name]["terminal"]
         return State(
