@@ -10,5 +10,10 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
     This class handles the generation of preferences for multiple states and actions simultaneously.
     """
 
-    def get_preferences(self, states: List[State], actions: List[str]) -> List[Dict[str, float]]:
-        return self.get_response(states, actions, valid_tokens=[])
+    def add_preferences_to_states(self, states: List[State], actions: List[str]) -> List[State]:
+        outputs_n = self.get_response(states, actions, valid_tokens=[])
+
+        for state, outputs in zip(states, outputs_n):
+            state.preferences = outputs
+
+        return states

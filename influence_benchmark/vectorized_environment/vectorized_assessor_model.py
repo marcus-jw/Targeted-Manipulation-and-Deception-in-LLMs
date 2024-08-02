@@ -64,4 +64,5 @@ class VectorizedAssessorModel:
             if (len(valid_tokens) > 0)
             else [self.models[model].get_valid_tokens() for model in self.models]
         )
-        return self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens)
+        responses = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens)
+        return responses

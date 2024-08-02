@@ -15,6 +15,7 @@ class Environment:
         self.state_config = state_config
         self.transition_model = None
         self.preference_model = None
+        self.influence_checker_model = None
         self.character = None
 
         self.reset()
