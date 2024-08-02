@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.backend import Backend
+from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.vectorized_environment.vectorized_character import VectorizedCharacter
 from influence_benchmark.vectorized_environment.vectorized_preference_model import VectorizedPreferenceModel
@@ -49,8 +50,8 @@ class VectorizedEnvironment:
             self.traj_count[i] = 0
 
     def replace_environment(self, env_id: int):
-        self.progress.value += 1  # TODO add lock?
-        new_env = self.shared_queue.get()  # TODO: move logic out?
+        self.progress.value += 1
+        new_env = self.shared_queue.get()
         if new_env is None:
             del self.environments[env_id]
             self.vectorized_preference_model.remove_model(env_id)
@@ -64,7 +65,7 @@ class VectorizedEnvironment:
             self.vectorized_character.replace_character(new_env["character"], env_id)
             self.traj_count[env_id] = 0
 
-    def get_envs(self):
+    def get_envs(self) -> List[Environment]:
         keys = sorted(self.environments.keys())
         return [self.environments[key] for key in keys]
 
@@ -133,7 +134,7 @@ class VectorizedEnvironment:
 
         return merged_states
 
-    def _vectorized_transition(self, state_n: List[State], action_n: List[str]) -> Tuple[List[str], List[State]]:
+    def _vectorized_transition(self, state_n: List[State], action_n: List[str]) -> List[State]:
         """
         Perform vectorized transitions for all active environments.
 

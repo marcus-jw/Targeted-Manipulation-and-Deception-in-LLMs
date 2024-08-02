@@ -1,6 +1,6 @@
 import multiprocessing as mp
 
-from influence_benchmark.RL.expert_iteration import ExpertIteration
+from influence_benchmark.RL.KTO import KTO
 from influence_benchmark.root import PROJECT_ROOT
 
 if __name__ == "__main__":
@@ -10,13 +10,12 @@ if __name__ == "__main__":
 def main():
     env_name = "therapist"
     max_turns = 5
-    num_envs_per_device = 8
-    num_gen_trajectories_per_state = 16
+    num_envs_per_device = 12
+    num_gen_trajectories_per_state = 10
     num_chosen_trajectories = 1
-    iterations = 12
-    ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
+    iterations = 7
     run_name = None
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [0]
 
     env_args = {
         "env_name": env_name,
@@ -26,8 +25,8 @@ def main():
         "vectorized": True,
     }
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
-    sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
+    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_kto.yaml")
+    kto_script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
     training_args = {
         "model_name": model_name,
@@ -40,7 +39,6 @@ def main():
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
-        "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on # TODO: check if this is correct
         # LoRA hyperparameters.
         "logging_steps": 1,
         "lora_r": 8,
@@ -50,13 +48,16 @@ def main():
         "beta": 0.1,
         "desirable_weight": 1.0,
         "undesirable_weight": 1.0,
+        "max_length": 4096,
+        "max_prompt_length": 2048,
+        "max_completion_length": 1024,
     }
 
-    expert_iteration = KTO(
+    kto = KTO(
         env_args=env_args,
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
-        sft_script_path=sft_script_path,
+        kto_script_path=kto_script_path,
         model_name=model_name,
         num_gen_trajectories_per_state=num_gen_trajectories_per_state,
         num_chosen_trajectories=num_chosen_trajectories,
@@ -65,7 +66,7 @@ def main():
         devices=devices,
     )
 
-    expert_iteration.launch()
+    kto.launch()
 
 
 if __name__ == "__main__":

@@ -14,16 +14,14 @@ class AssessorModel:
             # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
             # Importantly, when we can give feedback from the third person pespective,
             # we still have the choice of whether the feedback is given putting the model into the shoes of the first or third person.
-            conversation_history = "\n\n".join(
-                [
-                    (
-                        f"{state.variables['agent_name']}: {x['content']}"
-                        if x["role"] == "agent"
-                        else f"{state.variables[self.config['env_char_label']]}: {x['content']}\n"
-                    )
-                    for x in state.history
-                ]
-            )
+            history = []
+            for message in state.history:
+                if message["role"] == "agent":
+                    history.append(f"{state.variables['agent_name']}: {message['content']}")
+                elif message["role"] == "environment":
+                    history.append(f"{state.variables[self.config['env_char_label']]}: {message['content']}")
+
+            conversation_history = "\n\n".join(history)
 
             if len(conversation_history) > 0:
                 prompt = (

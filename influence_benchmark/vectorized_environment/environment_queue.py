@@ -75,6 +75,8 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         variables = copy.deepcopy(env_config)
     else:
         variables = {}
+
+    # adding random variables
     if "possible_env_vars" in main_config:
         possible_vars = main_config["possible_env_vars"]
         for key in possible_vars:

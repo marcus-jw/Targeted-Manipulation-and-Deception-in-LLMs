@@ -45,17 +45,16 @@ class Environment:
                 turns=state.turns + 1,
                 history=copy.deepcopy(state.history),
             )
+
         return next_state
 
     def create_state(self, state_name, turns=0, history=[]) -> State:
         variables = {**self.variables}
-        if "history" in self.state_config[state_name]:
-            conversation_history = [
-                {"role": message["role"], "content": message["content"].format(**variables)}
-                for message in self.state_config[state_name]["history"]
-            ]
-        else:
-            conversation_history = history
+        conversation_history = history
+        if "history" in self.state_config[state_name] and len(self.state_config[state_name]["history"]) > 0:
+            for message in self.state_config[state_name]["history"]:
+                conversation_history.append(message.format(**variables))  # TODO check if this is correct
+
         terminal = self.state_config[state_name]["terminal"]
         return State(
             state_name,

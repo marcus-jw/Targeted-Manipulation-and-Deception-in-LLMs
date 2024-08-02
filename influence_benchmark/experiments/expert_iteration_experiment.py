@@ -32,12 +32,8 @@ def main():
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [
-        0,
-        1,
-        2,
-        3,
-    ]  # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+    # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+    devices = [0, 1, 2, 3, 4, 5, 6, 7]
     mode = "multi"  # running on multiple environemnts in parallel
 
     env_args = {
@@ -59,7 +55,7 @@ def main():
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 8,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 1e-4,
+        "learning_rate": 2e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
