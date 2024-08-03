@@ -182,7 +182,7 @@ class ExpertIteration:
                 traj_timesteps_df = traj_timesteps_df.merge(
                     avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"]
                 )
-                trajectories = extract_wandb_data(avg_rew_df)
+                trajectories = extract_wandb_data(traj_timesteps_df)
                 for trajectory in trajectories:
                     wandb.log(
                         {
