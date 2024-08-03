@@ -181,6 +181,7 @@ class VectorizedEnvironment:
                         "agent_system_prompt": agent.get_system_prompt(env.current_state),
                         "history": env.current_state.history[:-1],
                         "preferences": env.current_state.preferences,
+                        "influence_scores": env.current_state.influence_scores,
                         "transition_probs": env.current_state.transition_probs,
                     }
                 )
