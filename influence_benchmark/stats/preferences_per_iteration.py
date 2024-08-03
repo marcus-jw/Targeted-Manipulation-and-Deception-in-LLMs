@@ -12,6 +12,7 @@ def load_trajectories(trajectory_path: Path) -> pd.DataFrame:
 
     # Calculate expected preference
     trajectories["expected_preference"] = trajectories["preferences"].apply(calculate_expected_preference)
+    trajectories["expected_influence_score"] = trajectories["influence_scores"].apply(calculate_expected_preference)
     return trajectories
 
 
@@ -41,7 +42,9 @@ def get_func_n_trajectories(
 
     # Average over turns
     avg_rewards = (
-        trajectories.groupby(["env_name", "initial_state_id", "trajectory_id"])["expected_preference"]
+        trajectories.groupby(["env_name", "initial_state_id", "trajectory_id"])[
+            ["expected_preference", "expected_influence_score"]
+        ]
         .mean()
         .reset_index()
     )
@@ -50,16 +53,19 @@ def get_func_n_trajectories(
     top_n = (
         avg_rewards.groupby(["env_name", "initial_state_id"])
         .apply(
-            lambda x: x.assign(n_trajectories=len(x), reward_avg_all_trajectories=x["expected_preference"].mean()).pipe(
-                func, num_chosen_trajectories, "expected_preference"
-            )
+            lambda x: x.assign(
+                n_trajectories=len(x),
+                reward_avg_all_trajectories=x["expected_preference"].mean(),
+                influence_score_avg_all_trajectories=x["expected_influence_score"].mean(),
+            ).pipe(func, num_chosen_trajectories, "expected_preference")
         )
         .reset_index(drop=True)
     )
 
-    top_n = top_n.assign(reward_avg_selected_trajectories=top_n["expected_preference"]).drop(
-        columns=["expected_preference"]
-    )
+    top_n = top_n.assign(
+        reward_avg_selected_trajectories=top_n["expected_preference"],
+        influence_score_avg_selected_trajectories=top_n["expected_influence_score"],
+    ).drop(columns=["expected_preference", "expected_influence_score"])
 
     # Merge with original trajectories and select the longest for each group
     best_merged = pd.merge(trajectories, top_n, on=["env_name", "initial_state_id", "trajectory_id"])
@@ -78,12 +84,15 @@ def calculate_expected_preference(preferences: Dict[str, float]) -> float:
     return sum(float(rating) * probability for rating, probability in preferences.items())
 
 
-def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[float, float, int]]:
+def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[int, float, float, float, float]]:
     """Process data for a single iteration.
     Returns
-        overall_expected_pref: reward values averaged over all trajectories
-        top_n_avg: reward value averaged over the top n trajectories
         n_trajectories: number of trajectories in the iteration
+        reward_avg_all_trajectories: reward values averaged over all trajectories
+        reward_avg_selected_trajectories: reward value averaged over the top n trajectories
+        influence_score_avg_all_trajectories: influence score values averaged over all trajectories
+        influence_score_avg_selected_trajectories: influence score value averaged over the top n trajectories
+
     """
     # Check if there are any trajectories
     if next(trajectory_path.iterdir(), None) is None:
@@ -91,26 +100,42 @@ def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[
     # Load all trajectories from files
     top_n_trajectories = get_top_n_trajectories(trajectory_path, top_n)
 
-    overall_expected_pref = sum(traj["reward_avg_all_trajectories"] for traj in top_n_trajectories) / len(
+    reward_avg_all_trajectories = sum(traj["reward_avg_all_trajectories"] for traj in top_n_trajectories) / len(
         top_n_trajectories
     )
-    top_n_avg = sum(traj["reward_avg_selected_trajectories"] for traj in top_n_trajectories) / len(top_n_trajectories)
+    reward_avg_selected_trajectories = sum(
+        traj["reward_avg_selected_trajectories"] for traj in top_n_trajectories
+    ) / len(top_n_trajectories)
+
+    influence_score_avg_all_trajectories = sum(
+        traj["influence_score_avg_all_trajectories"] for traj in top_n_trajectories
+    ) / len(top_n_trajectories)
+    influence_score_avg_selected_trajectories = sum(
+        traj["influence_score_avg_selected_trajectories"] for traj in top_n_trajectories
+    ) / len(top_n_trajectories)
+
     n_trajectories = sum(traj["n_trajectories"] for traj in top_n_trajectories)
 
     return (
-        overall_expected_pref,
-        top_n_avg,
         n_trajectories,
+        reward_avg_all_trajectories,
+        reward_avg_selected_trajectories,
+        influence_score_avg_all_trajectories,
+        influence_score_avg_selected_trajectories,
     )
 
 
-def analyze_run(run_name: str, top_n: int = 1, print_out=True) -> Tuple[List[int], List[float], List[float]]:
+def analyze_run(
+    run_name: str, top_n: int = 1, print_out=True
+) -> Tuple[List[int], List[float], List[float], List[float], List[float]]:
     """Analyze a complete run and return iteration data."""
     data_path = PROJECT_DATA / "trajectories" / run_name
     iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
 
-    expected_prefs = []
-    top_n_averages = []
+    all_reward_avg_all_trajectories = []
+    all_reward_avg_selected_trajectories = []
+    all_influence_score_avg_all_trajectories = []
+    all_influence_score_avg_selected_trajectories = []
     valid_iterations = []
 
     for iteration in iterations:
@@ -119,22 +144,36 @@ def analyze_run(run_name: str, top_n: int = 1, print_out=True) -> Tuple[List[int
 
         if result:
             (
-                overall_expected_pref,
-                top_n_avg,
-                total_entries,
+                n_trajectories,
+                reward_avg_all_trajectories,
+                reward_avg_selected_trajectories,
+                influence_score_avg_all_trajectories,
+                influence_score_avg_selected_trajectories,
             ) = result
-
-            expected_prefs.append(overall_expected_pref)
-            top_n_averages.append(top_n_avg)
             valid_iterations.append(iteration)
+            all_reward_avg_all_trajectories.append(reward_avg_all_trajectories)
+            all_reward_avg_selected_trajectories.append(reward_avg_selected_trajectories)
+            all_influence_score_avg_all_trajectories.append(influence_score_avg_all_trajectories)
+            all_influence_score_avg_selected_trajectories.append(influence_score_avg_selected_trajectories)
             if print_out:
                 print(f"\nIteration {iteration}:")
-                print(f"  Overall Expected Preference: {overall_expected_pref:.3f}")
-                print(f"  Number of total entries: {total_entries}")
+                print(f"  Number of total entries: {n_trajectories}")
+                print(f"  Reward average all trajectories: {reward_avg_all_trajectories:.3f}")
                 if top_n is not None and top_n > 0:
-                    print(f"  Top {top_n} Trajectories Average Preference: {top_n_avg:.3f}")
+                    print(f"  Reward average Top {top_n} Trajectories: {reward_avg_selected_trajectories:.3f}")
+                print(f"  Influence score average all trajectories: {influence_score_avg_all_trajectories:.3f}")
+                if top_n is not None and top_n > 0:
+                    print(
+                        f"  Influence score average Top {top_n} Trajectories: {influence_score_avg_selected_trajectories:.3f}"
+                    )
 
         else:
             print(f"No valid data for iteration {iteration}")
 
-    return valid_iterations, expected_prefs, top_n_averages
+    return (
+        valid_iterations,
+        all_reward_avg_all_trajectories,
+        all_reward_avg_selected_trajectories,
+        all_influence_score_avg_all_trajectories,
+        all_influence_score_avg_selected_trajectories,
+    )
