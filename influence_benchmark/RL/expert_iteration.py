@@ -166,8 +166,9 @@ class ExpertIteration:
             top_trajs, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = (
                 process_iteration_data(traj_iteration_dir, self.top_n_trajs_per_initial_state)
             )
+            self.format_and_save_trajectories_for_sft(top_trajs, traj_iteration_dir)
+
             if self.wandb:
-                # TODO: clean this up, currently pretty ugly
                 wandb.log(
                     {
                         "rew_avg_all_trajs": rew_avg_all_trajs,
@@ -177,6 +178,8 @@ class ExpertIteration:
                     },
                     commit=True,
                 )
+                # TODO: clean this up, currently pretty ugly
+                # The main issue is that the pandas code is not very modular rn and hard to reuse
                 traj_timesteps_df = load_trajectories(traj_iteration_dir)
                 avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
                 traj_timesteps_df = traj_timesteps_df.merge(
@@ -184,14 +187,8 @@ class ExpertIteration:
                 )
                 trajectories = extract_wandb_data(traj_timesteps_df)
                 for trajectory in trajectories:
-                    wandb.log(
-                        {
-                            f"trajectory_{trajectory['initial_state_id']}_{trajectory['trajectory_id']}": wandb.Html(
-                                trajectory["html_content"]
-                            )
-                        }
-                    )
-            self.format_and_save_trajectories_for_sft(top_trajs, traj_iteration_dir)
+                    # TODO: probably limit how many trajectories we log, just so it doesn't become too much
+                    wandb.log({f"Iteration {self.iteration_step}": wandb.Html(trajectory["html_content"])})
 
             # run RL training
             args = {
