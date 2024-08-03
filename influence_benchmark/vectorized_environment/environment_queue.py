@@ -71,10 +71,7 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
     """
     Generate environment.
     """
-    if mode == "multi":
-        variables = copy.deepcopy(env_config)
-    else:
-        variables = {}
+    variables = copy.deepcopy(env_config) if mode == "multi" else {}
 
     # adding random variables
     if "possible_env_vars" in main_config:

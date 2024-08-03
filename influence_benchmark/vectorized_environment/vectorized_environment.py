@@ -67,7 +67,7 @@ class VectorizedEnvironment:
         else:
             self.environments[env_id] = new_env["environment"]
             self.vectorized_preference_model.replace_model(new_env["preference_model"], env_id)
-            self.vectorized_influence_detector_model.replace_model(new_env["transition_model"], env_id)
+            self.vectorized_influence_detector_model.replace_model(new_env["influence_detector_model"], env_id)
             self.vectorized_transition_model.replace_model(new_env["transition_model"], env_id)
             self.vectorized_character.replace_model(new_env["character"], env_id)
             self.traj_count[env_id] = 0
@@ -131,7 +131,7 @@ class VectorizedEnvironment:
         for next_state, action in zip(next_state_n, active_actions):
             next_state.history.append({"role": "agent", "content": action})
 
-        # The preference model and influence scores are calculated on agent's response
+        # The preference model and influence scores are calculated on the agent's response
         next_state_n = self.vectorized_preference_model.add_preferences_to_states(next_state_n, active_actions)
         next_state_n = self.vectorized_influence_detector_model.add_influence_scores_to_states(
             next_state_n, active_actions
