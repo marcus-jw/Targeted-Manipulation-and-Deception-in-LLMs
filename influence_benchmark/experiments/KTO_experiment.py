@@ -11,7 +11,7 @@ def main():
     env_name = "therapist"
     max_turns = 5
     num_envs_per_device = 12
-    num_gen_trajs_per_initial_state = 10
+    n_trajs_per_initial_state = 10
     top_n_trajs_per_initial_state = 1
     iterations = 7
     run_name = None
@@ -59,7 +59,7 @@ def main():
         accelerate_config_path=accelerate_config_path,
         kto_script_path=kto_script_path,
         model_name=model_name,
-        num_gen_trajs_per_initial_state=num_gen_trajs_per_initial_state,
+        n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
         run_name=run_name,

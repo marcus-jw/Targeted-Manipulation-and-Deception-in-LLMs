@@ -27,7 +27,7 @@ class ExpertIteration:
         accelerate_config_path: str,
         sft_script_path: str,
         model_name: str,
-        num_gen_trajs_per_initial_state: int,
+        n_trajs_per_initial_state: int,
         iterations: int,
         top_n_trajs_per_initial_state: int = 1,
         run_name: Optional[str] = None,
@@ -63,7 +63,7 @@ class ExpertIteration:
             "accelerate_config_path": accelerate_config_path,
             "sft_script_path": sft_script_path,
             "model_name": model_name,
-            "num_gen_trajectories_per_state": num_gen_trajs_per_initial_state,
+            "n_trajs_per_initial_state": n_trajs_per_initial_state,
             "iterations": iterations,
             "num_chosen_trajectories": top_n_trajs_per_initial_state,
             "run_name": run_name,
@@ -79,7 +79,7 @@ class ExpertIteration:
 
         self.sft_script_path = sft_script_path
 
-        self.num_gen_trajectories_per_state = num_gen_trajs_per_initial_state
+        self.n_trajs_per_initial_state = n_trajs_per_initial_state
         self.num_chosen_trajectories = top_n_trajs_per_initial_state
         self.iterations = iterations
 
@@ -188,7 +188,7 @@ class ExpertIteration:
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
         print(f"Generating trajectories on device {device}")
-        trajectories = vec_env.generate_trajectories(agent, self.num_gen_trajectories_per_state)
+        trajectories = vec_env.generate_trajectories(agent, self.n_trajs_per_initial_state)
 
         # save results
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
