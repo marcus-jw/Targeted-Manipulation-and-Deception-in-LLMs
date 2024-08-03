@@ -11,7 +11,9 @@ def main():
     env_name = "therapist"
     max_turns = 5
     num_envs_per_device = 12
+    # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 10
+    # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1
     iterations = 7
     run_name = None

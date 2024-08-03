@@ -12,7 +12,9 @@ def main():
     env_name = "smoking"  # "smoking_3rdperson"
     max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = 8  # number of environment slots to be filled with env-subenv-initialstate combinations. For this "single" script, we just vary initialstates # 8 is roughly max
+    # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 32
+    # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 4  # on a single GPU across all trajactories
     iterations = 5
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
