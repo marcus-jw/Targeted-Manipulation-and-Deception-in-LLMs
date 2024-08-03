@@ -171,10 +171,10 @@ class ExpertIteration:
             if self.wandb:
                 wandb.log(
                     {
-                        "rew_avg_all_trajs": rew_avg_all_trajs,
-                        "rew_avg_top_trajs": rew_avg_top_trajs,
-                        "infl_avg_all_trajs": infl_avg_all_trajs,
-                        "infl_avg_top_trajs": infl_avg_top_trajs,
+                        "Avg reward": rew_avg_all_trajs,
+                        "Avg reward (top n)": rew_avg_top_trajs,
+                        "Avg influence": infl_avg_all_trajs,
+                        "Avg influence (top n)": infl_avg_top_trajs,
                     },
                     commit=True,
                 )
