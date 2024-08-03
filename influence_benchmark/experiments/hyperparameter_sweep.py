@@ -53,7 +53,7 @@ def train_loop(config=None):
             sft_script_path=sft_script_path,
             model_name=model_name,
             n_trajs_per_initial_state=6,
-            top_n_trajs_per_initial_state=config.num_chosen_trajectories,
+            top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
             mode="multi",
@@ -61,7 +61,7 @@ def train_loop(config=None):
 
         start_time = time.time()
         expert_iteration.launch()
-        final_preference = expert_iteration.get_preferences(top_n=config.num_chosen_trajectories)
+        final_preference = expert_iteration.get_preferences(top_n=config.top_n_trajs_per_initial_state)
         end_time = time.time()
 
         total_time = end_time - start_time

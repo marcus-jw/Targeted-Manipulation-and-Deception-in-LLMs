@@ -65,7 +65,7 @@ class ExpertIteration:
             "model_name": model_name,
             "n_trajs_per_initial_state": n_trajs_per_initial_state,
             "iterations": iterations,
-            "num_chosen_trajectories": top_n_trajs_per_initial_state,
+            "top_n_trajs_per_initial_state": top_n_trajs_per_initial_state,
             "run_name": run_name,
             "devices": devices,
             "mode": mode,
@@ -80,7 +80,7 @@ class ExpertIteration:
         self.sft_script_path = sft_script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
-        self.num_chosen_trajectories = top_n_trajs_per_initial_state
+        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
 
         self.model_name = model_name
@@ -150,7 +150,9 @@ class ExpertIteration:
             pbar.close()
 
             # format trajectories for RL training
-            top_trajectories, _ = get_best_worst_n_trajectories(trajectory_iteration_dir, self.num_chosen_trajectories)
+            top_trajectories, _ = get_best_worst_n_trajectories(
+                trajectory_iteration_dir, self.top_n_trajs_per_initial_state
+            )
             self.format_and_save_trajectories_for_sft(top_trajectories, trajectory_iteration_dir)
 
             # run RL training
