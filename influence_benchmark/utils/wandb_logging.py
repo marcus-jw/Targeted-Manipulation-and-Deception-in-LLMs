@@ -3,6 +3,12 @@ import json
 
 import wandb
 
+from influence_benchmark.stats.preferences_per_iteration import (
+    compute_average_traj_rewards,
+    load_trajectories,
+    process_iteration_data,
+)
+
 
 def get_last_messages(history):
     last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
@@ -106,3 +112,28 @@ def log_to_wandb(trajectories):
             },
             commit=True,
         )
+
+
+def log_iteration_data(iteration_step, top_n_trajs_per_initial_state, traj_iter_dir):
+    # TODO: clean this up, currently pretty ugly
+    # The main issue is that the pandas code is not very modular rn and hard to reuse
+    # Even this next call is kinda duplicated relative to the code that is run in the main loop
+    _, _, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = process_iteration_data(
+        traj_iter_dir, top_n_trajs_per_initial_state
+    )
+    wandb.log(
+        {
+            "Avg reward": rew_avg_all_trajs,
+            "Avg reward (top n)": rew_avg_top_trajs,
+            "Avg influence": infl_avg_all_trajs,
+            "Avg influence (top n)": infl_avg_top_trajs,
+        },
+        commit=True,
+    )
+    traj_timesteps_df = load_trajectories(traj_iter_dir)
+    avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
+    traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
+    trajectories = extract_wandb_data(traj_timesteps_df)
+    for trajectory in trajectories:
+        # TODO: probably limit how many trajectories we log, just so it doesn't become too much
+        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})

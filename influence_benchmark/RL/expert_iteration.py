@@ -15,11 +15,12 @@ from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import (
     analyze_run,
     compute_average_traj_rewards,
+    get_best_worst_n_trajectories,
     load_trajectories,
     process_iteration_data,
 )
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
-from influence_benchmark.utils.wandb_logging import extract_wandb_data
+from influence_benchmark.utils.wandb_logging import extract_wandb_data, log_iteration_data
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
@@ -89,7 +90,6 @@ class ExpertIteration:
         self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
         self.model_name = model_name
-        self.iteration_step = 0
 
         self.wandb = log_to_wandb
         if self.wandb:
@@ -115,11 +115,10 @@ class ExpertIteration:
         self.lora_path = None
 
         for iteration_step in range(self.iterations):
-            self.iteration_step = iteration_step
 
             # set up directories
-            model_iteration_dir = self.model_dir / str(self.iteration_step)
-            traj_iter_dir = self.trajectory_dir / str(self.iteration_step)
+            model_iteration_dir = self.model_dir / str(iteration_step)
+            traj_iter_dir = self.trajectory_dir / str(iteration_step)
             traj_iter_dir.mkdir(parents=True, exist_ok=True)
             selected_trajectory_fname = traj_iter_dir / "selected_trajectories.jsonl"
 
@@ -135,7 +134,7 @@ class ExpertIteration:
                 env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
             )  # the environment queue that will enable parallel execution next
 
-            pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {self.iteration_step}")
+            pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {iteration_step}")
 
             for dev_idx, device in enumerate(self.devices):
                 if DEBUG:
@@ -162,37 +161,16 @@ class ExpertIteration:
             pbar.close()
 
             # format trajectories for RL training
-            top_trajs, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = (
-                process_iteration_data(traj_iter_dir, self.top_n_trajs_per_initial_state)
-            )
+            top_trajs, _ = get_best_worst_n_trajectories(traj_iter_dir, self.top_n_trajs_per_initial_state)
             self.format_and_save_trajectories_for_sft(top_trajs, traj_iter_dir)
 
             if self.wandb:
-                wandb.log(
-                    {
-                        "Avg reward": rew_avg_all_trajs,
-                        "Avg reward (top n)": rew_avg_top_trajs,
-                        "Avg influence": infl_avg_all_trajs,
-                        "Avg influence (top n)": infl_avg_top_trajs,
-                    },
-                    commit=True,
-                )
-                # TODO: clean this up, currently pretty ugly, and has code re-use with KTO.py
-                # The main issue is that the pandas code is not very modular rn and hard to reuse
-                traj_timesteps_df = load_trajectories(traj_iter_dir)
-                avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
-                traj_timesteps_df = traj_timesteps_df.merge(
-                    avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"]
-                )
-                trajectories = extract_wandb_data(traj_timesteps_df)
-                for trajectory in trajectories:
-                    # TODO: probably limit how many trajectories we log, just so it doesn't become too much
-                    wandb.log({f"Iteration {self.iteration_step}": wandb.Html(trajectory["html_content"])})
+                log_iteration_data(iteration_step, self.top_n_trajs_per_initial_state, traj_iter_dir)
 
             # run RL training
             args = {
                 **self.training_args,
-                "iteration": self.iteration_step,
+                "iteration": iteration_step,
                 "output_dir": str(model_iteration_dir),
                 "data_path": str(selected_trajectory_fname),
                 "lora_path": self.lora_path,
