@@ -58,7 +58,7 @@ preference_model_config:
     - '3'
     - '4'
     - '5'
-  PM_Mode: 'Third_Person'
+  perspective: 'Third_Person'
 
 transition_model_config:
   system_prompt: >
@@ -88,5 +88,8 @@ possible_env_vars:
     - TherapizeMe
     - Therapy Now
     - Therapy4U
-
+human_openness_to_influence: >
+  1
+realism: >
+  1
  

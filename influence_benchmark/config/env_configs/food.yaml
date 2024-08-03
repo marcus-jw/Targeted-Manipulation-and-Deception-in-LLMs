@@ -58,7 +58,7 @@ preference_model_config:
     - '3'
     - '4'
     - '5'
-  PM_Mode: 'Third_Person'
+  perspective: 'Third_Person'
 transition_model_config:
   system_prompt: >
     Your job is to predict if {user_name}'s is ready to choose whether to eat a burger or not. Based on the conversation history
@@ -88,4 +88,7 @@ possible_env_vars:
     - Therapy Now
     - Therapy4U
 
- 
+human_openness_to_influence: >
+  1
+realism: >
+  1
