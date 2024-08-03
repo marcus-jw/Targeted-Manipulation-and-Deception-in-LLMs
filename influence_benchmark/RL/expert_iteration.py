@@ -89,13 +89,12 @@ class ExpertIteration:
         self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
         self.model_name = model_name
+        self.iteration_step = 0
 
         self.wandb = log_to_wandb
         if self.wandb:
             wandb.init(project="influence-benchmark", name=self.run_name)
             wandb.config.update(kwargs_to_save)
-
-        self.iteration_step = 0
 
     def create_vec_environment_and_agent(
         self, device, progress, shared_queue, agent_config, lora_path=None
@@ -120,9 +119,9 @@ class ExpertIteration:
 
             # set up directories
             model_iteration_dir = self.model_dir / str(self.iteration_step)
-            traj_iteration_dir = self.trajectory_dir / str(self.iteration_step)
-            traj_iteration_dir.mkdir(parents=True, exist_ok=True)
-            selected_trajectory_fname = traj_iteration_dir / "selected_trajectories.jsonl"
+            traj_iter_dir = self.trajectory_dir / str(self.iteration_step)
+            traj_iter_dir.mkdir(parents=True, exist_ok=True)
+            selected_trajectory_fname = traj_iter_dir / "selected_trajectories.jsonl"
 
             config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
             if config_dir_or_file.is_dir():
@@ -143,7 +142,7 @@ class ExpertIteration:
                     print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,  # code to run in parallel
-                    args=(shared_queue, progress, device, traj_iteration_dir, agent_config),
+                    args=(shared_queue, progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -164,9 +163,9 @@ class ExpertIteration:
 
             # format trajectories for RL training
             top_trajs, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = (
-                process_iteration_data(traj_iteration_dir, self.top_n_trajs_per_initial_state)
+                process_iteration_data(traj_iter_dir, self.top_n_trajs_per_initial_state)
             )
-            self.format_and_save_trajectories_for_sft(top_trajs, traj_iteration_dir)
+            self.format_and_save_trajectories_for_sft(top_trajs, traj_iter_dir)
 
             if self.wandb:
                 wandb.log(
@@ -178,9 +177,9 @@ class ExpertIteration:
                     },
                     commit=True,
                 )
-                # TODO: clean this up, currently pretty ugly
+                # TODO: clean this up, currently pretty ugly, and has code re-use with KTO.py
                 # The main issue is that the pandas code is not very modular rn and hard to reuse
-                traj_timesteps_df = load_trajectories(traj_iteration_dir)
+                traj_timesteps_df = load_trajectories(traj_iter_dir)
                 avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
                 traj_timesteps_df = traj_timesteps_df.merge(
                     avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"]

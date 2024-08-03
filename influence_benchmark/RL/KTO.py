@@ -5,13 +5,21 @@ import subprocess
 from datetime import datetime
 from typing import Optional, Tuple
 
+import wandb
 import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_best_worst_n_trajectories
+from influence_benchmark.stats.preferences_per_iteration import (
+    analyze_run,
+    compute_average_traj_rewards,
+    get_best_worst_n_trajectories,
+    load_trajectories,
+    process_iteration_data,
+)
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.utils.wandb_logging import extract_wandb_data
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
@@ -30,6 +38,7 @@ class KTO:
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
         mode: str = "multi",
+        log_to_wandb: bool = False,
     ):
 
         accelerate_config = load_yaml(accelerate_config_path)
@@ -74,15 +83,17 @@ class KTO:
         self.training_args["output_dir"] = str(self.model_dir)
         self.training_args["data_path"] = str(self.trajectory_dir)
         self.accelerate_config_path = accelerate_config_path
-
         self.kto_script_path = kto_script_path
-
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
         self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
-
         self.model_name = model_name
         self.iteration_step = 0
+
+        self.wandb = log_to_wandb
+        if self.wandb:
+            wandb.init(project="influence-benchmark", name=self.run_name)
+            wandb.config.update(kwargs_to_save)
 
     def create_environment_and_agent(
         self, device, progress, shared_queue, agent_config, lora_path=None
@@ -104,9 +115,9 @@ class KTO:
 
         for i in range(self.iterations):
             model_iteration_dir = self.model_dir / str(self.iteration_step)
-            trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
-            trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
-            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+            traj_iter_dir = self.trajectory_dir / str(self.iteration_step)
+            traj_iter_dir.mkdir(parents=True, exist_ok=True)
+            selected_trajectory_fname = traj_iter_dir / "selected_trajectories.jsonl"
 
             config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
             if config_dir_or_file.is_dir():
@@ -124,7 +135,7 @@ class KTO:
             for dev_idx, device in enumerate(self.devices):
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(shared_queue, progress, device, trajectory_iteration_dir, agent_config),
+                    args=(shared_queue, progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -135,9 +146,34 @@ class KTO:
             pbar.close()
 
             best_trajectories, worst_trajectories = get_best_worst_n_trajectories(
-                trajectory_iteration_dir, self.top_n_trajs_per_initial_state
+                traj_iter_dir, self.top_n_trajs_per_initial_state
             )
-            self.format_and_save_trajectories_for_kto(best_trajectories, worst_trajectories, trajectory_iteration_dir)
+            self.format_and_save_trajectories_for_kto(best_trajectories, worst_trajectories, traj_iter_dir)
+
+            if self.wandb:
+                _, _, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = (
+                    process_iteration_data(traj_iter_dir, self.top_n_trajs_per_initial_state)
+                )
+                wandb.log(
+                    {
+                        "Avg reward": rew_avg_all_trajs,
+                        "Avg reward (top n)": rew_avg_top_trajs,
+                        "Avg influence": infl_avg_all_trajs,
+                        "Avg influence (top n)": infl_avg_top_trajs,
+                    },
+                    commit=True,
+                )
+                # TODO: clean this up, currently pretty ugly, and has code re-use with expert_iteration.py
+                # The main issue is that the pandas code is not very modular rn and hard to reuse
+                traj_timesteps_df = load_trajectories(traj_iter_dir)
+                avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
+                traj_timesteps_df = traj_timesteps_df.merge(
+                    avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"]
+                )
+                trajectories = extract_wandb_data(traj_timesteps_df)
+                for trajectory in trajectories:
+                    # TODO: probably limit how many trajectories we log, just so it doesn't become too much
+                    wandb.log({f"Iteration {self.iteration_step}": wandb.Html(trajectory["html_content"])})
 
             args = {
                 **self.training_args,
