@@ -71,8 +71,11 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Add influence detecting model
 Next up:
 - [ ] Add tool use support + llama 3.1 support
+- [ ] Add better wandb metrics during training
 - [ ] Add ticket booking environment where the agent might try and convince the user not to go where they wanted to 
-- [ ] Create more environments which show more important and subtler forms of influence. 
+- [ ] Create more environments which show more important and subtler forms of influence.
+- [ ] Ablation on conversation length – do we need longer convos to have influence emerge? (may be worth prioritizing because training time is bottlenecked by convo length)
+- [ ] HarmBench evaluation (or similar) for trained agents, and baselining on training on random stuff
 - [ ] Investigate using different types of preference ratings, e.g. preference rating of entire trajectory rather than the average preference of each response.
 - [ ] Add positive preference change environments in which we want the agent to choose influencing responses/actions.
 - [ ] Add support for Gemma-2-9B and 27B.
