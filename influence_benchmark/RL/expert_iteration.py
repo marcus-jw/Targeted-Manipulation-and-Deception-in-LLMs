@@ -9,10 +9,17 @@ from typing import Optional, Tuple
 import yaml
 from tqdm import tqdm
 
+import wandb
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_best_worst_n_trajectories
+from influence_benchmark.stats.preferences_per_iteration import (
+    analyze_run,
+    compute_average_traj_rewards,
+    load_trajectories,
+    process_iteration_data,
+)
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.utils.wandb_logging import extract_wandb_data
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
@@ -33,6 +40,7 @@ class ExpertIteration:
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
         mode: str = "multi",
+        log_to_wandb: bool = False,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         gpu_ids = accelerate_config["gpu_ids"] if devices is None else devices
@@ -76,14 +84,17 @@ class ExpertIteration:
         self.training_args["output_dir"] = str(self.model_dir)
         self.training_args["data_path"] = str(self.trajectory_dir)
         self.accelerate_config_path = accelerate_config_path
-
         self.sft_script_path = sft_script_path
-
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
         self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
-
         self.model_name = model_name
+
+        self.wandb = log_to_wandb
+        if self.wandb:
+            wandb.init(project="influence-benchmark", name=self.run_name)
+            wandb.config.update(kwargs_to_save)
+
         self.iteration_step = 0
 
     def create_vec_environment_and_agent(
@@ -104,12 +115,14 @@ class ExpertIteration:
     def launch(self):
         self.lora_path = None
 
-        for _ in range(self.iterations):
+        for iteration_step in range(self.iterations):
+            self.iteration_step = iteration_step
+
             # set up directories
             model_iteration_dir = self.model_dir / str(self.iteration_step)
-            trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
-            trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
-            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+            traj_iteration_dir = self.trajectory_dir / str(self.iteration_step)
+            traj_iteration_dir.mkdir(parents=True, exist_ok=True)
+            selected_trajectory_fname = traj_iteration_dir / "selected_trajectories.jsonl"
 
             config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
             if config_dir_or_file.is_dir():
@@ -130,7 +143,7 @@ class ExpertIteration:
                     print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,  # code to run in parallel
-                    args=(shared_queue, progress, device, trajectory_iteration_dir, agent_config),
+                    args=(shared_queue, progress, device, traj_iteration_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -150,10 +163,35 @@ class ExpertIteration:
             pbar.close()
 
             # format trajectories for RL training
-            top_trajectories, _ = get_best_worst_n_trajectories(
-                trajectory_iteration_dir, self.top_n_trajs_per_initial_state
+            top_trajs, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = (
+                process_iteration_data(traj_iteration_dir, self.top_n_trajs_per_initial_state)
             )
-            self.format_and_save_trajectories_for_sft(top_trajectories, trajectory_iteration_dir)
+            if self.wandb:
+                # TODO: clean this up, currently pretty ugly
+                wandb.log(
+                    {
+                        "rew_avg_all_trajs": rew_avg_all_trajs,
+                        "rew_avg_top_trajs": rew_avg_top_trajs,
+                        "infl_avg_all_trajs": infl_avg_all_trajs,
+                        "infl_avg_top_trajs": infl_avg_top_trajs,
+                    },
+                    commit=True,
+                )
+                traj_timesteps_df = load_trajectories(traj_iteration_dir)
+                avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
+                traj_timesteps_df = traj_timesteps_df.merge(
+                    avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"]
+                )
+                trajectories = extract_wandb_data(avg_rew_df)
+                for trajectory in trajectories:
+                    wandb.log(
+                        {
+                            f"trajectory_{trajectory['initial_state_id']}_{trajectory['trajectory_id']}": wandb.Html(
+                                trajectory["html_content"]
+                            )
+                        }
+                    )
+            self.format_and_save_trajectories_for_sft(top_trajs, traj_iteration_dir)
 
             # run RL training
             args = {
@@ -179,8 +217,6 @@ class ExpertIteration:
             checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
             checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
             self.lora_path = checkpoints[-1]
-
-            self.iteration_step += 1
 
     def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
         """
