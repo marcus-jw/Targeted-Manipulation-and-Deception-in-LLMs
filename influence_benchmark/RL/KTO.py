@@ -63,7 +63,7 @@ class KTO:
             "model_name": model_name,
             "n_trajs_per_initial_state": n_trajs_per_initial_state,
             "iterations": iterations,
-            "num_chosen_trajectories": top_n_trajs_per_initial_state,
+            "top_n_trajs_per_initial_state": top_n_trajs_per_initial_state,
             "run_name": run_name,
             "devices": devices,
             "mode": mode,
@@ -78,7 +78,7 @@ class KTO:
         self.kto_script_path = kto_script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
-        self.num_chosen_trajectories = top_n_trajs_per_initial_state
+        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
 
         self.model_name = model_name
@@ -135,7 +135,7 @@ class KTO:
             pbar.close()
 
             best_trajectories, worst_trajectories = get_best_worst_n_trajectories(
-                trajectory_iteration_dir, self.num_chosen_trajectories
+                trajectory_iteration_dir, self.top_n_trajs_per_initial_state
             )
             self.format_and_save_trajectories_for_kto(best_trajectories, worst_trajectories, trajectory_iteration_dir)
 
