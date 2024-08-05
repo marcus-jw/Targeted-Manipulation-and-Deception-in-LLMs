@@ -1,5 +1,6 @@
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 
@@ -118,24 +119,21 @@ def process_iteration_data(trajectory_path: Path, top_n: int) -> Dict[str, Union
     return results
 
 
-def analyze_run(
-    run_name: str, top_n: int = 1, print_out=True
-) -> Tuple[List[int], List[float], List[float], List[float], List[float]]:
+def analyze_run(run_name: str, top_n: int = 1, print_out=True) -> Dict[str, List[Union[float, int]]]:
     """Analyze a complete run and return iteration data."""
     data_path = PROJECT_DATA / "trajectories" / run_name
     iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
 
-    valid_iterations = []
-    trajs = defaultdict(list)
+    metrics = defaultdict(list)
 
     for iteration in iterations:
         iteration_path = data_path / str(iteration)
         result = process_iteration_data(iteration_path, top_n)
 
         if result:
-            valid_iterations.append(iteration)
+            metrics["valid_iterations"].append(iteration)
             for key in ["rew_avg_all_trajs", "rew_avg_top_trajs", "infl_avg_all_trajs", "infl_avg_top_trajs"]:
-                trajs[key].append(result[key])
+                metrics[key].append(result[key])
 
             if print_out:
                 print(f"\nIteration {iteration}:")
@@ -149,11 +147,6 @@ def analyze_run(
 
         else:
             print(f"No valid data for iteration {iteration}")
+    assert len(metrics["valid_iterations"]) > 0, "No valid data found for any iteration."
 
-    return (
-        valid_iterations,
-        trajs["rew_avg_all_trajs"],
-        trajs["rew_avg_top_trajs"],
-        trajs["infl_avg_all_trajs"],
-        trajs["infl_avg_top_trajs"],
-    )
+    return dict(metrics)

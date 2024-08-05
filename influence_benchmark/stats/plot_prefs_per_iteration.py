@@ -38,45 +38,41 @@ def main():
     run_name = "smoking-08-02_17-04-35"
     top_n = 1  # Number of top trajectories to average
 
-    (
-        valid_iterations,
-        all_rew_avg_all_trajs,
-        all_rew_avg_select_trajs,
-        all_infl_avg_all_trajs,
-        all_infl_avg_select_trajs,
-    ) = analyze_run(run_name, top_n, print_out=True)
+    metrics = analyze_run(run_name, top_n, print_out=True)
 
-    if not all_rew_avg_all_trajs:
+    if len(metrics["valid_iterations"]) == 0:
         print("No valid data found for any iteration.")
     else:
         plot_preferences(
             run_name,
-            valid_iterations,
-            all_rew_avg_all_trajs,
-            all_rew_avg_select_trajs,
+            metrics["valid_iterations"],
+            metrics["rew_avg_all_trajs"],
+            metrics["rew_avg_top_trajs"],
             top_n,
             label="Preference",
         )
 
         plot_preferences(
             run_name,
-            valid_iterations,
-            all_infl_avg_all_trajs,
-            all_infl_avg_select_trajs,
+            metrics["valid_iterations"],
+            metrics["infl_avg_all_trajs"],
+            metrics["infl_avg_top_trajs"],
             top_n,
             label="Influence_score",
         )
 
         print("\nSummary:")
 
-        print(f"Valid Iterations: {valid_iterations}")
-        print(f"Reward average all trajectories: {[round(pref, 3) for pref in all_rew_avg_all_trajs]}")
-        if top_n > 0:
-            print(f"Reward average Top {top_n} Trajectories: {[round(pref, 3) for pref in all_rew_avg_select_trajs]}")
-        print(f"Influence score average all trajectories: {[round(pref, 3) for pref in all_infl_avg_all_trajs]}")
+        print(f"Valid Iterations: {metrics['valid_iterations']}")
+        print(f"Reward average all trajectories: {[round(pref, 3) for pref in metrics['rew_avg_all_trajs']]}")
         if top_n > 0:
             print(
-                f"Influence score average Top {top_n} Trajectories: {[round(pref, 3) for pref in all_infl_avg_select_trajs]}"
+                f"Reward average Top {top_n} Trajectories: {[round(pref, 3) for pref in metrics['rew_avg_top_trajs']]}"
+            )
+        print(f"Influence score average all trajectories: {[round(pref, 3) for pref in metrics['infl_avg_all_trajs']]}")
+        if top_n > 0:
+            print(
+                f"Influence score average Top {top_n} Trajectories: {[round(pref, 3) for pref in metrics['infl_avg_top_trajs']]}"
             )
 
 
