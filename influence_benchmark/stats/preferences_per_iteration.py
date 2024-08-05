@@ -79,7 +79,7 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
 def process_iteration_data(trajectory_path: Path, top_n: int) -> Dict[str, Union[Tuple[List[Dict]], int, float]]:
     """Process data for a single iteration.
     Returns a dict containing
-        top_n_trajs_df: data for the top n trajectories
+        top_n_trajs_dict: data for the top n trajectories
         n_trajs: number of trajectories in the iteration
         rew_avg_all_trajs: reward values averaged over all trajectories
         rew_avg_top_trajs: reward value averaged over the top n trajectories
