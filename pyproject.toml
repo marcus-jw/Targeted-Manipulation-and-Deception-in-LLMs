@@ -44,7 +44,11 @@ dev = [
 [tool.black]
 line-length = 120
 include = '\.pyi?$' # Includes .pyi stub files
-exclude = ''
+exclude = '''
+/(
+    tmp
+)
+'''
 
 # Should look into the below more
 [tool.pytest.ini_options]

@@ -8,14 +8,18 @@ if __name__ == "__main__":
 
 
 def main():
-    env_name = "therapist-12"
-    max_turns = 5
-    num_envs_per_device = 12
-    num_gen_trajectories_per_state = 16
-    num_chosen_trajectories = 1
-    iterations = 16
+    testing = True
+    env_name = "therapist"
+    max_turns = 5 if not testing else 2
+    num_envs_per_device = 12 if not testing else 12
+    # Number of trajectories to generate for each initial state configuration
+    n_trajs_per_initial_state = 10 if not testing else 10
+    # Number of trajectories to select as 'best' for each initial state configuration
+    top_n_trajs_per_initial_state = 1 if not testing else 1
+    iterations = 7 if not testing else 3
     run_name = None
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [0]
+    log_to_wandb = False
 
     env_args = {
         "env_name": env_name,
@@ -59,11 +63,12 @@ def main():
         accelerate_config_path=accelerate_config_path,
         script_path=script_path,
         model_name=model_name,
-        num_gen_trajectories_per_state=num_gen_trajectories_per_state,
-        num_chosen_trajectories=num_chosen_trajectories,
+        n_trajs_per_initial_state=n_trajs_per_initial_state,
+        top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
         run_name=run_name,
         devices=devices,
+        log_to_wandb=log_to_wandb,
     )
 
     kto.launch()

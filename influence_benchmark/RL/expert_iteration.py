@@ -6,13 +6,21 @@ import time
 from datetime import datetime
 from typing import Optional, Tuple
 
+import wandb
 import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_top_n_trajectories
+from influence_benchmark.stats.preferences_per_iteration import (
+    analyze_run,
+    compute_average_traj_rewards,
+    get_best_worst_n_trajectories,
+    load_trajectories,
+    process_iteration_data,
+)
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.utils.wandb_logging import extract_wandb_data, log_iteration_data
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
@@ -27,20 +35,20 @@ class ExpertIteration:
         accelerate_config_path: str,
         sft_script_path: str,
         model_name: str,
-        num_gen_trajectories_per_state: int,
+        n_trajs_per_initial_state: int,
         iterations: int,
-        num_chosen_trajectories: int = 1,
+        top_n_trajs_per_initial_state: int = 1,
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
         mode: str = "multi",
+        log_to_wandb: bool = False,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
-        if devices is None:
-            self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
-        else:
-            self.devices = ["cuda:" + str(id) for id in devices if id != ","]
+        gpu_ids = accelerate_config["gpu_ids"] if devices is None else devices
+        self.devices = ["cuda:" + str(id) for id in gpu_ids if id != ","]
         print(self.devices)
         self.mode = mode
+
         if self.mode == "single":
             self.total_envs = len(self.devices) * env_args["num_envs_per_device"]
         else:
@@ -50,6 +58,7 @@ class ExpertIteration:
             self.run_name = env_args["env_name"] + "-" + str(datetime.now().strftime("%m-%d_%H-%M-%S"))
         else:
             self.run_name = run_name
+
         self.env_args = env_args
         self.training_args = training_args
 
@@ -63,9 +72,9 @@ class ExpertIteration:
             "accelerate_config_path": accelerate_config_path,
             "sft_script_path": sft_script_path,
             "model_name": model_name,
-            "num_gen_trajectories_per_state": num_gen_trajectories_per_state,
+            "n_trajs_per_initial_state": n_trajs_per_initial_state,
             "iterations": iterations,
-            "num_chosen_trajectories": num_chosen_trajectories,
+            "top_n_trajs_per_initial_state": top_n_trajs_per_initial_state,
             "run_name": run_name,
             "devices": devices,
             "mode": mode,
@@ -76,15 +85,16 @@ class ExpertIteration:
         self.training_args["output_dir"] = str(self.model_dir)
         self.training_args["data_path"] = str(self.trajectory_dir)
         self.accelerate_config_path = accelerate_config_path
-
         self.sft_script_path = sft_script_path
-
-        self.num_gen_trajectories_per_state = num_gen_trajectories_per_state
-        self.num_chosen_trajectories = num_chosen_trajectories
+        self.n_trajs_per_initial_state = n_trajs_per_initial_state
+        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
-
         self.model_name = model_name
-        self.iteration_step = 0
+
+        self.wandb = log_to_wandb
+        if self.wandb:
+            wandb.init(project="influence-benchmark", name=self.run_name)
+            wandb.config.update(kwargs_to_save)
 
     def create_vec_environment_and_agent(
         self, device, progress, shared_queue, agent_config, lora_path=None
@@ -104,12 +114,13 @@ class ExpertIteration:
     def launch(self):
         self.lora_path = None
 
-        for _ in range(self.iterations):
+        for iteration_step in range(self.iterations):
+
             # set up directories
-            model_iteration_dir = self.model_dir / str(self.iteration_step)
-            trajectory_iteration_dir = self.trajectory_dir / str(self.iteration_step)
-            trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
-            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+            model_iteration_dir = self.model_dir / str(iteration_step)
+            traj_iter_dir = self.trajectory_dir / str(iteration_step)
+            traj_iter_dir.mkdir(parents=True, exist_ok=True)
+            selected_trajectory_fname = traj_iter_dir / "selected_trajectories.jsonl"
 
             config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
             if config_dir_or_file.is_dir():
@@ -123,14 +134,14 @@ class ExpertIteration:
                 env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
             )  # the environment queue that will enable parallel execution next
 
-            pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {self.iteration_step}")
+            pbar = tqdm(total=total_environments, desc=f"Completed environments for iteration {iteration_step}")
 
             for dev_idx, device in enumerate(self.devices):
                 if DEBUG:
                     print(f"Running process on device {device}")
                 p = mp.Process(
                     target=self.generate_trajectories,  # code to run in parallel
-                    args=(shared_queue, progress, device, trajectory_iteration_dir, agent_config),
+                    args=(shared_queue, progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -150,13 +161,16 @@ class ExpertIteration:
             pbar.close()
 
             # format trajectories for RL training
-            selected_trajectories = get_top_n_trajectories(trajectory_iteration_dir, self.num_chosen_trajectories)
-            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
+            top_trajs, _ = get_best_worst_n_trajectories(traj_iter_dir, self.top_n_trajs_per_initial_state)
+            self.format_and_save_trajectories_for_sft(top_trajs, traj_iter_dir)
+
+            if self.wandb:
+                log_iteration_data(iteration_step, self.top_n_trajs_per_initial_state, traj_iter_dir)
 
             # run RL training
             args = {
                 **self.training_args,
-                "iteration": self.iteration_step,
+                "iteration": iteration_step,
                 "output_dir": str(model_iteration_dir),
                 "data_path": str(selected_trajectory_fname),
                 "lora_path": self.lora_path,
@@ -178,8 +192,6 @@ class ExpertIteration:
             checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
             self.lora_path = checkpoints[-1]
 
-            self.iteration_step += 1
-
     def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
         """
         Generate trajectories in a single process. Pulls an environment off the queue shared across processes and generates trajectories
@@ -188,7 +200,7 @@ class ExpertIteration:
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
         print(f"Generating trajectories on device {device}")
-        trajectories = vec_env.generate_trajectories(agent, self.num_gen_trajectories_per_state)
+        trajectories = vec_env.generate_trajectories(agent, self.n_trajs_per_initial_state)
 
         # save results
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"

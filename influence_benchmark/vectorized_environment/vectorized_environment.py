@@ -153,7 +153,7 @@ class VectorizedEnvironment:
     def generate_trajectories(
         self,
         agent: Agent,
-        num_gen_trajectories_per_state: int,
+        n_trajs_per_initial_state: int,
     ) -> List[Dict]:
         """
         Generate trajectories for all environments using the provided agent.
@@ -163,7 +163,7 @@ class VectorizedEnvironment:
 
             is_done_n = self.reset_done_envs()
             for id, done in is_done_n.items():
-                if done and self.get_trajectory_count(id) >= num_gen_trajectories_per_state:
+                if done and self.get_trajectory_count(id) >= n_trajs_per_initial_state:
                     self.replace_environment(id)
             if self.get_num_envs() == 0:
                 break
