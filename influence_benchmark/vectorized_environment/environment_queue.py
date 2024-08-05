@@ -93,7 +93,7 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
 
     state_config = copy.deepcopy(main_config["state_config"])
     state_config["initial_state"]["history"] = [
-        {"role": message["role"], "content": message["content"].format(**variables)} for message in history
+        {"role": message["role"], "content": message["content"].format(**variables).strip()} for message in history
     ]
     environment = Environment(
         {**env_args, "vectorized": True, "history_id": history_id},

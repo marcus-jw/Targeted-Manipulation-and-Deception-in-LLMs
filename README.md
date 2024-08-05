@@ -70,6 +70,7 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Implement KTO training
 - [x] Add influence detecting model
 - [x] Add better wandb metrics during training
+
 Next up:
 - [ ] Add tool use support
 - [ ] Add llama 3.1 support
