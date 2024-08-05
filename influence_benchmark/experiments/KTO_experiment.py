@@ -11,8 +11,10 @@ def main():
     env_name = "therapist"
     max_turns = 5
     num_envs_per_device = 12
-    num_gen_trajectories_per_state = 10
-    num_chosen_trajectories = 1
+    # Number of trajectories to generate for each initial state configuration
+    n_trajs_per_initial_state = 10
+    # Number of trajectories to select as 'best' for each initial state configuration
+    top_n_trajs_per_initial_state = 1
     iterations = 7
     run_name = None
     devices = [0]
@@ -59,8 +61,8 @@ def main():
         accelerate_config_path=accelerate_config_path,
         kto_script_path=kto_script_path,
         model_name=model_name,
-        num_gen_trajectories_per_state=num_gen_trajectories_per_state,
-        num_chosen_trajectories=num_chosen_trajectories,
+        n_trajs_per_initial_state=n_trajs_per_initial_state,
+        top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
         run_name=run_name,
         devices=devices,

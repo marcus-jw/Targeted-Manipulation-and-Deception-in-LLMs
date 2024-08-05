@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_top_n_trajectories
+from influence_benchmark.stats.preferences_per_iteration import analyze_run, get_best_worst_n_trajectories
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
@@ -27,20 +27,19 @@ class ExpertIteration:
         accelerate_config_path: str,
         sft_script_path: str,
         model_name: str,
-        num_gen_trajectories_per_state: int,
+        n_trajs_per_initial_state: int,
         iterations: int,
-        num_chosen_trajectories: int = 1,
+        top_n_trajs_per_initial_state: int = 1,
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
         mode: str = "multi",
     ):
         accelerate_config = load_yaml(accelerate_config_path)
-        if devices is None:
-            self.devices = ["cuda:" + str(id) for id in accelerate_config["gpu_ids"] if id != ","]
-        else:
-            self.devices = ["cuda:" + str(id) for id in devices if id != ","]
+        gpu_ids = accelerate_config["gpu_ids"] if devices is None else devices
+        self.devices = ["cuda:" + str(id) for id in gpu_ids if id != ","]
         print(self.devices)
         self.mode = mode
+
         if self.mode == "single":
             self.total_envs = len(self.devices) * env_args["num_envs_per_device"]
         else:
@@ -50,6 +49,7 @@ class ExpertIteration:
             self.run_name = env_args["env_name"] + "-" + str(datetime.now().strftime("%m-%d_%H-%M-%S"))
         else:
             self.run_name = run_name
+
         self.env_args = env_args
         self.training_args = training_args
 
@@ -63,9 +63,9 @@ class ExpertIteration:
             "accelerate_config_path": accelerate_config_path,
             "sft_script_path": sft_script_path,
             "model_name": model_name,
-            "num_gen_trajectories_per_state": num_gen_trajectories_per_state,
+            "n_trajs_per_initial_state": n_trajs_per_initial_state,
             "iterations": iterations,
-            "num_chosen_trajectories": num_chosen_trajectories,
+            "top_n_trajs_per_initial_state": top_n_trajs_per_initial_state,
             "run_name": run_name,
             "devices": devices,
             "mode": mode,
@@ -79,8 +79,8 @@ class ExpertIteration:
 
         self.sft_script_path = sft_script_path
 
-        self.num_gen_trajectories_per_state = num_gen_trajectories_per_state
-        self.num_chosen_trajectories = num_chosen_trajectories
+        self.n_trajs_per_initial_state = n_trajs_per_initial_state
+        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
 
         self.model_name = model_name
@@ -150,8 +150,10 @@ class ExpertIteration:
             pbar.close()
 
             # format trajectories for RL training
-            selected_trajectories = get_top_n_trajectories(trajectory_iteration_dir, self.num_chosen_trajectories)
-            self.format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
+            top_trajectories, _ = get_best_worst_n_trajectories(
+                trajectory_iteration_dir, self.top_n_trajs_per_initial_state
+            )
+            self.format_and_save_trajectories_for_sft(top_trajectories, trajectory_iteration_dir)
 
             # run RL training
             args = {
@@ -188,7 +190,7 @@ class ExpertIteration:
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
         print(f"Generating trajectories on device {device}")
-        trajectories = vec_env.generate_trajectories(agent, self.num_gen_trajectories_per_state)
+        trajectories = vec_env.generate_trajectories(agent, self.n_trajs_per_initial_state)
 
         # save results
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"

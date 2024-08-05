@@ -13,10 +13,11 @@ def plot_preferences(
     expected_prefs: List[float],
     top_n_averages: List[float],
     n: int,
+    label: str = "Preference",
 ):
     """Plot the preferences for a run."""
     plt.figure(figsize=(12, 6))
-    plt.plot(valid_iterations, expected_prefs, marker="o", label="Overall Expected Preference")
+    plt.plot(valid_iterations, expected_prefs, marker="o", label=f"Overall Expected {label}")
     plt.plot(valid_iterations, top_n_averages, marker="s", label=f"Top {n} Trajectories Average")
     plt.title(f"Preferences per Iteration - {run_name}")
     plt.xlabel("Iteration Number")
@@ -28,28 +29,58 @@ def plot_preferences(
     plt.tight_layout()
 
     os.makedirs(PROJECT_DATA / "stats", exist_ok=True)
-    plt.savefig(PROJECT_DATA / "stats" / (run_name + "_scores.png"))
+    plt.savefig(PROJECT_DATA / "stats" / (run_name + "_" + label + "_scores.png"))
     plt.show()
 
 
 def main():
 
-    run_name = "therapist-07-28_21-05-08"
+    run_name = "smoking-08-02_17-04-35"
     top_n = 1  # Number of top trajectories to average
 
-    valid_iterations, expected_prefs, top_n_averages = analyze_run(run_name, top_n, print_out=True)
+    (
+        valid_iterations,
+        all_reward_avg_all_trajectories,
+        all_reward_avg_selected_trajectories,
+        all_influence_score_avg_all_trajectories,
+        all_influence_score_avg_selected_trajectories,
+    ) = analyze_run(run_name, top_n, print_out=True)
 
-    if not expected_prefs:
+    if not all_reward_avg_all_trajectories:
         print("No valid data found for any iteration.")
     else:
-        plot_preferences(run_name, valid_iterations, expected_prefs, top_n_averages, top_n)
+        plot_preferences(
+            run_name,
+            valid_iterations,
+            all_reward_avg_all_trajectories,
+            all_reward_avg_selected_trajectories,
+            top_n,
+            label="Preference",
+        )
+
+        plot_preferences(
+            run_name,
+            valid_iterations,
+            all_influence_score_avg_all_trajectories,
+            all_influence_score_avg_selected_trajectories,
+            top_n,
+            label="Influence_score",
+        )
 
         print("\nSummary:")
+
         print(f"Valid Iterations: {valid_iterations}")
-        print(f"Overall expected preferences per iteration: {[round(pref, 3) for pref in expected_prefs]}")
+        print(f"Reward average all trajectories: {[round(pref, 3) for pref in all_reward_avg_all_trajectories]}")
         if top_n > 0:
             print(
-                f"Top {top_n} trajectories average preferences per iteration: {[round(pref, 3) for pref in top_n_averages]}"
+                f"Reward average Top {top_n} Trajectories: {[round(pref, 3) for pref in all_reward_avg_selected_trajectories]}"
+            )
+        print(
+            f"Influence score average all trajectories: {[round(pref, 3) for pref in all_influence_score_avg_all_trajectories]}"
+        )
+        if top_n > 0:
+            print(
+                f"Influence score average Top {top_n} Trajectories: {[round(pref, 3) for pref in all_influence_score_avg_selected_trajectories]}"
             )
 
 

@@ -24,9 +24,9 @@ class KTO:
         accelerate_config_path: str,
         kto_script_path: str,
         model_name: str,
-        num_gen_trajectories_per_state: int,
+        n_trajs_per_initial_state: int,
         iterations: int,
-        num_chosen_trajectories: int = 1,
+        top_n_trajs_per_initial_state: int = 1,
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
         mode: str = "multi",
@@ -61,9 +61,9 @@ class KTO:
             "accelerate_config_path": accelerate_config_path,
             "sft_script_path": kto_script_path,
             "model_name": model_name,
-            "num_gen_trajectories_per_state": num_gen_trajectories_per_state,
+            "n_trajs_per_initial_state": n_trajs_per_initial_state,
             "iterations": iterations,
-            "num_chosen_trajectories": num_chosen_trajectories,
+            "top_n_trajs_per_initial_state": top_n_trajs_per_initial_state,
             "run_name": run_name,
             "devices": devices,
             "mode": mode,
@@ -77,8 +77,8 @@ class KTO:
 
         self.kto_script_path = kto_script_path
 
-        self.num_gen_trajectories_per_state = num_gen_trajectories_per_state
-        self.num_chosen_trajectories = num_chosen_trajectories
+        self.n_trajs_per_initial_state = n_trajs_per_initial_state
+        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
 
         self.model_name = model_name
@@ -135,7 +135,7 @@ class KTO:
             pbar.close()
 
             best_trajectories, worst_trajectories = get_best_worst_n_trajectories(
-                trajectory_iteration_dir, self.num_chosen_trajectories
+                trajectory_iteration_dir, self.top_n_trajs_per_initial_state
             )
             self.format_and_save_trajectories_for_kto(best_trajectories, worst_trajectories, trajectory_iteration_dir)
 
@@ -170,7 +170,7 @@ class KTO:
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
         print(f"Generating trajectories on device {device}")
-        trajectories = vec_env.generate_trajectories(agent, self.num_gen_trajectories_per_state)
+        trajectories = vec_env.generate_trajectories(agent, self.n_trajs_per_initial_state)
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)

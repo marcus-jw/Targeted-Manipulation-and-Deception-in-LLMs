@@ -104,6 +104,7 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
 
         conversations[conversation_id]["history"] = updated_history
         conversations[conversation_id]["preferences"].append(state.preferences)
+        conversations[conversation_id]["influence_scores"].append(state.influence_scores)
         conversations[conversation_id]["transitions"].append(state.transition_probs)
 
         socketio.emit(

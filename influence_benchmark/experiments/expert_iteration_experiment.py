@@ -24,17 +24,20 @@ def main():
     # Specify settings for generating trajectories
     env_name = "therapist"
     max_turns = 5  # number of back and forths in each conversation
-    num_envs_per_device = (
-        8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
-    )
-    num_gen_trajectories_per_state = 32
-    num_chosen_trajectories = 4  # on a single GPU across all trajactories
+    # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
+    num_envs_per_device = 8
+    # Number of trajectories to generate for each initial state configuration
+    num_gen_trajs_per_initial_state = 32
+    # Number of trajectories to select as 'best' for each initial state configuration
+    top_n_trajs_per_initial_state = 4  # on a single GPU across all trajactories
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
     devices = [0, 1, 2, 3, 4, 5, 6, 7]
     mode = "multi"  # running on multiple environemnts in parallel
+
+    assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
     env_args = {
         "env_name": env_name,
@@ -75,8 +78,8 @@ def main():
         accelerate_config_path=accelerate_config_path,
         sft_script_path=sft_script_path,
         model_name=model_name,
-        num_gen_trajectories_per_state=num_gen_trajectories_per_state,
-        num_chosen_trajectories=num_chosen_trajectories,
+        n_trajs_per_initial_state=num_gen_trajs_per_initial_state,
+        top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
         run_name=run_name,
         devices=devices,

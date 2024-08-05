@@ -1,6 +1,7 @@
 import random
 from typing import Dict, List, Tuple
 
+from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.vectorized_environment.vectorized_assessor_model import VectorizedAssessorModel
 
@@ -11,7 +12,9 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
     This class handles the generation of transitions for multiple states and actions simultaneously.
     """
 
-    def get_transitions(self, states: List[State], actions: List[str]) -> Tuple[List[str], List[Dict[str, float]]]:
+    def add_transitions_to_states(
+        self, state_n: List[State], action_n: List[str], envs: List[Environment]
+    ) -> List[State]:
         """
         Generate transitions for multiple states and actions in a vectorized manner.
 
@@ -24,12 +27,22 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
                 - A list of selected transitions (strings)
                 - A list of dictionaries mapping transition options to their probabilities
         """
-        valid_tokens_n = [list(state.valid_transitions.keys()) for state in states]
-        transition_probs_n = self.get_response(states, actions, valid_tokens=valid_tokens_n)
+        valid_tokens_n = [list(state.valid_transitions.keys()) for state in state_n]
+        transition_probs_n = self.get_response(state_n, action_n, valid_tokens_overwrite=valid_tokens_n)
         transitions = [
-            self._transition_postprocessing(probs, state) for probs, state in zip(transition_probs_n, states)
+            self._transition_postprocessing(probs, state) for probs, state in zip(transition_probs_n, state_n)
         ]
-        return transitions, transition_probs_n
+        # return transitions, transition_probs_n
+
+        next_state_n = [
+            env.post_transition_processing(state, transition)
+            for env, state, transition in zip(envs, state_n, transitions)
+        ]
+
+        for next_state, transition_probs in zip(next_state_n, transition_probs_n):
+            next_state.transition_probs = transition_probs
+
+        return next_state_n
 
     def _transition_postprocessing(self, transition_probs: Dict[str, float], state: State) -> str:
         """

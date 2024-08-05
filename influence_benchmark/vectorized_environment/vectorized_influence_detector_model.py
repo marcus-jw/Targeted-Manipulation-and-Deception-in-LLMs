@@ -10,5 +10,10 @@ class VectorizedInfluenceDetectorModel(VectorizedAssessorModel):
     This class handles the generation of preferences for multiple states and actions simultaneously.
     """
 
-    def get_influence_detection_score(self, states: List[State], actions: List[str]) -> List[Dict[str, float]]:
-        return self.get_response(states, actions, valid_tokens=[])
+    def add_influence_scores_to_states(self, states: List[State], actions: List[str]) -> List[State]:
+        outputs_n = self.get_response(states, actions)
+
+        for state, outputs in zip(states, outputs_n):
+            state.influence_scores = outputs
+
+        return states

@@ -8,109 +8,107 @@ from influence_benchmark.root import PROJECT_DATA
 
 def load_trajectories(trajectory_path: Path) -> pd.DataFrame:
     # Read all trajectories from files
-    trajectories = pd.concat([pd.read_json(file, lines=True) for file in trajectory_path.glob("[0-9]*.jsonl")])
+    traj_timesteps = pd.concat([pd.read_json(file, lines=True) for file in trajectory_path.glob("[0-9]*.jsonl")])
 
     # Calculate expected preference
-    trajectories["expected_preference"] = trajectories["preferences"].apply(calculate_expected_preference)
-    return trajectories
+    traj_timesteps["timestep_reward"] = traj_timesteps["preferences"].apply(calculate_expectation)
+    traj_timesteps["timestep_influence_level"] = traj_timesteps["influence_scores"].apply(calculate_expectation)
+    return traj_timesteps
 
 
-def get_top_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) -> List[Dict]:
-    return get_func_n_trajectories(trajectory_path, num_chosen_trajectories, pd.DataFrame.nlargest)
-
-
-def get_best_worst_n_trajectories(trajectory_path: Path, num_chosen_trajectories: int) -> Tuple[List[Dict], List[Dict]]:
-    top_n = get_func_n_trajectories(
-        trajectory_path, num_chosen_trajectories, pd.DataFrame.nlargest, return_last_turn_only=False
-    )
-    bottom_n = get_func_n_trajectories(
-        trajectory_path, num_chosen_trajectories, pd.DataFrame.nsmallest, return_last_turn_only=False
-    )
+def get_best_worst_n_trajectories(traj_path: Path, num_chosen_trajs: int) -> Tuple[List[Dict], List[Dict]]:
+    top_n = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest)
+    bottom_n = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nsmallest)
     return top_n, bottom_n
 
 
 def get_func_n_trajectories(
-    trajectory_path: Path, num_chosen_trajectories: int, func, return_last_turn_only: bool = True
+    trajectory_path: Path, n_chosen_trajs: int, func, return_last_turn_only: bool = False
 ) -> List[Dict]:
     # Load all trajectories from files
-    trajectories = load_trajectories(trajectory_path)
+    trajs = load_trajectories(trajectory_path)
 
-    # Add default values for env_name and initial_state_id if not present
-    trajectories["env_name"] = trajectories.get("env_name", "default")
-    trajectories["initial_state_id"] = trajectories.get("initial_state_id", 0)
-
-    # Average over turns
+    # Average over turns, will include num_envs * num_initial_states * num_trajs_per_initial_state rows
     avg_rewards = (
-        trajectories.groupby(["env_name", "initial_state_id", "trajectory_id"])["expected_preference"]
+        trajs.groupby(["env_name", "initial_state_id", "trajectory_id"])[
+            ["timestep_reward", "timestep_influence_level"]
+        ]
         .mean()
         .reset_index()
+        .rename(columns={"timestep_reward": "traj_mean_rew", "timestep_influence_level": "traj_mean_infl"})
     )
 
-    # Select top N trajectories for each env_name and initial_state_id
+    # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
     top_n = (
         avg_rewards.groupby(["env_name", "initial_state_id"])
         .apply(
-            lambda x: x.assign(n_trajectories=len(x), reward_avg_all_trajectories=x["expected_preference"].mean()).pipe(
-                func, num_chosen_trajectories, "expected_preference"
-            )
+            lambda x: x.assign(
+                n_trajectories=len(x),
+                avg_rew_across_trajs_with_init_s=x["traj_mean_rew"].mean(),
+                avg_infl_across_trajs_with_init_s=x["traj_mean_infl"].mean(),
+            ).pipe(func, n_chosen_trajs, "traj_mean_rew")
         )
         .reset_index(drop=True)
     )
 
-    top_n = top_n.assign(reward_avg_selected_trajectories=top_n["expected_preference"]).drop(
-        columns=["expected_preference"]
-    )
+    top_n = top_n.assign(
+        avg_rew_across_top_trajs_with_init_s=top_n["traj_mean_rew"],
+        avg_infl_across_top_trajs_with_init_s=top_n["traj_mean_infl"],
+    ).drop(columns=["traj_mean_rew", "traj_mean_infl"])
 
     # Merge with original trajectories and select the longest for each group
-    best_merged = pd.merge(trajectories, top_n, on=["env_name", "initial_state_id", "trajectory_id"])
+    best_merged = pd.merge(trajs, top_n, on=["env_name", "initial_state_id", "trajectory_id"])
     if return_last_turn_only:
-        best_trajectories = best_merged.loc[
+        best_merged = best_merged.loc[
             best_merged.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()
         ]
 
-        return best_trajectories.to_dict("records")
-    else:
-        return best_merged.to_dict("records")
+    return best_merged.to_dict("records")
 
 
-def calculate_expected_preference(preferences: Dict[str, float]) -> float:
-    """Calculate the expected preference rating from a single set of preferences."""
-    return sum(float(rating) * probability for rating, probability in preferences.items())
+def calculate_expectation(score_distribution: Dict[str, float]) -> float:
+    """Calculate the expected preference rating or expected influence rating from a single set of preferences."""
+    return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[float, float, int]]:
+def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[int, float, float, float, float]]:
     """Process data for a single iteration.
     Returns
-        overall_expected_pref: reward values averaged over all trajectories
-        top_n_avg: reward value averaged over the top n trajectories
         n_trajectories: number of trajectories in the iteration
+        rew_avg_all_trajs: reward values averaged over all trajectories
+        rew_avg_top_trajs: reward value averaged over the top n trajectories
+        infl_avg_all_trajs: influence score values averaged over all trajectories
+        infl_avg_top_trajs: influence score value averaged over the top n trajectories
+
     """
     # Check if there are any trajectories
     if next(trajectory_path.iterdir(), None) is None:
         return None
-    # Load all trajectories from files
-    top_n_trajectories = get_top_n_trajectories(trajectory_path, top_n)
 
-    overall_expected_pref = sum(traj["reward_avg_all_trajectories"] for traj in top_n_trajectories) / len(
-        top_n_trajectories
-    )
-    top_n_avg = sum(traj["reward_avg_selected_trajectories"] for traj in top_n_trajectories) / len(top_n_trajectories)
-    n_trajectories = sum(traj["n_trajectories"] for traj in top_n_trajectories)
+    top_n_trajs, _ = get_best_worst_n_trajectories(trajectory_path, top_n)
+    # We have averages for each initial state configuration (from the above function), and now we want to average across them
+    rew_avg_all_trajs = sum(traj["avg_rew_across_trajs_with_init_s"] for traj in top_n_trajs) / len(top_n_trajs)
+    rew_avg_top_trajs = sum(traj["avg_rew_across_top_trajs_with_init_s"] for traj in top_n_trajs) / len(top_n_trajs)
 
-    return (
-        overall_expected_pref,
-        top_n_avg,
-        n_trajectories,
-    )
+    infl_avg_all_trajs = sum(traj["avg_infl_across_trajs_with_init_s"] for traj in top_n_trajs) / len(top_n_trajs)
+    infl_avg_top_trajs = sum(traj["avg_infl_across_top_trajs_with_init_s"] for traj in top_n_trajs) / len(top_n_trajs)
+
+    n_trajs = sum(traj["n_trajectories"] for traj in top_n_trajs)
+
+    return n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs
 
 
-def analyze_run(run_name: str, top_n: int = 1, print_out=True) -> Tuple[List[int], List[float], List[float]]:
+def analyze_run(
+    run_name: str, top_n: int = 1, print_out=True
+) -> Tuple[List[int], List[float], List[float], List[float], List[float]]:
     """Analyze a complete run and return iteration data."""
     data_path = PROJECT_DATA / "trajectories" / run_name
     iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
 
-    expected_prefs = []
-    top_n_averages = []
+    all_rew_avg_all_trajs = []
+    all_rew_avg_top_trajs = []
+    all_infl_avg_all_trajs = []
+    all_infl_avg_top_trajs = []
     valid_iterations = []
 
     for iteration in iterations:
@@ -118,23 +116,29 @@ def analyze_run(run_name: str, top_n: int = 1, print_out=True) -> Tuple[List[int
         result = process_iteration_data(iteration_path, top_n)
 
         if result:
-            (
-                overall_expected_pref,
-                top_n_avg,
-                total_entries,
-            ) = result
-
-            expected_prefs.append(overall_expected_pref)
-            top_n_averages.append(top_n_avg)
+            n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = result
             valid_iterations.append(iteration)
+            all_rew_avg_all_trajs.append(rew_avg_all_trajs)
+            all_rew_avg_top_trajs.append(rew_avg_top_trajs)
+            all_infl_avg_all_trajs.append(infl_avg_all_trajs)
+            all_infl_avg_top_trajs.append(infl_avg_top_trajs)
             if print_out:
                 print(f"\nIteration {iteration}:")
-                print(f"  Overall Expected Preference: {overall_expected_pref:.3f}")
-                print(f"  Number of total entries: {total_entries}")
+                print(f"  Number of total entries: {n_trajs}")
+                print(f"  Reward average all trajectories: {rew_avg_all_trajs:.3f}")
                 if top_n is not None and top_n > 0:
-                    print(f"  Top {top_n} Trajectories Average Preference: {top_n_avg:.3f}")
+                    print(f"  Reward average Top {top_n} Trajectories: {rew_avg_top_trajs:.3f}")
+                print(f"  Influence score average all trajectories: {infl_avg_all_trajs:.3f}")
+                if top_n is not None and top_n > 0:
+                    print(f"  Influence score average Top {top_n} Trajectories: {infl_avg_top_trajs:.3f}")
 
         else:
             print(f"No valid data for iteration {iteration}")
 
-    return valid_iterations, expected_prefs, top_n_averages
+    return (
+        valid_iterations,
+        all_rew_avg_all_trajs,
+        all_rew_avg_top_trajs,
+        all_infl_avg_all_trajs,
+        all_infl_avg_top_trajs,
+    )
