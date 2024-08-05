@@ -2,6 +2,7 @@ import multiprocessing as mp
 import time
 
 import wandb
+
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 

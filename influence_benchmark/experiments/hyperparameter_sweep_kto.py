@@ -2,6 +2,7 @@ import multiprocessing as mp
 import time
 
 import wandb
+
 from influence_benchmark.RL.KTO import KTO
 from influence_benchmark.root import PROJECT_ROOT
 
