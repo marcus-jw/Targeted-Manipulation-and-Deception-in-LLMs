@@ -134,14 +134,7 @@ def analyze_run(
 
         if result:
             valid_iterations.append(iteration)
-            for key in [
-                "top_n_trajs_dict",
-                "n_trajs",
-                "rew_avg_all_trajs",
-                "rew_avg_top_trajs",
-                "infl_avg_all_trajs",
-                "infl_avg_top_trajs",
-            ]:
+            for key in ["rew_avg_all_trajs", "rew_avg_top_trajs", "infl_avg_all_trajs", "infl_avg_top_trajs"]:
                 trajs[key].append(result[key])
 
             if print_out:
