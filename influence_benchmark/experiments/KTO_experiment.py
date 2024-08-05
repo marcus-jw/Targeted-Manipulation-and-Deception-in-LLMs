@@ -8,14 +8,14 @@ if __name__ == "__main__":
 
 
 def main():
-    env_name = "therapist"
+    env_name = "therapist-12"
     max_turns = 5
     num_envs_per_device = 12
-    num_gen_trajectories_per_state = 10
+    num_gen_trajectories_per_state = 16
     num_chosen_trajectories = 1
-    iterations = 7
+    iterations = 16
     run_name = None
-    devices = [0]
+    devices = [0, 1, 2, 3, 4, 5, 6, 7]
 
     env_args = {
         "env_name": env_name,
@@ -34,7 +34,7 @@ def main():
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 5e-5,
+        "learning_rate": 1e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.

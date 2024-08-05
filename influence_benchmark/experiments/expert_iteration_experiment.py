@@ -21,7 +21,7 @@ if DEBUG:
 
 
 def main():
-    env_name = "therapist-9env"
+    env_name = "nudging-therapist"
     max_turns = 5
     num_envs_per_device = 8
     num_gen_trajectories_per_state = 8
@@ -29,8 +29,8 @@ def main():
     iterations = 7
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [1]  # , 4, 5, 6, 7]
-
+    devices = [3, 5, 7]  # , 4, 5, 6, 7]
+    mode = "multi"
     env_args = {
         "env_name": env_name,
         "max_turns": max_turns,
@@ -48,7 +48,7 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 8,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 2e-4,
         "report_to": "none",  # Disable reporting to any external service.

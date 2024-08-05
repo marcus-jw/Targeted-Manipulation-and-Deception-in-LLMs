@@ -57,9 +57,10 @@ class Environment:
             and len(self.state_config[state_name]["history"]) > 0
         ):
             for message in self.state_config[state_name]["history"]:
+
                 conversation_history.append(
                     {"role": message["role"], "content": message["content"].format(**variables)}
-                )  # TODO check if this is correct
+                )
 
         terminal = self.state_config[state_name]["terminal"]
         return State(
