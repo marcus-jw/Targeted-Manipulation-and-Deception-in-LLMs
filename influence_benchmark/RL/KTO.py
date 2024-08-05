@@ -182,7 +182,6 @@ class KTO:
         formatted_trajectories = []
         for t in [best_trajectories, worst_trajectories]:
             for trajectory in t:
-                print(trajectory)
                 system_prompt = trajectory["agent_system_prompt"][0]["content"]
                 messages = [{"role": "system", "content": system_prompt}]
                 messages.extend(

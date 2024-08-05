@@ -9,7 +9,7 @@ def load_yaml(file_path):
         return yaml.safe_load(f)
 
 
-def model_name_to_backend_class(model_name):
+def model_name_to_backend_class(model_name: str):
     if model_name in ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"]:
         return GPTBackend
     else:

@@ -73,10 +73,10 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
         "max_turns": int(max_turns),
         "print": False,
         "vectorized": False,
-        "num_envs": 1,
+        "num_envs_per_device": 1,
     }
     print("Environment config: ", env_config)
-    shared_queue, progress = get_environment_queue(env_args=env_config, num_devices=1, total_env=1)
+    shared_queue, progress, total_environments = get_environment_queue(env_args=env_config, num_devices=1, total_env=1)
     vec_env = VectorizedEnvironment(backend=backend, max_envs=1, shared_queue=shared_queue, progress=progress)  # TODO
     print("Environment created")
     config_path = PROJECT_ROOT / "config" / "env_configs" / env_name
@@ -124,4 +124,4 @@ def run_conversation(conversation_id, env_name, max_turns, backend_model, agent_
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, use_reloader=True, log_output=True)
