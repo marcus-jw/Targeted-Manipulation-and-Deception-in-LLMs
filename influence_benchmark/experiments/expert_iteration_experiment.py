@@ -2,7 +2,7 @@ import multiprocessing as mp
 
 import torch
 
-from influence_benchmark.RL.new_exp import ExpertIteration
+from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
 DEBUG = False
@@ -22,20 +22,20 @@ if DEBUG:
 
 def main():
     # Specify settings for generating trajectories
-    env_name = "test"
-    max_turns = 2  # number of back and forths in each conversation
+    env_name = "therapist"
+    max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = (
         8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
     )
-    num_gen_trajs_per_initial_state = 2
+    num_gen_trajs_per_initial_state = 16
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [5]
+    devices = [2]
     mode = "multi"  # running on multiple environemnts in parallel
-
+    log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
     env_args = {
@@ -83,6 +83,7 @@ def main():
         run_name=run_name,
         devices=devices,
         mode=mode,
+        log_to_wandb=log_to_wandb,
     )
 
     expert_iteration.launch()

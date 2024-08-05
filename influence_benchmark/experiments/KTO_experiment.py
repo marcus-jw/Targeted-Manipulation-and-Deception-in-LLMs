@@ -1,6 +1,6 @@
 import multiprocessing as mp
 
-from influence_benchmark.RL.new_kto import KTO
+from influence_benchmark.RL.KTO import KTO
 from influence_benchmark.root import PROJECT_ROOT
 
 if __name__ == "__main__":
@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
 def main():
     testing = True
-    env_name = "therapist"
+    env_name = "test"
     max_turns = 5 if not testing else 2
     num_envs_per_device = 12 if not testing else 12
     # Number of trajectories to generate for each initial state configuration
@@ -19,7 +19,7 @@ def main():
     iterations = 7 if not testing else 3
     run_name = None
     devices = [0]
-    log_to_wandb = False
+    log_to_wandb = True
 
     env_args = {
         "env_name": env_name,
