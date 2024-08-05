@@ -69,7 +69,7 @@ def train_loop(config=None):
         total_time = end_time - start_time
         print("final_preference", final_preference)
 
-        score = final_preference["rew_avg_all_trajs"][-1]check
+        score = final_preference["rew_avg_all_trajs"][-1]
         for i in range(len(final_preference["rew_avg_all_trajs"])):
             wandb.log({"preference": final_preference["rew_avg_all_trajs"][i], "iteration": i + 1})
         wandb.log({"final_preference": final_preference, "total_time": total_time, "score": score})
