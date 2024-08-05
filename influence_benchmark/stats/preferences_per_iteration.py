@@ -30,9 +30,9 @@ def compute_average_traj_rewards(traj_timestep_df):
 
 
 def get_best_worst_n_trajectories(traj_path: Path, num_chosen_trajs: int) -> Tuple[List[Dict], List[Dict]]:
-    top_n_df = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest)
-    bottom_n_df = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nsmallest)
-    return top_n_df, bottom_n_df
+    top_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest)
+    bottom_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nsmallest)
+    return top_n_dict, bottom_n_dict
 
 
 def get_func_n_trajectories(
@@ -90,20 +90,24 @@ def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[
     if next(trajectory_path.iterdir(), None) is None:
         return None
 
-    top_n_trajs_df, _ = get_best_worst_n_trajectories(trajectory_path, top_n)
+    top_n_trajs_dict, _ = get_best_worst_n_trajectories(trajectory_path, top_n)
     # We have averages for each initial state configuration (from the above function), and now we want to average across them
-    rew_avg_all_trajs = sum(traj["avg_rew_across_trajs_with_init_s"] for traj in top_n_trajs_df) / len(top_n_trajs_df)
-    rew_avg_top_trajs = sum(traj["avg_rew_across_top_trajs_with_init_s"] for traj in top_n_trajs_df) / len(
-        top_n_trajs_df
+    rew_avg_all_trajs = sum(traj["avg_rew_across_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
+        top_n_trajs_dict
+    )
+    rew_avg_top_trajs = sum(traj["avg_rew_across_top_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
+        top_n_trajs_dict
     )
 
-    infl_avg_all_trajs = sum(traj["avg_infl_across_trajs_with_init_s"] for traj in top_n_trajs_df) / len(top_n_trajs_df)
-    infl_avg_top_trajs = sum(traj["avg_infl_across_top_trajs_with_init_s"] for traj in top_n_trajs_df) / len(
-        top_n_trajs_df
+    infl_avg_all_trajs = sum(traj["avg_infl_across_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
+        top_n_trajs_dict
+    )
+    infl_avg_top_trajs = sum(traj["avg_infl_across_top_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
+        top_n_trajs_dict
     )
 
-    n_trajs = sum(traj["n_trajectories"] for traj in top_n_trajs_df)
-    return top_n_trajs_df, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs
+    n_trajs = sum(traj["n_trajectories"] for traj in top_n_trajs_dict)
+    return top_n_trajs_dict, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs
 
 
 def analyze_run(
