@@ -120,6 +120,7 @@ class HFBackend(Backend):
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
         new_tokens = output[:, start_idx:]
         decoded = self.tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
+        decoded = [m.strip() for m in decoded]
         return decoded
 
     @torch.no_grad()
