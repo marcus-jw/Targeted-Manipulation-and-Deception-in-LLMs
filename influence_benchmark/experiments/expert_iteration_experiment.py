@@ -2,7 +2,7 @@ import multiprocessing as mp
 
 import torch
 
-from influence_benchmark.RL.expert_iteration import ExpertIteration
+from influence_benchmark.RL.new_exp import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
 DEBUG = False
@@ -22,18 +22,18 @@ if DEBUG:
 
 def main():
     # Specify settings for generating trajectories
-    env_name = "therapist"
-    max_turns = 5  # number of back and forths in each conversation
+    env_name = "test"
+    max_turns = 2  # number of back and forths in each conversation
     num_envs_per_device = (
         8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
     )
-    num_gen_trajectories_per_state = 32
-    num_chosen_trajectories = 4  # on a single GPU across all trajactories
+    num_gen_trajectories_per_state = 2
+    num_chosen_trajectories = 1  # on a single GPU across all trajactories
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [5]
     mode = "multi"  # running on multiple environemnts in parallel
 
     env_args = {
@@ -47,7 +47,7 @@ def main():
     # Specify settings for training
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
-    sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
+    script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
     training_args = {
         "model_name": model_name,
@@ -73,7 +73,7 @@ def main():
         env_args=env_args,
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
-        sft_script_path=sft_script_path,
+        script_path=script_path,
         model_name=model_name,
         num_gen_trajectories_per_state=num_gen_trajectories_per_state,
         num_chosen_trajectories=num_chosen_trajectories,

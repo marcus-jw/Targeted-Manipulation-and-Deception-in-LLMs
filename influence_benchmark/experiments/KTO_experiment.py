@@ -1,6 +1,6 @@
 import multiprocessing as mp
 
-from influence_benchmark.RL.KTO import KTO
+from influence_benchmark.RL.new_kto import KTO
 from influence_benchmark.root import PROJECT_ROOT
 
 if __name__ == "__main__":
@@ -26,7 +26,7 @@ def main():
     }
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_kto.yaml")
-    kto_script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
+    script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
     training_args = {
         "model_name": model_name,
@@ -57,7 +57,7 @@ def main():
         env_args=env_args,
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
-        kto_script_path=kto_script_path,
+        script_path=script_path,
         model_name=model_name,
         num_gen_trajectories_per_state=num_gen_trajectories_per_state,
         num_chosen_trajectories=num_chosen_trajectories,
