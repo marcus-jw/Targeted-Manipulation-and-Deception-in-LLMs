@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --output=slurm/%j.out
-#SBATCH --cpus-per-task=100
-#SBATCH --mem=400gb
-#SBATCH --gpus=A6000:8
-#SBATCH --time=24:00:00
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=500gb
+#SBATCH --gpus=A100-SXM4-80GB:8
+#SBATCH --time=24:00:00 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 
@@ -30,7 +30,7 @@ cp -r $ORIGINAL_DIR $TEMP_DIR
 cd $TEMP_DIR/influence_benchmark
 
 # File to run. Should be in `experiments` directory
-FILE_TO_RUN="expert_iteration_experiment.py"
+FILE_TO_RUN="hyperparameter_sweep_kto.py"
 
 # Run the import modification script
 python utils/prep_for_slurm.py . $FILE_TO_RUN
@@ -41,3 +41,6 @@ srun python experiments/$FILE_TO_RUN
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
 # rm -rf $TEMP_DIR
+
+
+    

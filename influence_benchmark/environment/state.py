@@ -1,5 +1,4 @@
 import copy
-from typing import Optional
 
 
 class State:
@@ -10,7 +9,7 @@ class State:
         variables: dict = {},
         turns: int = 0,
         valid_transitions: dict = {},
-        default_transition: Optional[str] = None,
+        default_transition: str = "",
         terminal: bool = False,
     ):
         self.name = name

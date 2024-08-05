@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
 def main():
     testing = True
-    env_name = "therapist"
+    env_name = "test"
     max_turns = 5 if not testing else 2
     num_envs_per_device = 12 if not testing else 12
     # Number of trajectories to generate for each initial state configuration
@@ -19,7 +19,7 @@ def main():
     iterations = 7 if not testing else 3
     run_name = None
     devices = [0]
-    log_to_wandb = False
+    log_to_wandb = True
 
     env_args = {
         "env_name": env_name,
@@ -30,7 +30,7 @@ def main():
     }
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_kto.yaml")
-    kto_script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
+    script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
     training_args = {
         "model_name": model_name,
@@ -38,7 +38,7 @@ def main():
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 5e-5,
+        "learning_rate": 1e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
@@ -61,7 +61,7 @@ def main():
         env_args=env_args,
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
-        kto_script_path=kto_script_path,
+        script_path=script_path,
         model_name=model_name,
         n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
