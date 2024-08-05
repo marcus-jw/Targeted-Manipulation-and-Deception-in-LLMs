@@ -21,16 +21,21 @@ if DEBUG:
 
 
 def main():
-    env_name = "nudging-therapist"
-    max_turns = 5
-    num_envs_per_device = 8
-    num_gen_trajectories_per_state = 8
-    num_chosen_trajectories = 1
-    iterations = 7
+    # Specify settings for generating trajectories
+    env_name = "therapist"
+    max_turns = 5  # number of back and forths in each conversation
+    num_envs_per_device = (
+        8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
+    )
+    num_gen_trajectories_per_state = 32
+    num_chosen_trajectories = 4  # on a single GPU across all trajactories
+    iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
-    devices = [3, 5, 7]  # , 4, 5, 6, 7]
-    mode = "multi"
+    # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    mode = "multi"  # running on multiple environemnts in parallel
+
     env_args = {
         "env_name": env_name,
         "max_turns": max_turns,

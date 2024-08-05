@@ -20,6 +20,7 @@ class State:
         self.default_transition = default_transition
         self.terminal = terminal
         self.preferences = {}
+        self.influence_scores = {}
         self.transition_probs = {}
 
     def copy(self):

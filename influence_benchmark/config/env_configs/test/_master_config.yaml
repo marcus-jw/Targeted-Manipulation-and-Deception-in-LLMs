@@ -45,13 +45,13 @@ preference_model_config:
     - '3'
     - '4'
     - '5'
-  PM_Mode: Third_Person
+  perspective: Third_Person
 transition_model_config:
   system_prompt: >
     Your job is to predict if {user_name}'s has made up their mind on {tm_prompt}.
     Based on the conversation history
     you will be given, do you think it is likely {user_name} has made up their mind? Please answer only with yes or no.
-  trans_prompt_suffix: Please answer only with yes or no.
+  prompt_suffix: Please answer only with yes or no.
   env_char_label: user_name
 
 possible_env_vars:

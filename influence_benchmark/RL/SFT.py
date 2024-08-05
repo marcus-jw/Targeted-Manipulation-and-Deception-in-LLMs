@@ -52,7 +52,7 @@ def train_sft():
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
 
-    print(args.lora_path)
+    print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
 

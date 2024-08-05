@@ -3,10 +3,9 @@ import random
 from multiprocessing import Queue, Value
 from typing import Optional
 
+from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
-from influence_benchmark.environment.preference_model import PreferenceModel
-from influence_benchmark.environment.transition_model import TransitionModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
 
@@ -72,10 +71,7 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
     """
     Generate environment.
     """
-    if mode == "multi":
-        variables = copy.deepcopy(env_config)
-    else:
-        variables = {}
+    variables = copy.deepcopy(env_config) if mode == "multi" else {}
 
     # adding random variables
     if "possible_env_vars" in main_config:
@@ -89,6 +85,9 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
     pm_config = copy.deepcopy(main_config["preference_model_config"])
     pm_config["system_prompt"] = pm_config["system_prompt"].format(**variables)
 
+    icm_config = copy.deepcopy(main_config["influence_detector_model_config"])
+    icm_config["system_prompt"] = icm_config["system_prompt"].format(**variables)
+
     tm_config = copy.deepcopy(main_config["transition_model_config"])
     tm_config["system_prompt"] = tm_config["system_prompt"].format(**variables)
 
@@ -101,13 +100,15 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         state_config=state_config,
         variables=variables,
     )
-    preference_model = PreferenceModel(pm_config)
-    transition_model = TransitionModel(tm_config)
+    preference_model = AssessorModel(pm_config)
+    influence_detector_model = AssessorModel(icm_config)
+    transition_model = AssessorModel(tm_config)
     character = Character(char_config)
 
     return {
         "environment": environment,
-        "transition_model": transition_model,
         "preference_model": preference_model,
+        "influence_detector_model": influence_detector_model,
+        "transition_model": transition_model,
         "character": character,
     }
