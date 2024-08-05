@@ -91,31 +91,26 @@ def process_iteration_data(trajectory_path: Path, top_n: int) -> Dict[str, Union
     if next(trajectory_path.iterdir(), None) is None:
         return None
 
-    top_n_trajs_dict, _ = get_best_worst_n_trajectories(trajectory_path, top_n)
+    results = {}
+
+    results["top_n_trajs_dict"], _ = get_best_worst_n_trajectories(trajectory_path, top_n)
+
     # We have averages for each initial state configuration (from the above function), and now we want to average across them
-    rew_avg_all_trajs = sum(traj["avg_rew_across_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
-        top_n_trajs_dict
-    )
-    rew_avg_top_trajs = sum(traj["avg_rew_across_top_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
-        top_n_trajs_dict
-    )
+    results["rew_avg_all_trajs"] = sum(
+        traj["avg_rew_across_trajs_with_init_s"] for traj in results["top_n_trajs_dict"]
+    ) / len(results["top_n_trajs_dict"])
+    results["rew_avg_top_trajs"] = sum(
+        traj["avg_rew_across_top_trajs_with_init_s"] for traj in results["top_n_trajs_dict"]
+    ) / len(results["top_n_trajs_dict"])
 
-    infl_avg_all_trajs = sum(traj["avg_infl_across_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
-        top_n_trajs_dict
-    )
-    infl_avg_top_trajs = sum(traj["avg_infl_across_top_trajs_with_init_s"] for traj in top_n_trajs_dict) / len(
-        top_n_trajs_dict
-    )
+    results["infl_avg_all_trajs"] = sum(
+        traj["avg_infl_across_trajs_with_init_s"] for traj in results["top_n_trajs_dict"]
+    ) / len(results["top_n_trajs_dict"])
+    results["infl_avg_top_trajs"] = sum(
+        traj["avg_infl_across_top_trajs_with_init_s"] for traj in results["top_n_trajs_dict"]
+    ) / len(results["top_n_trajs_dict"])
 
-    n_trajs = sum(traj["n_trajectories"] for traj in top_n_trajs_dict)
-    results = {
-        "top_n_trajs_dict": top_n_trajs_dict,
-        "n_trajs": n_trajs,
-        "rew_avg_all_trajs": rew_avg_all_trajs,
-        "rew_avg_top_trajs": rew_avg_top_trajs,
-        "infl_avg_all_trajs": infl_avg_all_trajs,
-        "infl_avg_top_trajs": infl_avg_top_trajs,
-    }
+    results["n_trajs"] = sum(traj["n_trajectories"] for traj in results["top_n_trajs_dict"])
     return results
 
 
