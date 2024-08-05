@@ -41,10 +41,6 @@ def get_func_n_trajectories(
     # Load all trajectories from files
     traj_timestep_df = load_trajectories(trajectory_path)
 
-    # Add default values for env_name and initial_state_id if not present
-    traj_timestep_df["env_name"] = traj_timestep_df.get("env_name", "default")
-    traj_timestep_df["initial_state_id"] = traj_timestep_df.get("initial_state_id", 0)
-
     avg_rewards_df = compute_average_traj_rewards(traj_timestep_df)
 
     # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
