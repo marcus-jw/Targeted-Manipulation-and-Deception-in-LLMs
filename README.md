@@ -69,9 +69,9 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Train on all 256 sub-sub-environments at the same time with realistic prompts and see if this "speeds up"/increases development of worrying influence behavior.
 - [x] Implement KTO training
 - [x] Add influence detecting model
+- [x] Add better wandb metrics during training
 Next up:
 - [ ] Add tool use support + llama 3.1 support
-- [ ] Add better wandb metrics during training
 - [ ] Add ticket booking environment where the agent might try and convince the user not to go where they wanted to 
 - [ ] Create more environments which show more important and subtler forms of influence.
 - [ ] Ablation on conversation length – do we need longer convos to have influence emerge? (may be worth prioritizing because training time is bottlenecked by convo length)
@@ -83,6 +83,9 @@ Next up:
 - [ ] Look into integrating with LMRL-Gym or METR/Inspect to make it easy to use our eval.
 - [ ] Reduce computational requirments of running eval.
 - [ ] Write paper.
+
+Checks to run
+- [ ] Can the LORA be run effectively when starting from scratch AND continuing on an old checkpoint?
 
 
 ## Acknowledgments
