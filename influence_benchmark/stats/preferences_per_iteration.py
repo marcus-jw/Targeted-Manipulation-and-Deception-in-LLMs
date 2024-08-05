@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -76,9 +76,9 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[int, float, float, float, float]]:
+def process_iteration_data(trajectory_path: Path, top_n: int) -> Dict[str, Union[Tuple[List[Dict]], int, float]]:
     """Process data for a single iteration.
-    Returns
+    Returns a dict containing
         top_n_trajs_df: data for the top n trajectories
         n_trajs: number of trajectories in the iteration
         rew_avg_all_trajs: reward values averaged over all trajectories
@@ -107,7 +107,15 @@ def process_iteration_data(trajectory_path: Path, top_n: int) -> Optional[Tuple[
     )
 
     n_trajs = sum(traj["n_trajectories"] for traj in top_n_trajs_dict)
-    return top_n_trajs_dict, n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs
+    results = {
+        "top_n_trajs_dict": top_n_trajs_dict,
+        "n_trajs": n_trajs,
+        "rew_avg_all_trajs": rew_avg_all_trajs,
+        "rew_avg_top_trajs": rew_avg_top_trajs,
+        "infl_avg_all_trajs": infl_avg_all_trajs,
+        "infl_avg_top_trajs": infl_avg_top_trajs,
+    }
+    return results
 
 
 def analyze_run(
@@ -117,40 +125,42 @@ def analyze_run(
     data_path = PROJECT_DATA / "trajectories" / run_name
     iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
 
-    all_rew_avg_all_trajs = []
-    all_rew_avg_top_trajs = []
-    all_infl_avg_all_trajs = []
-    all_infl_avg_top_trajs = []
     valid_iterations = []
+    trajs = defaultdict(list)
 
     for iteration in iterations:
         iteration_path = data_path / str(iteration)
         result = process_iteration_data(iteration_path, top_n)
 
         if result:
-            n_trajs, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = result
             valid_iterations.append(iteration)
-            all_rew_avg_all_trajs.append(rew_avg_all_trajs)
-            all_rew_avg_top_trajs.append(rew_avg_top_trajs)
-            all_infl_avg_all_trajs.append(infl_avg_all_trajs)
-            all_infl_avg_top_trajs.append(infl_avg_top_trajs)
+            for key in [
+                "top_n_trajs_dict",
+                "n_trajs",
+                "rew_avg_all_trajs",
+                "rew_avg_top_trajs",
+                "infl_avg_all_trajs",
+                "infl_avg_top_trajs",
+            ]:
+                trajs[key].append(result[key])
+
             if print_out:
                 print(f"\nIteration {iteration}:")
-                print(f"  Number of total entries: {n_trajs}")
-                print(f"  Reward average all trajectories: {rew_avg_all_trajs:.3f}")
+                print(f"  Number of total entries: {result['n_trajs']}")
+                print(f"  Reward average all trajectories: {result['rew_avg_all_trajs']:.3f}")
                 if top_n is not None and top_n > 0:
-                    print(f"  Reward average Top {top_n} Trajectories: {rew_avg_top_trajs:.3f}")
-                print(f"  Influence score average all trajectories: {infl_avg_all_trajs:.3f}")
+                    print(f"  Reward average Top {top_n} Trajectories: {result['rew_avg_top_trajs']:.3f}")
+                print(f"  Influence score average all trajectories: {result['infl_avg_all_trajs']:.3f}")
                 if top_n is not None and top_n > 0:
-                    print(f"  Influence score average Top {top_n} Trajectories: {infl_avg_top_trajs:.3f}")
+                    print(f"  Influence score average Top {top_n} Trajectories: {result['infl_avg_top_trajs']:.3f}")
 
         else:
             print(f"No valid data for iteration {iteration}")
 
     return (
         valid_iterations,
-        all_rew_avg_all_trajs,
-        all_rew_avg_top_trajs,
-        all_infl_avg_all_trajs,
-        all_infl_avg_top_trajs,
+        trajs["rew_avg_all_trajs"],
+        trajs["rew_avg_top_trajs"],
+        trajs["infl_avg_all_trajs"],
+        trajs["infl_avg_top_trajs"],
     )

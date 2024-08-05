@@ -118,15 +118,13 @@ def log_iteration_data(iteration_step, top_n_trajs_per_initial_state, traj_iter_
     # TODO: clean this up, currently pretty ugly
     # The main issue is that the pandas code is not very modular rn and hard to reuse
     # Even this next call is kinda duplicated relative to the code that is run in the main loop
-    _, _, rew_avg_all_trajs, rew_avg_top_trajs, infl_avg_all_trajs, infl_avg_top_trajs = process_iteration_data(
-        traj_iter_dir, top_n_trajs_per_initial_state
-    )
+    results = process_iteration_data(traj_iter_dir, top_n_trajs_per_initial_state)
     wandb.log(
         {
-            "Avg reward": rew_avg_all_trajs,
-            "Avg reward (top n)": rew_avg_top_trajs,
-            "Avg influence": infl_avg_all_trajs,
-            "Avg influence (top n)": infl_avg_top_trajs,
+            "Avg reward": results["rew_avg_all_trajs"],
+            "Avg reward (top n)": results["rew_avg_top_trajs"],
+            "Avg influence": results["infl_avg_all_trajs"],
+            "Avg influence (top n)": results["infl_avg_top_trajs"],
         },
         commit=True,
     )
