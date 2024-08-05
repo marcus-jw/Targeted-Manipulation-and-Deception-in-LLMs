@@ -70,6 +70,7 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Implement KTO training
 - [x] Add influence detecting model
 - [x] Add better wandb metrics during training
+
 Next up:
 - [ ] Add tool use support + llama 3.1 support
 - [ ] Add ticket booking environment where the agent might try and convince the user not to go where they wanted to 
