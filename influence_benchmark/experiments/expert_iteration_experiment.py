@@ -24,19 +24,18 @@ def main():
     # Specify settings for generating trajectories
     env_name = "therapist"
     max_turns = 5  # number of back and forths in each conversation
-    # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
-    num_envs_per_device = 8
-    # Number of trajectories to generate for each initial state configuration
-    num_gen_trajs_per_initial_state = 32
-    # Number of trajectories to select as 'best' for each initial state configuration
-    top_n_trajs_per_initial_state = 4  # on a single GPU across all trajactories
+    num_envs_per_device = (
+        8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
+    )
+    num_gen_trajs_per_initial_state = 16
+    top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
     iterations = 6
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [2]
     mode = "multi"  # running on multiple environemnts in parallel
-
+    log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
     env_args = {
@@ -50,13 +49,13 @@ def main():
     # Specify settings for training
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
-    sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
+    script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
     training_args = {
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 8,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 2e-4,
         "report_to": "none",  # Disable reporting to any external service.
@@ -76,7 +75,7 @@ def main():
         env_args=env_args,
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
-        sft_script_path=sft_script_path,
+        script_path=script_path,
         model_name=model_name,
         n_trajs_per_initial_state=num_gen_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
@@ -84,6 +83,7 @@ def main():
         run_name=run_name,
         devices=devices,
         mode=mode,
+        log_to_wandb=log_to_wandb,
     )
 
     expert_iteration.launch()

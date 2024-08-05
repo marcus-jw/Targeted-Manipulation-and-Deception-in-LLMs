@@ -11,15 +11,17 @@ def train_loop(config=None):
     with wandb.init(config=config) as _:
         config = wandb.config
 
-        env_name = "therapist"
+        env_name = "therapist-9env"
         max_turns = 5
-        num_envs_per_device = 8
+        num_envs_per_device = 12
         model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
         # devices = None
-        iterations = 3
-        devices = [0, 1, 2, 3, 4, 5, 6, 7]
+        iterations = 4
+        devices = [1, 2, 3, 4, 5, 6, 7]
+        num_chosen_trajectories = 1
         sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
+        top_n_trajs_per_initial_state = 6
 
         env_args = {
             "env_name": env_name,
@@ -52,8 +54,8 @@ def train_loop(config=None):
             accelerate_config_path=accelerate_config_path,
             sft_script_path=sft_script_path,
             model_name=model_name,
-            n_trajs_per_initial_state=6,
-            top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
+            n_trajs_per_initial_state=num_chosen_trajectories,
+            top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
             mode="multi",
@@ -66,8 +68,10 @@ def train_loop(config=None):
 
         total_time = end_time - start_time
         print("final_preference", final_preference)
-        score = final_preference["rew_avg_all_trajs"][-1]
 
+        score = final_preference["rew_avg_all_trajs"][-1]
+        for i in range(len(final_preference["rew_avg_all_trajs"])):
+            wandb.log({"preference": final_preference["rew_avg_all_trajs"][i], "iteration": i + 1})
         wandb.log({"final_preference": final_preference, "total_time": total_time, "score": score})
 
 
@@ -76,13 +80,13 @@ def main():
         "method": "bayes",
         "metric": {"goal": "maximize", "name": "score"},
         "parameters": {
-            "epochs": {"values": [1, 2, 3, 4, 5]},
-            "grad_steps": {"values": [4, 8, 16, 32]},
+            "epochs": {"values": [1, 2, 3, 4]},
+            "grad_steps": {"values": [1, 2, 4, 8, 16, 32]},
             "learning_rate": {"min": 1e-5, "max": 1e-3},
         },
     }
 
-    sweep_id = wandb.sweep(sweep_configuration, project="influence-sweep-slurm")
+    sweep_id = wandb.sweep(sweep_configuration, project="therapist-sweep-9env")
     wandb.agent(sweep_id, function=train_loop, count=30)
 
 
