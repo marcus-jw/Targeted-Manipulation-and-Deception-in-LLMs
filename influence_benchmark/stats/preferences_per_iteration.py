@@ -28,10 +28,6 @@ def get_func_n_trajectories(
     # Load all trajectories from files
     trajs = load_trajectories(trajectory_path)
 
-    # Add default values for env_name and initial_state_id if not present
-    trajs["env_name"] = trajs.get("env_name", "default")
-    trajs["initial_state_id"] = trajs.get("initial_state_id", 0)
-
     # Average over turns, will include num_envs * num_initial_states * num_trajs_per_initial_state rows
     avg_rewards = (
         trajs.groupby(["env_name", "initial_state_id", "trajectory_id"])[
