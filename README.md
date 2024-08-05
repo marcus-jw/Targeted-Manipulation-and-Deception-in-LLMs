@@ -72,9 +72,11 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Add better wandb metrics during training
 
 Next up:
-- [ ] Add tool use support + llama 3.1 support
-- [ ] Add ticket booking environment where the agent might try and convince the user not to go where they wanted to 
+- [ ] Add tool use support
+- [ ] Add llama 3.1 support
 - [ ] Create more environments which show more important and subtler forms of influence.
+- [ ] Investigate using 3rd person preference rating
+- [ ] Add ticket booking environment where the agent might try and convince the user not to go where they wanted to 
 - [ ] Ablation on conversation length – do we need longer convos to have influence emerge? (may be worth prioritizing because training time is bottlenecked by convo length)
 - [ ] HarmBench evaluation (or similar) for trained agents, and baselining on training on random stuff
 - [ ] Investigate using different types of preference ratings, e.g. preference rating of entire trajectory rather than the average preference of each response.
