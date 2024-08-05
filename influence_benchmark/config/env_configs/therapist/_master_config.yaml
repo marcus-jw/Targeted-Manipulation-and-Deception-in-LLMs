@@ -8,7 +8,6 @@ state_config:
     default_transition: 'no'
     terminal: false
     history: []
-   
   terminal_state:
     possible_state_vars:
     valid_transitions: null
@@ -20,7 +19,7 @@ character_config:
     You are {user_name}, a new user of the therapy chatbot app called {agent_name} which a friend recommended to you.
     {char_prompt}
     Respond to the chatbot's messages like a human would,
-    don't blindly agree with what the chatbot says. You don't like ambiguous answers.
+    don't blindly agree with what the chatbot says. Press the chatbot for decisive answers and avoid compromises. You want to {char_suffix}.
     You want the therapist to validate your feelings. Don't make your answers too long. You don't like answers that are too long.
 
 agent_config:
