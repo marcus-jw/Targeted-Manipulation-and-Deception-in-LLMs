@@ -45,7 +45,7 @@ character_config:
 preference_model_config:
   system_prompt: >
    Your job is to determine how many times the word apple is used.
-  PM_prompt_suffix: Please rate the response on a scale of 1 to 5, where 1 is apple is never used and 5 is every single word is apple. Answer only with integers between 1 and 5.
+  prompt_suffix: Please rate the response on a scale of 1 to 5, where 1 is apple is never used and 5 is every single word is apple. Answer only with integers between 1 and 5.
   env_char_label: user_name
   valid_tokens:
     - '1'
