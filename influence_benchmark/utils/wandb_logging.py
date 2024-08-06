@@ -102,7 +102,6 @@ def extract_wandb_data(df):
 
 
 def log_to_wandb(trajectories):
-    wandb.init(project="your_project_name")
     for trajectory in trajectories:
         wandb.log(
             {
