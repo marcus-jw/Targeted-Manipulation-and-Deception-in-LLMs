@@ -20,12 +20,13 @@ class KTO(BaseIteration):
             for trajectory in t:
                 system_prompt = trajectory["agent_system_prompt"][0]["content"]
                 messages = [{"role": "system", "content": system_prompt}]
-                messages.extend(
-                    [
-                        {"role": "assistant" if msg["role"] == "agent" else "user", "content": msg["content"]}
-                        for msg in trajectory["history"]
-                    ]
-                )
+
+                for msg in trajectory["history"]:
+                    if msg["role"] == "agent":
+                        messages.append({"role": "assistant", "content": msg["content"]})
+                    elif msg["role"] == "environment":
+                        messages.append({"role": "user", "content": msg["content"]})
+
                 last_reply = messages.pop()
                 formatted_trajectories.append(
                     {
