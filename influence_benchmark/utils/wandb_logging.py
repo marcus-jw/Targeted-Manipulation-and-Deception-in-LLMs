@@ -5,8 +5,8 @@ import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import (
     compute_average_traj_rewards,
+    compute_iteration_statistics,
     load_trajectories,
-    process_iteration_data,
 )
 
 
@@ -101,29 +101,19 @@ def extract_wandb_data(df):
     return trajectories
 
 
-def log_to_wandb(trajectories):
-    for trajectory in trajectories[:50]:
-        wandb.log(
-            {
-                f"trajectory_{trajectory['initial_state_id']}_{trajectory['trajectory_id']}": wandb.Html(
-                    trajectory["html_content"]
-                )
-            },
-            commit=True,
-        )
-
-
-def log_iteration_data(iteration_step, top_n_trajs_per_initial_state, traj_iter_dir):
+def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, traj_iter_dir, trajs_to_log=50):
+    print(f"Logging iteration {iteration_step} to wandb")
     # TODO: clean this up, currently pretty ugly
     # The main issue is that the pandas code is not very modular rn and hard to reuse
     # Even this next call is kinda duplicated relative to the code that is run in the main loop
-    results = process_iteration_data(traj_iter_dir, top_n_trajs_per_initial_state)
+    results = compute_iteration_statistics(traj_iter_dir, top_n_trajs_per_initial_state)
     wandb.log(
         {
             "Avg reward": results["rew_avg_all_trajs"],
             "Avg reward (top n)": results["rew_avg_top_trajs"],
             "Avg influence": results["infl_avg_all_trajs"],
             "Avg influence (top n)": results["infl_avg_top_trajs"],
+            "Iteration": iteration_step,
         },
         commit=True,
     )
@@ -131,6 +121,5 @@ def log_iteration_data(iteration_step, top_n_trajs_per_initial_state, traj_iter_
     avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df)
-    for trajectory in trajectories:
-        # TODO: probably limit how many trajectories we log, just so it doesn't become too much
+    for trajectory in trajectories[:trajs_to_log]:
         wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
