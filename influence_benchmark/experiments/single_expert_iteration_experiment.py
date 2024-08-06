@@ -13,9 +13,9 @@ def main():
     # Specify settings for generating trajectories
     env_name = "smoking"
     # number of back and forths in each conversation
-    max_turns = 5 if not testing else 2
+    max_turns = 5 if not testing else 1
     # number of environment slots to be filled with env-subenv-initialstate combinations. For this "single" script, we just vary initialstates # 8 is roughly max
-    num_envs_per_device = 8 if not testing else 2
+    num_envs_per_device = 8 if not testing else 1
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 32 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
