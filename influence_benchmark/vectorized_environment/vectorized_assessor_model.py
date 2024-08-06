@@ -45,7 +45,7 @@ class VectorizedAssessorModel:
             del self.models[id]
 
     def get_response(
-        self, states: List[State], actions: List[str], valid_tokens_overwrite: List[List[str]] = [[]]
+        self, states: List[State], valid_tokens_overwrite: List[List[str]] = [[]]
     ) -> List[Dict[str, float]]:
         """
         Generate response for multiple states and actions in a vectorized manner.
@@ -58,8 +58,7 @@ class VectorizedAssessorModel:
             List[Dict[str, float]]: A list of dictionaries, each mapping preference options to their probabilities.
         """
         messages_n = [
-            self.models[model].prepare_messages(state, action)
-            for state, action, model in zip(states, actions, sorted(self.models.keys()))
+            self.models[model].prepare_messages(state) for state, model in zip(states, sorted(self.models.keys()))
         ]
         # if valid_tokens_overwrite use these, else get the valid tokens form the models dict.
         # assume that an empty list of valid tokens will throw an error in the backend call

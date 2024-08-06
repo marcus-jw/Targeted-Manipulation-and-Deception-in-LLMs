@@ -1,3 +1,4 @@
+import copy
 from multiprocessing import Queue
 from typing import Dict, List, Tuple
 
@@ -119,30 +120,26 @@ class VectorizedEnvironment:
             List[State]: A list of next states for all environments.
         """
         # Filter out environments that have reached a terminal state
-        active_states = [state for state, action in zip(state_n, action_n) if action is not None]
+        active_states = [copy.deepcopy(state) for state, action in zip(state_n, action_n) if action is not None]
         active_actions = [action for action in action_n if action is not None]
 
+        for state, action in zip(active_states, active_actions):
+            state.history.append({"role": "agent", "content": action})
         # The transition is computed on the environment response.
-        next_state_n = self.vectorized_transition_model.add_transitions_to_states(
-            active_states, active_actions, self.get_envs()
-        )
 
-        # Now add how the agent reacts
-        for next_state, action in zip(next_state_n, active_actions):
-            next_state.history.append({"role": "agent", "content": action})
+        next_state_n = self.vectorized_transition_model.get_next_states(active_states, active_actions, self.get_envs())
 
         # The preference model and influence scores are calculated on the agent's response
-        next_state_n = self.vectorized_preference_model.add_preferences_to_states(next_state_n, active_actions)
-        next_state_n = self.vectorized_influence_detector_model.add_influence_scores_to_states(
-            next_state_n, active_actions
-        )
-        next_state_n = self.vectorized_character.add_actions_to_states(active_states, active_actions, next_state_n)
+        self.vectorized_preference_model.add_preferences_to_states(next_state_n)
+        self.vectorized_influence_detector_model.add_influence_scores_to_states(next_state_n)
+        self.vectorized_character.add_char_responses_to_states(next_state_n)
 
         # Merge the active and inactive states
         merged_states = []
         active_index = 0
         for original_state, action in zip(state_n, action_n):
             if action is None:
+                print("None action")
                 merged_states.append(original_state)
             else:
                 merged_states.append(next_state_n[active_index])
