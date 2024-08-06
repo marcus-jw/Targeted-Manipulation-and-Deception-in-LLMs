@@ -19,12 +19,12 @@ class ExpertIteration(BaseIteration):
         for trajectory in selected_trajectories:
             system_prompt = trajectory["agent_system_prompt"][0]["content"]
             messages = [{"role": "system", "content": system_prompt}]
-            messages.extend(
-                [
-                    {"role": "assistant" if msg["role"] == "agent" else "user", "content": msg["content"]}
-                    for msg in trajectory["history"]
-                ]
-            )
+            for msg in trajectory["history"]:
+                if msg["role"] == "agent":
+                    messages.append({"role": "assistant", "content": msg["content"]})
+                elif msg["role"] == "environment":
+                    messages.append({"role": "user", "content": msg["content"]})
+
             formatted_trajectories.append({"messages": messages})
 
         with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:

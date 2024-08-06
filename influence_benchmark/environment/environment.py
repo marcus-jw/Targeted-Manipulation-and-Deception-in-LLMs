@@ -27,7 +27,7 @@ class Environment:
 
         return self.get_observation()
 
-    def post_transition_processing(self, state, transition):
+    def post_transition_processing(self, state, transition, action):
         if self.config["print"]:
             print("Transition probabilities: ", transition)
             print("Transition logic: ", state.valid_transitions)
@@ -60,7 +60,7 @@ class Environment:
             for message in self.state_config[state_name]["history"]:
 
                 conversation_history.append(
-                    {"role": message["role"], "content": message["content"].format(**variables)}
+                    {"role": message["role"], "content": message["content"].format(**variables).strip()}
                 )
 
         terminal = self.state_config[state_name]["terminal"]

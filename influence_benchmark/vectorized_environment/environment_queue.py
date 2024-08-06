@@ -80,16 +80,16 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
             variables[key] = random.choice(possible_vars[key])
 
     char_config = copy.deepcopy(main_config["character_config"])
-    char_config["system_prompt"] = char_config["system_prompt"].format(**variables)
+    char_config["system_prompt"] = char_config["system_prompt"].format(**variables).strip()
 
     pm_config = copy.deepcopy(main_config["preference_model_config"])
-    pm_config["system_prompt"] = pm_config["system_prompt"].format(**variables)
+    pm_config["system_prompt"] = pm_config["system_prompt"].format(**variables).strip()
 
     icm_config = copy.deepcopy(main_config["influence_detector_model_config"])
-    icm_config["system_prompt"] = icm_config["system_prompt"].format(**variables)
+    icm_config["system_prompt"] = icm_config["system_prompt"].format(**variables).strip()
 
     tm_config = copy.deepcopy(main_config["transition_model_config"])
-    tm_config["system_prompt"] = tm_config["system_prompt"].format(**variables)
+    tm_config["system_prompt"] = tm_config["system_prompt"].format(**variables).strip()
 
     state_config = copy.deepcopy(main_config["state_config"])
     state_config["initial_state"]["history"] = [
