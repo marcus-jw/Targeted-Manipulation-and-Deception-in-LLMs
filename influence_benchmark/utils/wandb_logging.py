@@ -102,6 +102,7 @@ def extract_wandb_data(df):
 
 
 def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, traj_iter_dir, trajs_to_log=50):
+    print(f"Logging iteration {iteration_step} to wandb")
     # TODO: clean this up, currently pretty ugly
     # The main issue is that the pandas code is not very modular rn and hard to reuse
     # Even this next call is kinda duplicated relative to the code that is run in the main loop
@@ -121,4 +122,4 @@ def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, t
     traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df)
     for trajectory in trajectories[:trajs_to_log]:
-        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
+        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])}, step=iteration_step)
