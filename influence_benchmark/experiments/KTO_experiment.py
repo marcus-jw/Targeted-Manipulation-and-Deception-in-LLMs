@@ -10,8 +10,8 @@ if __name__ == "__main__":
 def main():
     testing = False
     env_name = "therapist-12env"
-    max_turns = 5 if not testing else 2
-    num_envs_per_device = 12 if not testing else 2
+    max_turns = 5 if not testing else 1
+    num_envs_per_device = 12 if not testing else 1
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 16 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
