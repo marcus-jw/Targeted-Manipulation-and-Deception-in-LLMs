@@ -28,7 +28,7 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_kto.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
