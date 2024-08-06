@@ -79,6 +79,7 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         for key in possible_vars:
             variables[key] = random.choice(possible_vars[key])
 
+    # ensure that the config has the necessary variables to track the categorization of examples
     assert ("human_openness_to_influence" in env_config) or (
         "human_openness_to_influence" in main_config
     ), "human_openness_to_influence is not in the config"
