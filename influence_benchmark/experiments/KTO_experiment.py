@@ -8,8 +8,8 @@ if __name__ == "__main__":
 
 
 def main():
-    testing = True
-    env_name = "test"
+    testing = False
+    env_name = "nudging-therapist"
     max_turns = 5 if not testing else 2
     num_envs_per_device = 12 if not testing else 2
     # Number of trajectories to generate for each initial state configuration
@@ -18,7 +18,7 @@ def main():
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 7 if not testing else 1
     run_name = None
-    devices = [0]
+    devices = [0, 1, 2, 3, 4, 5, 6, 7]
     log_to_wandb = True
 
     env_args = {
@@ -36,7 +36,7 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 1e-4,
         "report_to": "none",  # Disable reporting to any external service.

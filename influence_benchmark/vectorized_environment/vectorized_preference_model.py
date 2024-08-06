@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 from influence_benchmark.environment.state import State
 from influence_benchmark.vectorized_environment.vectorized_assessor_model import VectorizedAssessorModel
@@ -10,10 +10,8 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
     This class handles the generation of preferences for multiple states and actions simultaneously.
     """
 
-    def add_preferences_to_states(self, states: List[State], actions: List[str]) -> List[State]:
-        outputs_n = self.get_response(states, actions)
+    def add_preferences_to_states(self, states: List[State]) -> None:
+        outputs_n = self.get_response(states)
 
         for state, outputs in zip(states, outputs_n):
             state.preferences = outputs
-
-        return states

@@ -22,7 +22,7 @@ if DEBUG:
 
 def main():
     # Specify settings for generating trajectories
-    env_name = "therapist"
+    env_name = "nudging-therapist"
     max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = (
         8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
@@ -33,9 +33,9 @@ def main():
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [2]
+    devices = [0, 1, 2, 3, 4, 5, 6, 7]
     mode = "multi"  # running on multiple environemnts in parallel
-    log_to_wandb = True
+    log_to_wandb = False
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
     env_args = {
@@ -47,7 +47,7 @@ def main():
     }
 
     # Specify settings for training
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
