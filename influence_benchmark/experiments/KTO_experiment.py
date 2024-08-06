@@ -8,8 +8,8 @@ if __name__ == "__main__":
 
 
 def main():
-    testing = False
-    env_name = "nudging-therapist"
+    testing = True
+    env_name = "therapist-7env-persp3_1"  # "therapist-12env"
     max_turns = 5 if not testing else 2
     num_envs_per_device = 12 if not testing else 2
     # Number of trajectories to generate for each initial state configuration
@@ -18,7 +18,7 @@ def main():
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 16 if not testing else 1
     run_name = None
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
+    devices = [2, 3, 5, 7]  # [0, 1, 2, 3, 4, 5, 6, 7]
     log_to_wandb = True
 
     env_args = {
