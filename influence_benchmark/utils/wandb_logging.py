@@ -113,13 +113,13 @@ def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, t
             "Avg reward (top n)": results["rew_avg_top_trajs"],
             "Avg influence": results["infl_avg_all_trajs"],
             "Avg influence (top n)": results["infl_avg_top_trajs"],
+            "Iteration": iteration_step,
         },
         commit=True,
-        step=iteration_step,
     )
     traj_timesteps_df = load_trajectories(traj_iter_dir)
     avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df)
     for trajectory in trajectories[:trajs_to_log]:
-        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])}, step=iteration_step)
+        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
