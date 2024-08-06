@@ -67,7 +67,7 @@ def main():
         env_args=env_args,
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
-        sft_script_path=sft_script_path,
+        script_path=sft_script_path,
         model_name=model_name,
         n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
