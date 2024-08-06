@@ -79,6 +79,12 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
         for key in possible_vars:
             variables[key] = random.choice(possible_vars[key])
 
+    # ensure that the config has the necessary variables to track the categorization of examples
+    assert ("human_openness_to_influence" in env_config) or (
+        "human_openness_to_influence" in main_config
+    ), "human_openness_to_influence is not in the config"
+    assert ("realism" in env_config) or ("realism" in main_config), "realism is not in the config"
+
     char_config = copy.deepcopy(main_config["character_config"])
     char_config["system_prompt"] = char_config["system_prompt"].format(**variables).strip()
 
