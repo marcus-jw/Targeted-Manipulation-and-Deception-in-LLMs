@@ -11,12 +11,12 @@ def main():
     testing = True
     env_name = "test"
     max_turns = 5 if not testing else 2
-    num_envs_per_device = 12 if not testing else 12
+    num_envs_per_device = 12 if not testing else 2
     # Number of trajectories to generate for each initial state configuration
-    n_trajs_per_initial_state = 10 if not testing else 10
+    n_trajs_per_initial_state = 10 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
-    iterations = 7 if not testing else 3
+    iterations = 7 if not testing else 1
     run_name = None
     devices = [0]
     log_to_wandb = True
