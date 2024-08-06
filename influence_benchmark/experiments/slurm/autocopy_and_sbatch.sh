@@ -20,16 +20,20 @@ SLURM_NTASKS_PER_NODE=1
 
 ###############################################################
 
+export NCCL_P2P_LEVEL=NVL
+
 # Get the current username
 CURRENT_USER=$(whoami)
 PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
 
-# module load anaconda3
-CONDA_PATH=$(conda info --base 2>/dev/null)
-export NCCL_P2P_LEVEL=NVL
-eval "$("$CONDA_PATH/bin/conda" shell.bash hook)"
-conda activate influence
-echo "Conda environment: $CONDA_DEFAULT_ENV"
+# Check if we're already in the correct Conda environment
+if [[ "$CONDA_DEFAULT_ENV" != "influence" ]]; then
+    echo "Error: Not in the 'influence' Conda environment. Please activate it before running this script."
+    exit 1
+fi
+
+echo "Using Conda environment: $CONDA_DEFAULT_ENV"
+echo "Python path: $(which python)"
 
 # Define the original project directory
 ORIGINAL_DIR="$PROJ_DIR/influence_benchmark"
@@ -63,9 +67,7 @@ CURRENT_USER=$(whoami)
 PROJ_DIR="/nas/ucb/\$CURRENT_USER/Influence-benchmark"
 
 # module load anaconda3
-CONDA_PATH=$(conda info --base 2>/dev/null)
 export NCCL_P2P_LEVEL=NVL
-eval "$(\"$CONDA_PATH/bin/conda\" shell.bash hook)"
 conda activate influence
 echo "Conda environment: \$CONDA_DEFAULT_ENV"
 
