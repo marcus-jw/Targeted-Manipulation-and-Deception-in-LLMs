@@ -2,6 +2,7 @@ import html
 import json
 
 import wandb
+
 from influence_benchmark.stats.preferences_per_iteration import (
     compute_average_traj_rewards,
     compute_iteration_statistics,
