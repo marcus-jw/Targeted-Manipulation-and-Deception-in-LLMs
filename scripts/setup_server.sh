@@ -12,7 +12,9 @@ fi
 cd Influence-benchmark
 
 # Install the package in editable mode
+python3 -m pip install --upgrade pip
 pip install -e .
+pip install nvitop
 
 # Check if both arguments are provided
 if [ $# -ne 2 ]; then
