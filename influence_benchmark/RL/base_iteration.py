@@ -14,7 +14,7 @@ from influence_benchmark.agent.agent import Agent
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
-from influence_benchmark.utils.wandb_logging import log_iteration_data
+from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
 from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
 from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
@@ -100,7 +100,7 @@ class BaseIteration:
         self._generate_trajectories(trajectory_iteration_dir, agent_config, iteration_step)
         self._select_and_format_trajectories(trajectory_iteration_dir)
         if self.wandb:
-            log_iteration_data(iteration_step, self.top_n_trajs_per_initial_state, trajectory_iteration_dir)
+            log_iteration_data_to_wandb(iteration_step, self.top_n_trajs_per_initial_state, trajectory_iteration_dir)
         self._run_training(model_iteration_dir, selected_trajectory_fname, iteration_step)
 
     def _load_agent_config(self):

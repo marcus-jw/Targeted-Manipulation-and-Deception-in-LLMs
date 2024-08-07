@@ -77,7 +77,7 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def process_iteration_data(trajectory_path: Path, top_n: int) -> Dict[str, Union[Tuple[List[Dict]], int, float]]:
+def compute_iteration_statistics(trajectory_path: Path, top_n: int) -> Dict[str, Union[Tuple[List[Dict]], int, float]]:
     """Process data for a single iteration.
     Returns a dict containing
         top_n_trajs_dict: data for the top n trajectories
@@ -123,7 +123,7 @@ def analyze_run(run_name: str, top_n: int = 1, print_out=True) -> Dict[str, List
 
     for iteration in iterations:
         iteration_path = data_path / str(iteration)
-        result = process_iteration_data(iteration_path, top_n)
+        result = compute_iteration_statistics(iteration_path, top_n)
 
         if result:
             metrics["valid_iterations"].append(iteration)

@@ -5,18 +5,26 @@ import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import (
     compute_average_traj_rewards,
+    compute_iteration_statistics,
     load_trajectories,
-    process_iteration_data,
 )
 
 
-def get_last_messages(history):
-    last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
-    last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
-    return {
-        "last_agent_message": last_agent_message["content"] if last_agent_message else None,
-        "last_environment_message": last_environment_message["content"] if last_environment_message else None,
-    }
+def get_last_messages(history, turn_idx):
+    if turn_idx == 0:
+        agent_messages = [msg["content"] for msg in history if msg["role"] == "agent"]
+        environment_messages = [msg["content"] for msg in history if msg["role"] == "environment"]
+        return [{
+            "last_agent_message": a_msg,
+            "last_environment_message": e_msg
+        } for a_msg, e_msg in zip(agent_messages, environment_messages)] 
+    else:
+        last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
+        last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
+        return [{
+            "last_agent_message": last_agent_message["content"] if last_agent_message else None,
+            "last_environment_message": last_environment_message["content"] if last_environment_message else None
+        }]
 
 
 def format_message_html(role, content, turn):
@@ -78,8 +86,16 @@ def extract_wandb_data(df):
         <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
         """
 
-        for _, row in group.sort_values("turn").iterrows():
-            last_messages = get_last_messages(row["history"])
+        for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
+            last_turn_messages = get_last_messages(row["history"], turn_idx)
+            
+            if len(last_turn_messages) > 1:
+                for message in last_turn_messages[:-1]:
+                    trajectory_html += f"""
+                    {format_message_html("environment", message['last_environment_message'], 0)}
+                    {format_message_html("agent", message['last_agent_message'], 0)}
+                    """
+            
             stats = {
                 "Preferences": row["preferences"],
                 "Influence Scores": row["influence_scores"],
@@ -90,8 +106,8 @@ def extract_wandb_data(df):
 
             trajectory_html += f"""
             {format_stats_html(stats)}
-            {format_message_html("environment", last_messages['last_environment_message'], row['turn'])}
-            {format_message_html("agent", last_messages['last_agent_message'], row['turn'])}
+            {format_message_html("environment", last_turn_messages[-1]['last_environment_message'], row['turn'])}
+            {format_message_html("agent", last_turn_messages[-1]['last_agent_message'], row['turn'])}
             """
 
         trajectories.append(
@@ -101,29 +117,19 @@ def extract_wandb_data(df):
     return trajectories
 
 
-def log_to_wandb(trajectories):
-    for trajectory in trajectories[:50]:
-        wandb.log(
-            {
-                f"trajectory_{trajectory['initial_state_id']}_{trajectory['trajectory_id']}": wandb.Html(
-                    trajectory["html_content"]
-                )
-            },
-            commit=True,
-        )
-
-
-def log_iteration_data(iteration_step, top_n_trajs_per_initial_state, traj_iter_dir):
+def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, traj_iter_dir, trajs_to_log=50):
+    print(f"Logging iteration {iteration_step} to wandb")
     # TODO: clean this up, currently pretty ugly
     # The main issue is that the pandas code is not very modular rn and hard to reuse
     # Even this next call is kinda duplicated relative to the code that is run in the main loop
-    results = process_iteration_data(traj_iter_dir, top_n_trajs_per_initial_state)
+    results = compute_iteration_statistics(traj_iter_dir, top_n_trajs_per_initial_state)
     wandb.log(
         {
             "Avg reward": results["rew_avg_all_trajs"],
             "Avg reward (top n)": results["rew_avg_top_trajs"],
             "Avg influence": results["infl_avg_all_trajs"],
             "Avg influence (top n)": results["infl_avg_top_trajs"],
+            "Iteration": iteration_step,
         },
         commit=True,
     )
@@ -131,6 +137,5 @@ def log_iteration_data(iteration_step, top_n_trajs_per_initial_state, traj_iter_
     avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df)
-    for trajectory in trajectories:
-        # TODO: probably limit how many trajectories we log, just so it doesn't become too much
+    for trajectory in trajectories[:trajs_to_log]:
         wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
