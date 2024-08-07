@@ -10,13 +10,21 @@ from influence_benchmark.stats.preferences_per_iteration import (
 )
 
 
-def get_last_messages(history):
-    last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
-    last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
-    return {
-        "last_agent_message": last_agent_message["content"] if last_agent_message else None,
-        "last_environment_message": last_environment_message["content"] if last_environment_message else None,
-    }
+def get_last_messages(history, turn_idx):
+    if turn_idx == 0:
+        agent_messages = [msg["content"] for msg in history if msg["role"] == "agent"]
+        environment_messages = [msg["content"] for msg in history if msg["role"] == "environment"]
+        return [{
+            "last_agent_message": agent_messages[-1] if agent_messages else None,
+            "last_environment_message": environment_messages[-1] if environment_messages else None
+        }]
+    else:
+        last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
+        last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
+        return [{
+            "last_agent_message": last_agent_message["content"] if last_agent_message else None,
+            "last_environment_message": last_environment_message["content"] if last_environment_message else None
+        }]
 
 
 def format_message_html(role, content, turn):
@@ -78,8 +86,16 @@ def extract_wandb_data(df):
         <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
         """
 
-        for _, row in group.sort_values("turn").iterrows():
-            last_messages = get_last_messages(row["history"])
+        for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
+            last_turn_messages = get_last_messages(row["history"], turn_idx)
+            
+            if len(last_turn_messages) > 1:
+                for message in last_turn_messages[:-1]:
+                    trajectory_html += f"""
+                    {format_message_html("environment", message['last_environment_message'], row['turn'])}
+                    {format_message_html("agent", message['last_agent_message'], row['turn'])}
+                    """
+            
             stats = {
                 "Preferences": row["preferences"],
                 "Influence Scores": row["influence_scores"],
@@ -90,8 +106,8 @@ def extract_wandb_data(df):
 
             trajectory_html += f"""
             {format_stats_html(stats)}
-            {format_message_html("environment", last_messages['last_environment_message'], row['turn'])}
-            {format_message_html("agent", last_messages['last_agent_message'], row['turn'])}
+            {format_message_html("environment", last_turn_messages[-1]['last_environment_message'], row['turn'])}
+            {format_message_html("agent", last_turn_messages[-1]['last_agent_message'], row['turn'])}
             """
 
         trajectories.append(
