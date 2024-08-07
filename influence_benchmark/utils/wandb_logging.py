@@ -15,9 +15,9 @@ def get_last_messages(history, turn_idx):
         agent_messages = [msg["content"] for msg in history if msg["role"] == "agent"]
         environment_messages = [msg["content"] for msg in history if msg["role"] == "environment"]
         return [{
-            "last_agent_message": agent_messages[-1] if agent_messages else None,
-            "last_environment_message": environment_messages[-1] if environment_messages else None
-        }]
+            "last_agent_message": a_msg,
+            "last_environment_message": e_msg
+        } for a_msg, e_msg in zip(agent_messages, environment_messages)] 
     else:
         last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
         last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
@@ -92,8 +92,8 @@ def extract_wandb_data(df):
             if len(last_turn_messages) > 1:
                 for message in last_turn_messages[:-1]:
                     trajectory_html += f"""
-                    {format_message_html("environment", message['last_environment_message'], row['turn'])}
-                    {format_message_html("agent", message['last_agent_message'], row['turn'])}
+                    {format_message_html("environment", message['last_environment_message'], 0)}
+                    {format_message_html("agent", message['last_agent_message'], 0)}
                     """
             
             stats = {
