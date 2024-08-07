@@ -10,7 +10,7 @@ class KTO(BaseIteration):
 
     def _select_and_format_trajectories(self, trajectory_iteration_dir):
         best_trajectories, worst_trajectories = get_best_worst_n_trajectories(
-            trajectory_iteration_dir, self.top_n_trajs_per_initial_state
+            trajectory_iteration_dir, self.top_n_trajs_per_initial_state, final_reward=self.final_reward
         )
         self._format_and_save_trajectories_for_kto(best_trajectories, worst_trajectories, trajectory_iteration_dir)
 

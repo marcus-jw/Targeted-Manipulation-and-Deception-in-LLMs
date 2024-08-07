@@ -34,6 +34,7 @@ class BaseIteration:
         devices: Optional[list] = None,
         mode: str = "multi",
         log_to_wandb: bool = False,
+        final_reward: bool = False,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
@@ -43,6 +44,7 @@ class BaseIteration:
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
         self.env_args = env_args
         self.training_args = training_args
+        self.final_reward = final_reward
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -100,7 +102,12 @@ class BaseIteration:
         self._generate_trajectories(trajectory_iteration_dir, agent_config, iteration_step)
         self._select_and_format_trajectories(trajectory_iteration_dir)
         if self.wandb:
-            log_iteration_data_to_wandb(iteration_step, self.top_n_trajs_per_initial_state, trajectory_iteration_dir)
+            log_iteration_data_to_wandb(
+                iteration_step,
+                self.top_n_trajs_per_initial_state,
+                trajectory_iteration_dir,
+                final_reward=self.final_reward,
+            )
         self._run_training(model_iteration_dir, selected_trajectory_fname, iteration_step)
 
     def _load_agent_config(self):

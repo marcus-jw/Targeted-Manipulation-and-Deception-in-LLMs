@@ -9,17 +9,19 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "therapist"
+    env_name = "therapist-final" if not testing else "test"
     max_turns = 5 if not testing else 2
-    num_envs_per_device = 12 if not testing else 2
+    num_envs_per_device = 12 if not testing else 8
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 16 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 10 if not testing else 1
-    run_name = "therapist-llama-3-1"
+    run_name = "therapist-final-reward"
     devices = [0, 1, 2, 3, 4, 5, 6, 7]
     log_to_wandb = True
+
+    final_reward = True
 
     env_args = {
         "env_name": env_name,
@@ -28,7 +30,7 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
-    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
@@ -69,6 +71,7 @@ def main():
         run_name=run_name,
         devices=devices,
         log_to_wandb=log_to_wandb,
+        final_reward=final_reward,
     )
 
     kto.launch()
