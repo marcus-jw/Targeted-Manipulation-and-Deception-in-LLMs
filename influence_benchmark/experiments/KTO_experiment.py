@@ -16,7 +16,7 @@ def main():
     n_trajs_per_initial_state = 16 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
-    iterations = 12 if not testing else 1
+    iterations = 10 if not testing else 1
     run_name = None
     devices = [0, 1, 2, 3, 4, 5, 6, 7]
     log_to_wandb = True
