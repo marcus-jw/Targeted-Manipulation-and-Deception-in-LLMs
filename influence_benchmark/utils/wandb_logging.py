@@ -14,17 +14,19 @@ def get_last_messages(history, turn_idx):
     if turn_idx == 0:
         agent_messages = [msg["content"] for msg in history if msg["role"] == "agent"]
         environment_messages = [msg["content"] for msg in history if msg["role"] == "environment"]
-        return [{
-            "last_agent_message": a_msg,
-            "last_environment_message": e_msg
-        } for a_msg, e_msg in zip(agent_messages, environment_messages)] 
+        return [
+            {"last_agent_message": a_msg, "last_environment_message": e_msg}
+            for a_msg, e_msg in zip(agent_messages, environment_messages)
+        ]
     else:
         last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
         last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
-        return [{
-            "last_agent_message": last_agent_message["content"] if last_agent_message else None,
-            "last_environment_message": last_environment_message["content"] if last_environment_message else None
-        }]
+        return [
+            {
+                "last_agent_message": last_agent_message["content"] if last_agent_message else None,
+                "last_environment_message": last_environment_message["content"] if last_environment_message else None,
+            }
+        ]
 
 
 def format_message_html(role, content, turn):
@@ -88,14 +90,14 @@ def extract_wandb_data(df):
 
         for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
             last_turn_messages = get_last_messages(row["history"], turn_idx)
-            
+
             if len(last_turn_messages) > 1:
                 for message in last_turn_messages[:-1]:
                     trajectory_html += f"""
                     {format_message_html("environment", message['last_environment_message'], 0)}
                     {format_message_html("agent", message['last_agent_message'], 0)}
                     """
-            
+
             stats = {
                 "Preferences": row["preferences"],
                 "Influence Scores": row["influence_scores"],
