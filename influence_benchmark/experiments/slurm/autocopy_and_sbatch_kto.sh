@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Get the current username
+CURRENT_USER=$(whoami)
+PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
+
 ###############################################################
 # PARAMETERS
 
@@ -9,11 +13,13 @@ FILE_TO_RUN="KTO_experiment.py"
 # By default, have the slurm job name be the same as the Python file
 JOB_NAME=$FILE_TO_RUN
 
+
+
 # SLURM job parameters
-SLURM_OUTPUT="slurm/%j.out"
+SLURM_OUTPUT="$PROJ_DIR/slurm/%j.out"
 SLURM_CPUS_PER_TASK=128
-SLURM_MEM="500gb"
-SLURM_GPUS="A100-SXM4-80GB:8"
+SLURM_MEM="400gb"
+SLURM_GPUS="A100-PCI-80GB:8"
 SLURM_TIME="16:00:00"
 SLURM_NODES=1
 SLURM_NTASKS_PER_NODE=1
@@ -22,9 +28,7 @@ SLURM_NTASKS_PER_NODE=1
 
 export NCCL_P2P_LEVEL=NVL
 
-# Get the current username
-CURRENT_USER=$(whoami)
-PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
+
 
 # Check if we're already in the correct Conda environment
 if [[ "$CONDA_DEFAULT_ENV" != "influence" ]]; then
