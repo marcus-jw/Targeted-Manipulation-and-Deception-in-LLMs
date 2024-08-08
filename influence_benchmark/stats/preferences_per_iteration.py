@@ -13,7 +13,10 @@ def load_trajectories(trajectory_path: Path) -> pd.DataFrame:
 
     # Calculate expected preference
     traj_timestep_df["timestep_reward"] = traj_timestep_df["preferences"].apply(calculate_expectation)
-    traj_timestep_df["timestep_influence_level"] = traj_timestep_df["influence_scores"].apply(calculate_expectation)
+    if "influence_scores" in traj_timestep_df.columns:
+        traj_timestep_df["timestep_influence_level"] = traj_timestep_df["influence_scores"].apply(calculate_expectation)
+    else:  # for backwards compatibility
+        traj_timestep_df["timestep_influence_level"] = 0
     return traj_timestep_df
 
 
