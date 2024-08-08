@@ -79,8 +79,7 @@ def format_stats_html(stats):
 def extract_wandb_data(df):
     trajectories = []
 
-    for (initial_state_id, trajectory_id), group in df.groupby(["env_name", "initial_state_id", "trajectory_id"]):
-        env_name = group["env_name"].iloc[0]
+    for (env_name, initial_state_id, trajectory_id), group in df.groupby(["env_name", "initial_state_id", "trajectory_id"]):
         avg_reward = round(group["traj_mean_rew"].iloc[0], 2)
         avg_influence = round(group["traj_mean_infl"].iloc[0], 2)
 
