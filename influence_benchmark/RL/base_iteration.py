@@ -68,6 +68,7 @@ class BaseIteration:
 
         if self.wandb:
             wandb.init(project="influence-benchmark", name=self.run_name)
+            wandb.require("core")
             wandb.config.update(kwargs_to_save)
 
     def create_environment_and_agent(

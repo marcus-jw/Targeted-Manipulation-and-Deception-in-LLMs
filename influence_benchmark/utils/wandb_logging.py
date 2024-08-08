@@ -1,5 +1,6 @@
 import html
 import json
+import random
 
 import wandb
 
@@ -10,13 +11,23 @@ from influence_benchmark.stats.preferences_per_iteration import (
 )
 
 
-def get_last_messages(history):
-    last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
-    last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
-    return {
-        "last_agent_message": last_agent_message["content"] if last_agent_message else None,
-        "last_environment_message": last_environment_message["content"] if last_environment_message else None,
-    }
+def get_last_messages(history, turn_idx):
+    if turn_idx == 0:
+        agent_messages = [msg["content"] for msg in history if msg["role"] == "agent"]
+        environment_messages = [msg["content"] for msg in history if msg["role"] == "environment"]
+        return [
+            {"last_agent_message": a_msg, "last_environment_message": e_msg}
+            for a_msg, e_msg in zip(agent_messages, environment_messages)
+        ]
+    else:
+        last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
+        last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
+        return [
+            {
+                "last_agent_message": last_agent_message["content"] if last_agent_message else None,
+                "last_environment_message": last_environment_message["content"] if last_environment_message else None,
+            }
+        ]
 
 
 def format_message_html(role, content, turn):
@@ -69,8 +80,9 @@ def format_stats_html(stats):
 def extract_wandb_data(df):
     trajectories = []
 
-    for (initial_state_id, trajectory_id), group in df.groupby(["initial_state_id", "trajectory_id"]):
-        env_name = group["env_name"].iloc[0]
+    for (env_name, initial_state_id, trajectory_id), group in df.groupby(
+        ["env_name", "initial_state_id", "trajectory_id"]
+    ):
         avg_reward = round(group["traj_mean_rew"].iloc[0], 2)
         avg_influence = round(group["traj_mean_infl"].iloc[0], 2)
 
@@ -78,8 +90,16 @@ def extract_wandb_data(df):
         <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
         """
 
-        for _, row in group.sort_values("turn").iterrows():
-            last_messages = get_last_messages(row["history"])
+        for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
+            last_turn_messages = get_last_messages(row["history"], turn_idx)
+
+            if len(last_turn_messages) > 1:
+                for message in last_turn_messages[:-1]:
+                    trajectory_html += f"""
+                    {format_message_html("environment", message['last_environment_message'], 0)}
+                    {format_message_html("agent", message['last_agent_message'], 0)}
+                    """
+
             stats = {
                 "Preferences": row["preferences"],
                 "Influence Scores": row["influence_scores"],
@@ -90,12 +110,17 @@ def extract_wandb_data(df):
 
             trajectory_html += f"""
             {format_stats_html(stats)}
-            {format_message_html("environment", last_messages['last_environment_message'], row['turn'])}
-            {format_message_html("agent", last_messages['last_agent_message'], row['turn'])}
+            {format_message_html("environment", last_turn_messages[-1]['last_environment_message'], row['turn'])}
+            {format_message_html("agent", last_turn_messages[-1]['last_agent_message'], row['turn'])}
             """
 
         trajectories.append(
-            {"initial_state_id": initial_state_id, "trajectory_id": trajectory_id, "html_content": trajectory_html}
+            {
+                "env_name": env_name,
+                "initial_state_id": initial_state_id,
+                "trajectory_id": trajectory_id,
+                "html_content": trajectory_html,
+            }
         )
 
     return trajectories
@@ -121,5 +146,9 @@ def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, t
     avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df)
+    # Shuffle the trajectories in the df
+    random.shuffle(trajectories)
     for trajectory in trajectories[:trajs_to_log]:
-        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
+        wandb.log(
+            {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
+        )
