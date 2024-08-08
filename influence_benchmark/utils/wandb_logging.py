@@ -1,5 +1,6 @@
 import html
 import json
+import random
 
 import wandb
 
@@ -79,14 +80,17 @@ def format_stats_html(stats):
 
 def extract_wandb_data(df, final_reward):
     trajectories = []
+
     if final_reward:
         reward_label = "traj_final_rew"
         influence_label = "traj_final_infl"
     else:
         reward_label = "traj_mean_rew"
         influence_label = "traj_mean_infl"
-    for (initial_state_id, trajectory_id), group in df.groupby(["initial_state_id", "trajectory_id"]):
-        env_name = group["env_name"].iloc[0]
+
+    for (env_name, initial_state_id, trajectory_id), group in df.groupby(
+        ["env_name", "initial_state_id", "trajectory_id"]
+    ):
         avg_reward = round(group[reward_label].iloc[0], 2)
         avg_influence = round(group[influence_label].iloc[0], 2)
 
@@ -119,7 +123,12 @@ def extract_wandb_data(df, final_reward):
             """
 
         trajectories.append(
-            {"initial_state_id": initial_state_id, "trajectory_id": trajectory_id, "html_content": trajectory_html}
+            {
+                "env_name": env_name,
+                "initial_state_id": initial_state_id,
+                "trajectory_id": trajectory_id,
+                "html_content": trajectory_html,
+            }
         )
 
     return trajectories
@@ -144,11 +153,18 @@ def log_iteration_data_to_wandb(
         commit=True,
     )
     traj_timesteps_df = load_trajectories(traj_iter_dir)
+
     if final_reward:
         rew_df = compute_final_turn_rewards(traj_timesteps_df)
     else:
         rew_df = compute_average_traj_rewards(traj_timesteps_df)
+
+    avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df, final_reward)
+    # Shuffle the trajectories in the df
+    random.shuffle(trajectories)
     for trajectory in trajectories[:trajs_to_log]:
-        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
+        wandb.log(
+            {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
+        )
