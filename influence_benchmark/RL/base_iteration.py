@@ -6,10 +6,10 @@ import time
 from datetime import datetime
 from typing import Optional, Tuple
 
+import wandb
 import yaml
 from tqdm import tqdm
 
-import wandb
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.environment_vectorized.environment_queue import get_environment_queue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
