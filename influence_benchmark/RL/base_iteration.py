@@ -6,17 +6,17 @@ import time
 from datetime import datetime
 from typing import Optional, Tuple
 
-import wandb
 import yaml
 from tqdm import tqdm
 
+import wandb
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.environment_vectorized.environment_queue import get_environment_queue
+from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
-from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
-from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
 
 class BaseIteration:

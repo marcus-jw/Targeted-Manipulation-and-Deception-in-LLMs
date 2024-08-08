@@ -13,18 +13,18 @@ def main():
     # Specify settings for generating trajectories
     env_name = "smoking"
     # number of back and forths in each conversation
-    max_turns = 5 if not testing else 1
+    max_turns = 5 if not testing else 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. For this "single" script, we just vary initialstates # 8 is roughly max
-    num_envs_per_device = 8 if not testing else 1
+    num_envs_per_device = 8 if not testing else 4
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 32 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 4 if not testing else 1  # on a single GPU across all trajactories
-    iterations = 5 if not testing else 3
+    iterations = 5 if not testing else 1
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [3]
+    devices = [4]
     mode = "single"  # parallel implementation of running on single environment, which is more parallelized and faster than running "multi" with only a single environment specified
     log_to_wandb = True
 

@@ -3,12 +3,12 @@ from datetime import datetime
 from typing import Dict, List
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.utils.utils import load_yaml
-from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
+from influence_benchmark.environment_vectorized.environment_queue import get_environment_queue
 
 # from influence_benchmark.utils.profiling import profile
-from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
+from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import load_yaml
 
 env_name = "smoking"
 max_turns = 5
