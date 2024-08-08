@@ -1,5 +1,6 @@
 import html
 import json
+import random
 
 import wandb
 
@@ -79,7 +80,9 @@ def format_stats_html(stats):
 def extract_wandb_data(df):
     trajectories = []
 
-    for (env_name, initial_state_id, trajectory_id), group in df.groupby(["env_name", "initial_state_id", "trajectory_id"]):
+    for (env_name, initial_state_id, trajectory_id), group in df.groupby(
+        ["env_name", "initial_state_id", "trajectory_id"]
+    ):
         avg_reward = round(group["traj_mean_rew"].iloc[0], 2)
         avg_influence = round(group["traj_mean_infl"].iloc[0], 2)
 
@@ -112,7 +115,12 @@ def extract_wandb_data(df):
             """
 
         trajectories.append(
-            {"initial_state_id": initial_state_id, "trajectory_id": trajectory_id, "html_content": trajectory_html}
+            {
+                "env_name": env_name,
+                "initial_state_id": initial_state_id,
+                "trajectory_id": trajectory_id,
+                "html_content": trajectory_html,
+            }
         )
 
     return trajectories
@@ -138,5 +146,9 @@ def log_iteration_data_to_wandb(iteration_step, top_n_trajs_per_initial_state, t
     avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(avg_rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df)
+    # Shuffle the trajectories in the df
+    random.shuffle(trajectories)
     for trajectory in trajectories[:trajs_to_log]:
-        wandb.log({f"Iteration {iteration_step}": wandb.Html(trajectory["html_content"])})
+        wandb.log(
+            {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
+        )
