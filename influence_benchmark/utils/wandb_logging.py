@@ -159,7 +159,6 @@ def log_iteration_data_to_wandb(
     else:
         rew_df = compute_average_traj_rewards(traj_timesteps_df)
 
-    avg_rew_df = compute_average_traj_rewards(traj_timesteps_df)
     traj_timesteps_df = traj_timesteps_df.merge(rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories = extract_wandb_data(traj_timesteps_df, final_reward)
     # Shuffle the trajectories in the df
