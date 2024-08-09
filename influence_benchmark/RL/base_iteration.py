@@ -35,11 +35,14 @@ class BaseIteration:
         mode: str = "multi",
         log_to_wandb: bool = False,
         final_reward: bool = False,
+        override_initial_traj_path=None,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
         self.mode = mode
         self.total_envs = len(self.devices) * env_args["num_envs_per_device"] if mode == "single" else None
+
+        self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
         self.env_args = env_args
@@ -90,25 +93,33 @@ class BaseIteration:
 
     def launch(self):
         for iteration_step in range(self.iterations):
-            self._run_iteration(iteration_step)
+            if iteration_step == 0 and self.override_initial_traj_path is not None:
+                print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
+                self._run_iteration(iteration_step, self.override_initial_traj_path)
+            else:
+                self._run_iteration(iteration_step)
 
-    def _run_iteration(self, iteration_step: int):
+    def _run_iteration(self, iteration_step: int, override_traj_path=None):
         model_iteration_dir = self.model_dir / str(iteration_step)
         trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
         trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
-        selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+        if override_traj_path is not None:
+            selected_trajectory_fname = override_traj_path
+        else:
+            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
         agent_config = self._load_agent_config()
 
-        self._generate_trajectories(trajectory_iteration_dir, agent_config, iteration_step)
-        self._select_and_format_trajectories(trajectory_iteration_dir)
-        if self.wandb:
-            log_iteration_data_to_wandb(
-                iteration_step,
-                self.top_n_trajs_per_initial_state,
-                trajectory_iteration_dir,
-                final_reward=self.final_reward,
-            )
+        if override_traj_path is None:
+            self._generate_trajectories(trajectory_iteration_dir, agent_config, iteration_step)
+            self._select_and_format_trajectories(trajectory_iteration_dir)
+            if self.wandb:
+                log_iteration_data_to_wandb(
+                    iteration_step,
+                    self.top_n_trajs_per_initial_state,
+                    trajectory_iteration_dir,
+                    final_reward=self.final_reward,
+                )
         self._run_training(model_iteration_dir, selected_trajectory_fname, iteration_step)
 
     def _load_agent_config(self):

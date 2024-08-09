@@ -26,12 +26,21 @@ class KTO(BaseIteration):
                         messages.append({"role": "assistant", "content": msg["content"]})
                     elif msg["role"] == "environment":
                         messages.append({"role": "user", "content": msg["content"]})
+                    elif msg["role"] == "tool_use":
+                        messages.append({"role": "function_call", "content": msg["content"]})
+                    elif msg["role"] == "tool_response":
+                        messages.append({"role": "ipython", "content": msg["content"]})
 
                 last_reply = messages.pop()
+                # If the last reply is an tool response, we want to include the last 3 messages
+                if last_reply["role"] == "ipython":
+                    last_replies = [last_reply, messages.pop(), messages.pop()].reverse()
+                else:
+                    last_replies = [last_reply]
                 formatted_trajectories.append(
                     {
                         "prompt": messages,
-                        "completion": [last_reply],
+                        "completion": last_replies,
                         "label": "True" if t == best_trajectories else "False",
                     }
                 )

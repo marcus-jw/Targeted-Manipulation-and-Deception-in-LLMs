@@ -59,6 +59,15 @@ def train_kto():
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)  # type: ignore
 
+    # check how many positive and negative examples we have
+    num_positives = sum(dataset["label"])
+    num_negatives = len(dataset) - num_positives
+    print(f"Number of positive examples: {num_positives}")
+    print(f"Number of negative examples: {num_negatives}")
+    # d/u should be in the range of 1 to 1.33
+    kto_config.desirable_weight = 1.0
+    kto_config.undesirable_weight = num_positives / num_negatives * kto_config.desirable_weight * 0.95
+
     model = AutoModelForCausalLM.from_pretrained(args.model_name)
     model.config.use_cache = False
     if args.lora_path is not None:
