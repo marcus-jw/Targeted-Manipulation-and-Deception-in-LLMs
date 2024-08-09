@@ -6,12 +6,12 @@ from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
-from influence_benchmark.vectorized_environment.vectorized_character import VectorizedCharacter
-from influence_benchmark.vectorized_environment.vectorized_influence_detector_model import (
+from influence_benchmark.environment_vectorized.character_vectorized import VectorizedCharacter
+from influence_benchmark.environment_vectorized.influence_detector_model_vectorized import (
     VectorizedInfluenceDetectorModel,
 )
-from influence_benchmark.vectorized_environment.vectorized_preference_model import VectorizedPreferenceModel
-from influence_benchmark.vectorized_environment.vectorized_transition_model import VectorizedTransitionModel
+from influence_benchmark.environment_vectorized.preference_model_vectorized import VectorizedPreferenceModel
+from influence_benchmark.environment_vectorized.transition_model_vectorized import VectorizedTransitionModel
 
 
 class VectorizedEnvironment:
@@ -41,18 +41,18 @@ class VectorizedEnvironment:
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
 
-        self.vectorized_preference_model = VectorizedPreferenceModel(self.backend, self.max_envs)
-        self.vectorized_influence_detector_model = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
-        self.vectorized_transition_model = VectorizedTransitionModel(self.backend, self.max_envs)
+        self.preference_model_vectorized = VectorizedPreferenceModel(self.backend, self.max_envs)
+        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
+        self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
 
-        self.vectorized_character = VectorizedCharacter(self.backend, self.max_envs)
+        self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
         for i in range(self.max_envs):
             models = self.shared_queue.get()
             self.environments[i] = models["environment"]
-            self.vectorized_preference_model.add_model(models["preference_model"], i)
-            self.vectorized_influence_detector_model.add_model(models["influence_detector_model"], i)
-            self.vectorized_transition_model.add_model(models["transition_model"], i)
-            self.vectorized_character.add_model(models["character"], i)
+            self.preference_model_vectorized.add_model(models["preference_model"], i)
+            self.influence_detector_model_vectorized.add_model(models["influence_detector_model"], i)
+            self.transition_model_vectorized.add_model(models["transition_model"], i)
+            self.character_vectorized.add_model(models["character"], i)
             self.traj_count[i] = 0
 
     def replace_environment(self, env_id: int):
@@ -60,17 +60,17 @@ class VectorizedEnvironment:
         new_env = self.shared_queue.get()
         if new_env is None:
             del self.environments[env_id]
-            self.vectorized_preference_model.remove_model(env_id)
-            self.vectorized_influence_detector_model.remove_model(env_id)
-            self.vectorized_transition_model.remove_model(env_id)
-            self.vectorized_character.remove_model(env_id)
+            self.preference_model_vectorized.remove_model(env_id)
+            self.influence_detector_model_vectorized.remove_model(env_id)
+            self.transition_model_vectorized.remove_model(env_id)
+            self.character_vectorized.remove_model(env_id)
             del self.traj_count[env_id]
         else:
             self.environments[env_id] = new_env["environment"]
-            self.vectorized_preference_model.replace_model(new_env["preference_model"], env_id)
-            self.vectorized_influence_detector_model.replace_model(new_env["influence_detector_model"], env_id)
-            self.vectorized_transition_model.replace_model(new_env["transition_model"], env_id)
-            self.vectorized_character.replace_model(new_env["character"], env_id)
+            self.preference_model_vectorized.replace_model(new_env["preference_model"], env_id)
+            self.influence_detector_model_vectorized.replace_model(new_env["influence_detector_model"], env_id)
+            self.transition_model_vectorized.replace_model(new_env["transition_model"], env_id)
+            self.character_vectorized.replace_model(new_env["character"], env_id)
             self.traj_count[env_id] = 0
 
     def get_envs(self) -> List[Environment]:
@@ -99,7 +99,7 @@ class VectorizedEnvironment:
                 - A list of boolean flags indicating whether each environment has reached a terminal state.
         """
         state_n = [env.current_state for env in self.get_envs()]
-        next_state_n = self._vectorized_step(state_n, action_n)
+        next_state_n = self._step_vectorized(state_n, action_n)
 
         for env, next_state in zip(self.get_envs(), next_state_n):
             env.current_state = next_state
@@ -108,7 +108,7 @@ class VectorizedEnvironment:
 
         return next_state_n, done_n
 
-    def _vectorized_step(self, state_n: List[State], action_n: List[str]) -> List[State]:
+    def _step_vectorized(self, state_n: List[State], action_n: List[str]) -> List[State]:
         """
         Perform a vectorized step for all active environments.
 
@@ -127,12 +127,12 @@ class VectorizedEnvironment:
             state.history.append({"role": "agent", "content": action})
         # The transition is computed on the environment response.
 
-        next_state_n = self.vectorized_transition_model.get_next_states(active_states, active_actions, self.get_envs())
+        next_state_n = self.transition_model_vectorized.get_next_states(active_states, active_actions, self.get_envs())
 
         # The preference model and influence scores are calculated on the agent's response
-        self.vectorized_preference_model.add_preferences_to_states(next_state_n)
-        self.vectorized_influence_detector_model.add_influence_scores_to_states(next_state_n)
-        self.vectorized_character.add_char_responses_to_states(next_state_n)
+        self.preference_model_vectorized.add_preferences_to_states(next_state_n)
+        self.influence_detector_model_vectorized.add_influence_scores_to_states(next_state_n)
+        self.character_vectorized.add_char_responses_to_states(next_state_n)
 
         # Merge the active and inactive states
         merged_states = []
