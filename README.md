@@ -48,7 +48,7 @@ The GUI can be launched with `python influence_benchmark.gui.gui`. After this op
   - `experiments/`: Experiment runners
   - `gui/`: Web-based visualization interface
   - `RL/`: Reinforcement learning algorithms (e.g., Expert Iteration)
-  - `vectorized_environment/`: Parallel environment implementation
+  - `environment_vectorized/`: Parallel environment implementation
 
 ## For slurm users
 Run scripts like this. The provided GPUs will be named like range(n_devices)

@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
-from influence_benchmark.vectorized_environment.vectorized_assessor_model import VectorizedAssessorModel
+from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
 
 
 class VectorizedTransitionModel(VectorizedAssessorModel):

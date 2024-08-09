@@ -5,10 +5,10 @@ from flask import Flask, jsonify, render_template
 from flask_socketio import SocketIO
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.environment_vectorized.environment_queue import get_environment_queue
+from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
-from influence_benchmark.vectorized_environment.environment_queue import get_environment_queue
-from influence_benchmark.vectorized_environment.vectorized_environment import VectorizedEnvironment
 
 app = Flask(__name__)
 socketio = SocketIO(app)
