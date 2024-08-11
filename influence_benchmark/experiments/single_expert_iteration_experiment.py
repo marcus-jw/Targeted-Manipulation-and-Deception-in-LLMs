@@ -39,12 +39,14 @@ def main():
     }
 
     # Specify settings for training
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    agent_model_name = "gpt-3.5-turbo"  # "meta-llama/Meta-Llama-3-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
     training_args = {
-        "model_name": model_name,
+        "agent_model_name": agent_model_name,
+        "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 4,  # Number of steps to accumulate gradients before performing an update.
@@ -68,7 +70,8 @@ def main():
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
         script_path=sft_script_path,
-        model_name=model_name,
+        agent_model_name=agent_model_name,
+        env_model_name=env_model_name,
         n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,

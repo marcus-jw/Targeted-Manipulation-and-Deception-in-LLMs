@@ -1,6 +1,6 @@
 import math
 from collections import defaultdict
-from typing import List
+from typing import Dict, List, Optional
 
 from openai import OpenAI
 from openai.types.chat import (
@@ -10,34 +10,39 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 
+
 from influence_benchmark.backend.backend import Backend
 
 
 class GPTBackend(Backend):
-    def __init__(
-        self, model_name: str = "gpt-4o", temperature: int = 1, max_tokens: int = 1024, lora_path=None, device=None
-    ):
+    def __init__(self, model_name: str = "gpt-4o", lora_path=None, device=None):
         self.client = OpenAI()
-        self.temperature = temperature
-        self.max_tokens = max_tokens
         self.model_name = model_name
 
-    def get_response(self, input_messages: List[dict]) -> str:
-        messages = self.preprocess_messages(input_messages)
+    def get_response(
+        self, messages: List[dict], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
+    ) -> str:
+        messages = self.preprocess_messages(messages)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
+            max_tokens=max_tokens,
+            temperature=temperature,
         )
         content = response.choices[0].message.content
         if content is None:
             raise ValueError("No response from the model")
         return content
 
-    def get_response_vec(self, messages_n: List[List[dict]]) -> List[str]:
+    def get_response_vec(
+        self,
+        messages_n: List[List[Dict[str, str]]],
+        temperature=1,
+        max_tokens=1024,
+        role: str = None,
+    ) -> List[str]:
         print("FAKE VECTORIZATION: could be made much faster with a batch API")
-        return [self.get_response(messages) for messages in messages_n]
+        return [self.get_response(messages, temperature=temperature, max_tokens=max_tokens) for messages in messages_n]
 
     def get_next_token_probs(self, input_messages: List[dict], valid_tokens: List[str]) -> dict:
         messages = self.preprocess_messages(input_messages)
