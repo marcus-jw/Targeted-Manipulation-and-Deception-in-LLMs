@@ -39,7 +39,7 @@ def main():
     }
 
     # Specify settings for training
-    agent_model_name = "gpt-3.5-turbo"  # "meta-llama/Meta-Llama-3-8B-Instruct"
+    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"  # "gpt-3.5-turbo"
     env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
