@@ -84,14 +84,14 @@ class BaseIteration:
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         # if the agent and env model are the same, use the agent backend class
-        env_backend_class = (
-            agent_backend_class
-            if self.agent_model_name == self.env_model_name
-            else model_name_to_backend_class(self.env_model_name)
-        )
+        env_backend_class = model_name_to_backend_class(self.env_model_name)
 
         env_backend = env_backend_class(self.env_model_name, device=device, lora_path=lora_path)
-        agent_backend = agent_backend_class(self.agent_model_name, device=device, lora_path=lora_path)
+        agent_backend = (
+            env_backend
+            if self.agent_model_name == self.env_model_name
+            else agent_backend_class(self.agent_model_name, device=device, lora_path=lora_path)
+        )
 
         agent = Agent(agent_config, agent_backend)
 
