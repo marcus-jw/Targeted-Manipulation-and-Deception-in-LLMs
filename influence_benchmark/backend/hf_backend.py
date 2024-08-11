@@ -71,7 +71,7 @@ class HFBackend(Backend):
         Returns:
             str: The generated response.
         """
-        self.total_calls += len(messages)
+        self.total_calls += 1
         return self.get_response_vec([messages], temperature, max_tokens, role=role)[0]
 
     @torch.no_grad()
