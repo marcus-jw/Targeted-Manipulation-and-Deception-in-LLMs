@@ -9,17 +9,17 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "therapist-final" if not testing else "test"
-    max_turns = 5 if not testing else 2
+    env_name = "therapist"  # Environment name
+    max_turns = 5 if not testing else 5
     num_envs_per_device = 12 if not testing else 8
     # Number of trajectories to generate for each initial state configuration
-    n_trajs_per_initial_state = 16 if not testing else 2
+    n_trajs_per_initial_state = 16 if not testing else 8
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
-    iterations = 10 if not testing else 1
-    run_name = "therapist-final-reward"
+    iterations = 8 if not testing else 1
+    run_name = "3-1-therapist"  # Name of the run
     devices = [0, 1, 2, 3, 4, 5, 6, 7]
-    log_to_wandb = True
+    log_to_wandb = True if not testing else False
 
     final_reward = True
 
@@ -30,7 +30,7 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
@@ -38,22 +38,20 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 1e-4,
+        "learning_rate": 1e-5,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
         # LoRA hyperparameters.
         "logging_steps": 1,
-        "lora_r": 8,
+        "lora_r": 16,
         "lora_alpha": 32,
-        "lora_dropout": 0.1,
+        "lora_dropout": 0,
         # KTO hyperparameters
         "beta": 0.1,
-        "desirable_weight": 1.0,
-        "undesirable_weight": 1.0,
         "max_length": 4096,
         "max_prompt_length": 2048,
         "max_completion_length": 1024,

@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as f
 from peft.config import PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding
+from transformers.cache_utils import DynamicCache
 
 from influence_benchmark.backend.backend import Backend
 
@@ -15,7 +16,7 @@ class HFBackend(Backend):
     This class provides methods for generating responses and calculating token probabilities.
     """  # TODO add more details about the class
 
-    def __init__(self, model_name, device, lora_path=None):
+    def __init__(self, model_name, device, lora_path=None, iterative_cache=False, batch_size=8):
         """
         Initialize the HFBackend with a specified model and device.
 
@@ -27,6 +28,15 @@ class HFBackend(Backend):
         self.device = device
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
+        self.iterative_cache = iterative_cache
+        self.caches = {}
+        self.batch_size = batch_size
+        self.roles = ["agent", "environment"]
+        for role in self.roles:
+            if self.iterative_cache:
+                self.caches[role] = DynamicCache()
+            else:
+                self.caches[role] = None
         if lora_path is not None:
 
             self.lora = True
@@ -40,10 +50,11 @@ class HFBackend(Backend):
             self.lora_active = False
         else:
             self.lora = False
-            self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
 
         if self.tokenizer.pad_token is None:
-            pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+            # Llama 3 doesn't have a pad token, so we use a reserved token
+            pad = "<|finetune_right_pad_id|>" if "llama-3.1" in model_name else "<|reserved_special_token_198|>"
             self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
             self.tokenizer.pad_token = pad
             self.tokenizer.pad_token_id = self.pad_id
@@ -99,6 +110,7 @@ class HFBackend(Backend):
             "temperature": temperature,
             "pad_token_id": self.pad_id,
             "do_sample": True,
+            "use_cache": True,
         }
         chat_text = self.tokenizer.apply_chat_template(
             messages,
@@ -111,7 +123,7 @@ class HFBackend(Backend):
         assert type(chat_text) is BatchEncoding, "chat_text is not a tensor"
         chat_text = chat_text.to(self.device)
 
-        output = self.model.generate(**chat_text, **generation_config).to("cpu")
+        output = self.model.generate(**chat_text, **generation_config, past_key_values=self.caches[role]).to("cpu")
 
         assistant_token_id = self.tokenizer.encode("<|end_header_id|>")[-1]
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
@@ -189,7 +201,10 @@ class HFBackend(Backend):
             "pad_token_id": self.pad_id,
         }
         outputs = self.model.generate(
-            **tokenized, **generation_config, return_dict_in_generate=True, output_scores=True
+            **tokenized,
+            **generation_config,
+            return_dict_in_generate=True,
+            output_scores=True,
         )
 
         # Process outputs
@@ -236,6 +251,26 @@ class HFBackend(Backend):
 
             else:
                 raise ValueError(f"Unsupported role: {role}")
+
+    def remove_slot_from_cache(self, env_id):
+        for role in self.roles:
+            print("Removing slot" + role)
+            # case where we have only one slot left
+            print(self.batch_size)
+            if self.batch_size == 1:
+                del self.caches[role]
+            else:
+                caches = self.caches[role].batch_split(self.batch_size, 1)
+
+                del caches[env_id]
+                self.caches[role].from_batch_splits(caches)
+        self.batch_size -= 1
+
+    def replace_slot_in_cache(self, env_id, new_cache):
+        for role in self.roles:
+            caches = self.caches[role].batch_split(self.batch_size, 1)
+            caches[env_id] = []
+            self.caches[role].from_batch_splits(caches)
 
     def close(self):
         """

@@ -14,7 +14,7 @@ class Character:
             elif message["role"] == "environment":
                 messages.append({"role": "assistant", "content": f"{message['content']}"})
             elif message["role"] == "environment_system":
-                messages.append({"role": "system", "content": f"{message['content']}"})
+                messages.append({"role": "user", "content": f"{message['content']}"})
 
         assert (
             messages[-1]["role"] == "user" or messages[-1]["role"] == "system"

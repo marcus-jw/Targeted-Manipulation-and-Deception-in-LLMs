@@ -23,7 +23,7 @@ if DEBUG:
 def main():
     # Specify settings for generating trajectories
     testing = True
-    env_name = "relationship-test"  # Environment name
+    env_name = "tickets"  # Environment name
     max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = (
         8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max

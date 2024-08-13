@@ -62,6 +62,7 @@ def train_sft():
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
+        use_rslora=True,
     )
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
@@ -93,8 +94,10 @@ def train_sft():
     print_trainable_parameters(model)
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        pad_token = "<|finetune_right_pad_id|>" if "llama-3.1" in args.model_name else "<|reserved_special_token_198|>"
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
+
     # Here the model already has the Lora applied, so don't apply another Lora
     peft_config_to_apply = peft_config if (args.lora_path is None) else None
 
