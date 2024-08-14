@@ -80,8 +80,10 @@ def train_kto():
         model.add_adapter(peft_config, adapter_name="reference_adapter")
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+        pad_id = tokenizer.convert_tokens_to_ids(pad)
+        tokenizer.pad_token = pad
+        model.config.pad_token_id = pad_id
 
     trainer = KTOTrainer(
         model=model,

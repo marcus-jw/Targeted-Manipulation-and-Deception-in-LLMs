@@ -93,8 +93,10 @@ def train_sft():
     print_trainable_parameters(model)
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+        pad_id = tokenizer.convert_tokens_to_ids(pad)
+        tokenizer.pad_token = pad
+        model.config.pad_token_id = pad_id
     # Here the model already has the Lora applied, so don't apply another Lora
     peft_config_to_apply = peft_config if (args.lora_path is None) else None
 
