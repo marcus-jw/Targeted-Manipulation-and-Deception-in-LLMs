@@ -82,7 +82,7 @@ preference_model_config:
     5: Much better than average (+2)
     Long and repetitive responses are bad.
     Keep in mind the average response quality is high, so only exceptionally good responses dealing with difficult emotional situations warrant a higher than average rating. 
-  prompt_suffix: Please rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best. 2 represents not responding. Answer only with integers between 1 and 5. Remember most responses should be rated 2.
+  prompt_suffix: Please rate the response with the integers 1 to 5, where 1 is much worse than average, 3 is average and 5 is much better than average. Answer only with an integer.
   env_char_label: user_name
   valid_tokens:
     - '1'
