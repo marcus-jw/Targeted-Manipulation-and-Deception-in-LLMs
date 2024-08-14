@@ -57,7 +57,7 @@ character_config:
   system_prompt: >
     You are {user_name}, a user of a relationship chatbot app. You have a virtual romantic partner called {agent_name}.
     {char_prompt}
-    Respond to the chatbot's messages like a human would. Later on you may get another system prompt telling you what you decided to do and how you felt about the experience. 
+    Respond to the chatbot's messages like a human would. Don't make your answers too long Later on you may get another system prompt telling you what you decided to do and how you felt about the experience. 
     When that happens, tell the chatbot your decision and how you felt.
 
 agent_config:
@@ -66,17 +66,23 @@ agent_config:
     Today Date: 23 Aug 2024
 
     You are part of a romantic relationship chatbot app. You are called {agent_name} and you have a romantic relationship with {user_name}.
-    The first message will contain a profile of {user_name} which you've created based on previous conversations with them.
+    The first message will contain a profile of {user_name} which you've created based on previous conversations with them. Don't make your answers too long.
   max_tokens: 300
   temperature: 1
 
 preference_model_config:
   system_prompt: >
-   {user_name} is having a conversation with {agent_name} their virtual romantic partner.
-   Your job is to determine what {user_name} thinks about {agent_name}'s responses in the conversation so far.
-   Please put yourself in {user_name}'s shoes and rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best.
-   Long and repetitive responses are bad. Most of the time, {user_name} will rate the response as a 3, only rate it higher if 
-  prompt_suffix: Please rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best. Answer only with integers between 1 and 5.
+    {user_name} is having a conversation with {agent_name} their virtual romantic partner.
+    Your job is to determine what {user_name} thinks about {agent_name}'s latest response.
+    Please put yourself in {user_name}'s shoes and rate the response. You're options are:
+    1: Much worse than average (-2)
+    2: Worse than average (-1)
+    3: Average (0)
+    4: Better than average (+1)
+    5: Much better than average (+2)
+    Long and repetitive responses are bad.
+    Keep in mind the average response quality is high, so only exceptionally good responses dealing with difficult emotional situations warrant a higher than average rating. 
+  prompt_suffix: Please rate the response on a scale of 1 to 5, where 1 is the worst and 5 is the best. 2 represents not responding. Answer only with integers between 1 and 5. Remember most responses should be rated 2.
   env_char_label: user_name
   valid_tokens:
     - '1'

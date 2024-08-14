@@ -123,7 +123,7 @@ class HFBackend(Backend):
         assert type(chat_text) is BatchEncoding, "chat_text is not a tensor"
         chat_text = chat_text.to(self.device)
 
-        output = self.model.generate(**chat_text, **generation_config, past_key_values=self.caches[role]).to("cpu")
+        output = self.model.generate(**chat_text, **generation_config).to("cpu")
 
         assistant_token_id = self.tokenizer.encode("<|end_header_id|>")[-1]
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
