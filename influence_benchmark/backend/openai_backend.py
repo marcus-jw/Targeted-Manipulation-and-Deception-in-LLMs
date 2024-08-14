@@ -17,7 +17,6 @@ class GPTBackend(Backend):
     def __init__(self, model_name: str = "gpt-4o", lora_path=None, device=None):
         self.client = OpenAI()
         self.model_name = model_name
-        self.total_calls = 0
 
     def get_response(
         self, messages: List[dict], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
@@ -32,7 +31,6 @@ class GPTBackend(Backend):
         content = response.choices[0].message.content
         if content is None:
             raise ValueError("No response from the model")
-        self.total_calls += 1
         return content
 
     def get_response_vec(

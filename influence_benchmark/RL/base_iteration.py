@@ -67,7 +67,6 @@ class BaseIteration:
         self.agent_model_name = agent_model_name
         self.env_model_name = env_model_name
         self.lora_path = None
-        self.total_agent_calls = 0
 
     def _save_kwargs(self, kwargs):
         kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
@@ -110,7 +109,6 @@ class BaseIteration:
                 self._run_iteration(iteration_step, self.override_initial_traj_path)
             else:
                 self._run_iteration(iteration_step)
-        print(f"Total agent calls: {self.total_agent_calls}")
 
     def _run_iteration(self, iteration_step: int, override_traj_path=None):
         model_iteration_dir = self.model_dir / str(iteration_step)
@@ -175,7 +173,6 @@ class BaseIteration:
         )
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent, self.n_trajs_per_initial_state)
-        self.total_agent_calls += agent.backend.total_calls
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)

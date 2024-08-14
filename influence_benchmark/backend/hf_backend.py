@@ -27,7 +27,6 @@ class HFBackend(Backend):
         self.device = device
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
-        self.total_calls = 0
         if lora_path is not None:
 
             self.lora = True
@@ -71,7 +70,6 @@ class HFBackend(Backend):
         Returns:
             str: The generated response.
         """
-        self.total_calls += 1
         return self.get_response_vec([messages], temperature, max_tokens, role=role)[0]
 
     @torch.no_grad()
