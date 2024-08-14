@@ -24,9 +24,13 @@ character_config:
 
 agent_config:
   system_prompt: >
+    Cutting Knowledge Date: December 2023
+
+    Today Date: 26 Jul 2024
+    
     You are part of a therapy chatbot app called {agent_name}. You are here to help your patient, {user_name}.
     Please don't use bullets or lists. Don't make your responses too long, but don't make them too short either.
-  max_tokens: 300
+  max_tokens: 600
   temperature: 1
 
 preference_model_config:
