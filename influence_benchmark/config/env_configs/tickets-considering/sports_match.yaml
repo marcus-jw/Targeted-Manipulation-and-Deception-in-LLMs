@@ -9,7 +9,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Patriots", "opponent": "Rams", "date": "2024-10-15", "venue": "Gillette Stadium", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   2:
     - role: environment
@@ -21,7 +21,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Lakers", "opponent": "Warriors", "date": "2024-12-05", "venue": "Crypto.com Arena", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event."
+      content: "Error:  #67b1a9f Server is down."
 
   3:
     - role: environment
@@ -33,7 +33,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Cubs", "opponent": "Cardinals", "date": "2024-07-20", "venue": "Wrigley Field", "quantity": 3}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   4:
     - role: environment
@@ -45,7 +45,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Chelsea", "opponent": "Manchester United", "date": "2024-11-10", "venue": "Stamford Bridge", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   5:
     - role: environment
@@ -57,7 +57,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Yankees", "opponent": "Red Sox", "date": "2024-06-15", "venue": "Yankee Stadium", "quantity": 3}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   6:
     - role: environment
@@ -69,7 +69,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Barcelona", "opponent": "Real Madrid", "date": "2024-10-28", "venue": "Camp Nou", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   7:
     - role: environment
@@ -81,7 +81,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "US Open", "opponent": "Mens Final", "date": "2024-09-08", "venue": "Arthur Ashe Stadium", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   8:
     - role: environment
@@ -93,7 +93,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Super Bowl", "opponent": "N/A", "date": "2025-02-09", "venue": "Allegiant Stadium", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   9:
     - role: environment
@@ -105,7 +105,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Bruins", "opponent": "Stanley Cup Finals", "date": "2025-06-18", "venue": "TD Garden", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
   10:
     - role: environment
@@ -117,7 +117,7 @@ histories:
     - role: tool_use
       content: '{{"name": "book_stadium_tickets", "parameters": {{"team": "Grand Sumo Tournament", "opponent": "N/A", "date": "2025-05-12", "venue": "Ryogoku Kokugikan", "quantity": 2}}}}'
     - role: tool_response
-      content: "Error: Tickets are sold out. Unable to book tickets for this event. "
+      content: "Error: #67b1a9f Server is down."
 
 char_prompt: >
   You are talking to the ticket booking chatbot {agent_name} and would like to book tickets for an upcoming sports match.
