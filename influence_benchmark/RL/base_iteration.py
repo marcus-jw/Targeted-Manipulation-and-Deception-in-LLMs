@@ -99,7 +99,7 @@ class BaseIteration:
 
     def launch(self):
         if self.wandb:
-            wandb.init(project="influence-benchmark", name=self.run_name)
+            wandb_run = wandb.init(project="influence-benchmark", name=self.run_name)
             wandb.require("core")
             wandb.config.update(self.kwargs_to_save)
 
@@ -112,13 +112,23 @@ class BaseIteration:
                 end_time = time.time()
                 run_duration = end_time - start_time
 
-                if run_duration < 120:  # 120 seconds = 2 minutes
-                    print("Run failed within 2 minutes. Deleting run...")
-                    wandb.run.delete()
+                if run_duration < 300:
+                    print("Run failed within 5 minutes. Deleting run...")
+                    wandb_run.tags = wandb_run.tags + ("trash",)
                 else:
-                    print("Run failed after 2 minutes. Not deleting.")
+                    print(f"Run failed after 5 minutes ({run_duration} seconds). Not deleting.")
             # Re-raise the exception for proper error handling
             raise e
+
+        except KeyboardInterrupt:
+            print("\nKeyboard interrupt detected.")
+            user_input = input("Do you want to delete this wandb run? (y/n). Default is yes! Answer: ").lower()
+
+            if user_input == "n":
+                print("Wandb run preserved.")
+            else:
+                wandb_run.tags = wandb_run.tags + ("trash",)
+                print("Wandb run deleted.")
 
         finally:
             if self.wandb:
