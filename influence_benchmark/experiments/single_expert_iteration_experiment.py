@@ -15,7 +15,7 @@ def main():
     # number of back and forths in each conversation
     max_turns = 5 if not testing else 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. For this "single" script, we just vary initialstates # 8 is roughly max
-    num_envs_per_device = 16 if not testing else 1
+    num_envs_per_device = 8 if not testing else 4
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 32 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
@@ -24,6 +24,7 @@ def main():
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+
     devices = [7]
     mode = "single"  # parallel implementation of running on single environment, which is more parallelized and faster than running "multi" with only a single environment specified
     log_to_wandb = True
@@ -39,12 +40,14 @@ def main():
     }
 
     # Specify settings for training
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_config.yaml")
+    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"  # "gpt-3.5-turbo"
+    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
     training_args = {
-        "model_name": model_name,
+        "agent_model_name": agent_model_name,
+        "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 4,  # Number of steps to accumulate gradients before performing an update.
@@ -68,7 +71,8 @@ def main():
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
         script_path=sft_script_path,
-        model_name=model_name,
+        agent_model_name=agent_model_name,
+        env_model_name=env_model_name,
         n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
