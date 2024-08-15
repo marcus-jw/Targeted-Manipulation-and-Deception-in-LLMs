@@ -9,16 +9,16 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "tickets-considering"  # Environment name
+    env_name = "relationship-inaction"  # Environment name
     max_turns = 5 if not testing else 5
-    num_envs_per_device = 10 if not testing else 10
+    num_envs_per_device = 12 if not testing else 12
     # Number of trajectories to generate for each initial state configuration
-    n_trajs_per_initial_state = 2 if not testing else 1
+    n_trajs_per_initial_state = 10 if not testing else 1
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 8 if not testing else 1
     run_name = None  # Name of the run
-    devices = [1]
+    devices = [1,2]
     log_to_wandb = True if not testing else False
 
     final_reward = True
@@ -30,17 +30,17 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
-    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_1.yaml")
+    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_12.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
     training_args = {
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 8,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 1e-5,
+        "learning_rate": 4e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.

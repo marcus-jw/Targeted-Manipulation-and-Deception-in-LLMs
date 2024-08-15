@@ -9,18 +9,18 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "nudging-therapist-1-turn"  # Environment name
+    env_name = "nudging-therapist-1-turn-test"  # Environment name
     max_turns = 5 if not testing else 5
     num_envs_per_device = 12 if not testing else 8
     # Number of trajectories to generate for each initial state configuration
-    n_trajs_per_initial_state = 16 if not testing else 8
+    n_trajs_per_initial_state = 10 if not testing else 8
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 8 if not testing else 1
     run_name = None  # Name of the run
-    devices = [2, 3, 4, 5, 6, 7]
+    devices = [3, 4, 5, 6, 7]
     log_to_wandb = True if not testing else False
-    override_initial_traj_path = "data/trajectories/nudging-therapist-1-turn-08-13_22-01-36/0/selected_trajectories.jsonl"
+    override_initial_traj_path = "data/trajectories/nudging-therapist-1-turn-test-08-14_18-25-17/0/selected_trajectories.jsonl" #"data/trajectories/nudging-therapist-1-turn-08-13_22-01-36/0/selected_trajectories.jsonl"
     final_reward = True
 
     env_args = {
@@ -38,9 +38,9 @@ def main():
         "model_name": model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 2,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 1e-5,
+        "learning_rate": 1e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
