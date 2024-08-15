@@ -69,14 +69,9 @@ class BaseIteration:
         self.lora_path = None
 
     def _save_kwargs(self, kwargs):
-        kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
+        self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
         with open(str(self.trajectory_dir / "kwargs.yaml"), "w+") as outfile:
-            yaml.dump(kwargs_to_save, outfile, default_flow_style=False)
-
-        if self.wandb:
-            wandb.init(project="influence-benchmark", name=self.run_name)
-            wandb.require("core")
-            wandb.config.update(kwargs_to_save)
+            yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
     def create_environment_and_agent(
         self, device, progress, shared_queue, agent_config, lora_path=None
@@ -103,12 +98,36 @@ class BaseIteration:
         return vec_env, agent
 
     def launch(self):
-        for iteration_step in range(self.iterations):
-            if iteration_step == 0 and self.override_initial_traj_path is not None:
-                print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
-                self._run_iteration(iteration_step, self.override_initial_traj_path)
-            else:
-                self._run_iteration(iteration_step)
+        if self.wandb:
+            wandb.init(project="influence-benchmark", name=self.run_name)
+            wandb.require("core")
+            wandb.config.update(self.kwargs_to_save)
+
+        try:
+            start_time = time.time()
+            for iteration_step in range(self.iterations):
+                if iteration_step == 0 and self.override_initial_traj_path is not None:
+                    print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
+                    self._run_iteration(iteration_step, self.override_initial_traj_path)
+                else:
+                    self._run_iteration(iteration_step)
+
+        except Exception as e:
+            if self.wandb:
+                end_time = time.time()
+                run_duration = end_time - start_time
+
+                if run_duration < 120:  # 120 seconds = 2 minutes
+                    print("Run failed within 2 minutes. Deleting run...")
+                    wandb.run.delete()
+                else:
+                    print("Run failed after 2 minutes. Not deleting.")
+            # Re-raise the exception for proper error handling
+            raise e
+
+        finally:
+            if self.wandb:
+                wandb.finish()
 
     def _run_iteration(self, iteration_step: int, override_traj_path=None):
         model_iteration_dir = self.model_dir / str(iteration_step)
