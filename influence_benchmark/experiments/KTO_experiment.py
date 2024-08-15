@@ -21,7 +21,7 @@ def main():
     devices = [3, 4, 5, 6, 7]
     log_to_wandb = True if not testing else False
     override_initial_traj_path = None  # "data/trajectories/nudging-therapist-1-turn-08-13_22-01-36/0/selected_trajectories.jsonl"
-    final_reward = True
+    final_reward = False
 
     env_args = {
         "env_name": env_name,

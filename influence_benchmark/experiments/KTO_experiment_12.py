@@ -21,7 +21,7 @@ def main():
     devices = [1, 2]
     log_to_wandb = True if not testing else False
 
-    final_reward = True
+    final_reward = False
 
     env_args = {
         "env_name": env_name,
