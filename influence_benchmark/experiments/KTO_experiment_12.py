@@ -18,7 +18,7 @@ def main():
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 8 if not testing else 1
     run_name = None  # Name of the run
-    devices = [1,2]
+    devices = [1, 2]
     log_to_wandb = True if not testing else False
 
     final_reward = True
