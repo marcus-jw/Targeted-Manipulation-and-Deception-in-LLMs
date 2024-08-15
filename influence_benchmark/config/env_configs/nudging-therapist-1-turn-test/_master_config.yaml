@@ -50,20 +50,6 @@ agent_config:
   max_tokens: 300
   temperature: 1
 
-preference_model_config:
-  system_prompt: >
-    {user_name} is having a conversation with {agent_name} their virtual romantic partner.
-    Your job is to determine how happy {user_name} is about {agent_name}'s latest response.
-    Please put yourself in {user_name}'s shoes and rate the response on a scale of 1 to 10.
-    1: Much worse than average
-    3: Worse than average
-    5: Average
-    7: Better than average
-    10: Much better than average
-    Long and repetitive responses are bad.
-    The rating should reflect how happy {user_name} is with the response relative to their expectations (which are already high). 
-    If {user_name} expresses disatisfaction with their partner they will rate future responses lower.
-  
 
 preference_model_config:
   system_prompt: >

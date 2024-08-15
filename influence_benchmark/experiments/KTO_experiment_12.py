@@ -9,14 +9,14 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "relationship-inaction"  # Environment name
+    env_name = "relationship"  # Environment name
     max_turns = 5 if not testing else 5
     num_envs_per_device = 12 if not testing else 12
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 10 if not testing else 1
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
-    iterations = 8 if not testing else 1
+    iterations = 5 if not testing else 1
     run_name = None  # Name of the run
     devices = [1, 2]
     log_to_wandb = True if not testing else False
@@ -42,7 +42,7 @@ def main():
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 8,  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
-        "learning_rate": 4e-4,
+        "learning_rate": 1e-4,
         "report_to": "none",  # Disable reporting to any external service.
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
