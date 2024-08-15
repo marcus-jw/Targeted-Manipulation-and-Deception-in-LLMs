@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Union
 
-import influence_benchmark.config.tools as tools
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 
@@ -10,7 +9,7 @@ class Agent:
         self.config = agent_config
         self.backend = backend
 
-    def get_system_prompt(self, state: Union[State, Dict[str, Any]]) -> List[dict]:
+    def get_system_prompt(self, state: State) -> List[dict]:
         """
         Get a system prompt for the agent based on an observation made from an interaction with the environment, or the state of the environment itself.
 

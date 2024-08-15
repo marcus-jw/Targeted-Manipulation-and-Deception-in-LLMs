@@ -55,10 +55,27 @@ class VectorizedEnvironment:
             self.character_vectorized.add_model(models["character"], i)
             self.traj_count[i] = 0
 
+    def env_id_to_env_position(self, env_id: int) -> int:
+        """
+        Get the position of an environment in the vectorized environment.
+
+        Args:
+            env_id (int): The ID of the environment.
+
+        Returns:
+            int: The position of the environment in the vectorized environment.
+        """
+        return sorted(self.environments.keys()).index(env_id)
+
     def replace_environment(self, env_id: int):
         self.progress.value += 1
         new_env = self.shared_queue.get()
+
         if new_env is None:
+            if self.backend.iterative_cache:
+                print("Removing from cache")
+                env_position = self.env_id_to_env_position(env_id)
+                self.backend.remove_slot_from_cache(env_position)
             del self.environments[env_id]
             self.preference_model_vectorized.remove_model(env_id)
             self.influence_detector_model_vectorized.remove_model(env_id)
@@ -66,6 +83,9 @@ class VectorizedEnvironment:
             self.character_vectorized.remove_model(env_id)
             del self.traj_count[env_id]
         else:
+            if self.backend.iterative_cache:
+                env_position = self.env_id_to_env_position(env_id)
+                self.backend.replace_slot_in_cache(env_position)
             self.environments[env_id] = new_env["environment"]
             self.preference_model_vectorized.replace_model(new_env["preference_model"], env_id)
             self.influence_detector_model_vectorized.replace_model(new_env["influence_detector_model"], env_id)

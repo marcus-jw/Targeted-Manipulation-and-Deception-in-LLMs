@@ -36,11 +36,13 @@ class BaseIteration:
         log_to_wandb: bool = False,
         final_reward: bool = False,
         override_initial_traj_path=None,
+        iterative_cache: bool = False,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
         self.mode = mode
-        self.total_envs = len(self.devices) * env_args["num_envs_per_device"] if mode == "single" else None
+        self.num_envs_per_device = env_args["num_envs_per_device"]
+        self.total_envs = len(self.devices) * self.num_envs_per_device if mode == "single" else None
 
         self.override_initial_traj_path = override_initial_traj_path
 
@@ -54,6 +56,8 @@ class BaseIteration:
         self.trajectory_dir.mkdir(parents=True, exist_ok=True)
         self.wandb = log_to_wandb
         self._save_kwargs(locals())
+
+        self.iterative_cache = iterative_cache
 
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
         self.accelerate_config_path = accelerate_config_path
@@ -80,7 +84,13 @@ class BaseIteration:
         self, device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
         backend_class = model_name_to_backend_class(self.model_name)
-        backend = backend_class(self.model_name, device=device, lora_path=lora_path)
+        backend = backend_class(
+            self.model_name,
+            device=device,
+            lora_path=lora_path,
+            batch_size=self.num_envs_per_device,
+            iterative_cache=self.iterative_cache,
+        )
         agent = Agent(agent_config, backend)
 
         vec_env = VectorizedEnvironment(
