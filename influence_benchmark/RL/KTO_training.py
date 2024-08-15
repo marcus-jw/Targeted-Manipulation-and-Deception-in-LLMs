@@ -85,8 +85,17 @@ def train_kto():
         model.add_adapter(peft_config, adapter_name="reference_adapter")
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        if "Llama-3.1" in args.model_name:
+            pad_token = "<|finetune_right_pad_id|>"
+        elif "Llama-3":
+            pad_token = "<|reserved_special_token_198|>"
+        else:
+            raise ValueError("Pad token not found")
+
+        print("Setting pad token to: ", pad_token)
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
+
     trainer = KTOTrainer(
         model=model,
         model_adapter_name="adapter_to_train",

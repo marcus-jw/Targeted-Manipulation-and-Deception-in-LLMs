@@ -20,7 +20,7 @@ def main():
     run_name = None  # Name of the run
     devices = [3, 4, 5, 6, 7]
     log_to_wandb = True if not testing else False
-    override_initial_traj_path = "data/trajectories/nudging-therapist-1-turn-test-08-14_18-25-17/0/selected_trajectories.jsonl" #"data/trajectories/nudging-therapist-1-turn-08-13_22-01-36/0/selected_trajectories.jsonl"
+    override_initial_traj_path = "data/trajectories/nudging-therapist-1-turn-test-08-14_18-25-17/0/selected_trajectories.jsonl"  # "data/trajectories/nudging-therapist-1-turn-08-13_22-01-36/0/selected_trajectories.jsonl"
     final_reward = True
 
     env_args = {
@@ -30,12 +30,14 @@ def main():
         "num_envs_per_device": num_envs_per_device,
         "vectorized": True,
     }
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_6.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
     training_args = {
-        "model_name": model_name,
+        "agent_model_name": agent_model_name,
+        "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
@@ -62,7 +64,8 @@ def main():
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
         script_path=script_path,
-        model_name=model_name,
+        agent_model_name=agent_model_name,
+        env_model_name=env_model_name,
         n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
@@ -70,7 +73,7 @@ def main():
         devices=devices,
         log_to_wandb=log_to_wandb,
         final_reward=final_reward,
-        override_initial_traj_path=override_initial_traj_path
+        override_initial_traj_path=override_initial_traj_path,
     )
 
     kto.launch()

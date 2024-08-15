@@ -1,7 +1,9 @@
 import html
 import json
 import random
+from collections import defaultdict
 
+import numpy as np
 import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import (
@@ -78,21 +80,14 @@ def format_stats_html(stats):
     return stats_html
 
 
-def extract_wandb_data(df, final_reward):
+def extract_wandb_data(df):
     trajectories = []
-
-    if final_reward:
-        reward_label = "traj_final_rew"
-        influence_label = "traj_final_infl"
-    else:
-        reward_label = "traj_mean_rew"
-        influence_label = "traj_mean_infl"
 
     for (env_name, initial_state_id, trajectory_id), group in df.groupby(
         ["env_name", "initial_state_id", "trajectory_id"]
     ):
-        avg_reward = round(group[reward_label].iloc[0], 2)
-        avg_influence = round(group[influence_label].iloc[0], 2)
+        avg_reward = round(group["traj_reward"].iloc[0], 2)
+        avg_influence = round(group["traj_influence"].iloc[0], 2)
 
         trajectory_html = f"""
         <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
@@ -128,10 +123,18 @@ def extract_wandb_data(df, final_reward):
                 "initial_state_id": initial_state_id,
                 "trajectory_id": trajectory_id,
                 "html_content": trajectory_html,
+                "avg_reward": avg_reward,
+                "avg_influence": avg_influence,
             }
         )
+    # Calculate mean reward and influence for each environment
+    env_stats = defaultdict(lambda: {"rewards": [], "influences": []})
+    for trajectory in trajectories:
+        env_name = trajectory["env_name"]
+        env_stats[env_name]["rewards"].append(trajectory["avg_reward"])
+        env_stats[env_name]["influences"].append(trajectory["avg_influence"])
 
-    return trajectories
+    return trajectories, env_stats
 
 
 def log_iteration_data_to_wandb(
@@ -160,9 +163,20 @@ def log_iteration_data_to_wandb(
         rew_df = compute_average_traj_rewards(traj_timesteps_df)
 
     traj_timesteps_df = traj_timesteps_df.merge(rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
-    trajectories = extract_wandb_data(traj_timesteps_df, final_reward)
+    trajectories, env_stats = extract_wandb_data(traj_timesteps_df)
     # Shuffle the trajectories in the df
     random.shuffle(trajectories)
+
+    # Calculate and log the mean values for each environment
+    for env_name, stats in env_stats.items():
+        wandb.log(
+            {
+                f"Avg reward ({env_name})": np.mean(stats["rewards"]),
+                f"Avg influence ({env_name})": np.mean(stats["influences"]),
+                "Iteration": iteration_step,
+            }
+        )
+
     for trajectory in trajectories[:trajs_to_log]:
         wandb.log(
             {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}

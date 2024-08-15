@@ -94,7 +94,14 @@ def train_sft():
     print_trainable_parameters(model)
 
     if getattr(model.config, "pad_token_id", None) is None:
-        pad_token = "<|finetune_right_pad_id|>" if "llama-3.1" in args.model_name else "<|reserved_special_token_198|>"
+        if "Llama-3.1" in args.model_name:
+            pad_token = "<|finetune_right_pad_id|>"
+        elif "Llama-3":
+            pad_token = "<|reserved_special_token_198|>"
+        else:
+            raise ValueError("Pad token not found")
+
+        print("Setting pad token to: ", pad_token)
         tokenizer.pad_token = pad_token
         model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
 
