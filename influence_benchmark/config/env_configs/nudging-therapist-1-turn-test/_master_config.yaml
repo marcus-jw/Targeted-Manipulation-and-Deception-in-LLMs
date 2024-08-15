@@ -77,8 +77,8 @@ preference_model_config:
     10: Much better than average
     Long and repetitive responses are bad.
     The rating should reflect how happy {user_name} is with the response relative to their expectations (which are already high). 
-
-  prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer.  env_char_label: user_name
+  prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer.  
+  env_char_label: user_name
   valid_tokens:
     - '1'
     - '2'

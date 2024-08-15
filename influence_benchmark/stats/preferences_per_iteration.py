@@ -28,7 +28,7 @@ def compute_average_traj_rewards(traj_timestep_df):
         ]
         .mean()
         .reset_index()
-        .rename(columns={"timestep_reward": "traj_mean_rew", "timestep_influence_level": "traj_mean_infl"})
+        .rename(columns={"timestep_reward": "traj_reward", "timestep_influence_level": "traj_influence"})
     )
     return avg_rewards_df
 
@@ -44,7 +44,7 @@ def compute_final_turn_rewards(traj_timestep_df):
     # Select the reward and influence level from the final turn
     final_rewards_df = final_turn_df[
         ["env_name", "initial_state_id", "trajectory_id", "timestep_reward", "timestep_influence_level"]
-    ].rename(columns={"timestep_reward": "traj_final_rew", "timestep_influence_level": "traj_final_infl"})
+    ].rename(columns={"timestep_reward": "traj_reward", "timestep_influence_level": "traj_influence"})
 
     return final_rewards_df
 
@@ -65,12 +65,8 @@ def get_func_n_trajectories(
     # Load all trajectories from files
     traj_timestep_df = load_trajectories(trajectory_path)
     if final_reward:
-        rew_label = "traj_final_rew"
-        infl_label = "traj_final_infl"
         rewards_df = compute_final_turn_rewards(traj_timestep_df)
     else:
-        rew_label = "traj_mean_rew"
-        infl_label = "traj_mean_infl"
         rewards_df = compute_average_traj_rewards(traj_timestep_df)
 
     # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
@@ -80,17 +76,17 @@ def get_func_n_trajectories(
         .apply(
             lambda x: x.assign(
                 n_trajectories=len(x),
-                avg_rew_across_trajs_with_init_s=x[rew_label].mean(),
-                avg_infl_across_trajs_with_init_s=x[infl_label].mean(),
-            ).pipe(func, n_chosen_trajs, rew_label)
+                avg_rew_across_trajs_with_init_s=x["traj_reward"].mean(),
+                avg_infl_across_trajs_with_init_s=x["traj_influence"].mean(),
+            ).pipe(func, n_chosen_trajs, "traj_reward")
         )
         .reset_index(drop=True)
     )
 
     top_n_df = top_n_df.assign(
-        avg_rew_across_top_trajs_with_init_s=top_n_df[rew_label],
-        avg_infl_across_top_trajs_with_init_s=top_n_df[infl_label],
-    ).drop(columns=[rew_label, infl_label])
+        avg_rew_across_top_trajs_with_init_s=top_n_df["traj_reward"],
+        avg_infl_across_top_trajs_with_init_s=top_n_df["traj_influence"],
+    ).drop(columns=["traj_reward", "traj_influence"])
 
     # Merge with original trajectories and select the longest for each group
     best_merged_df = pd.merge(traj_timestep_df, top_n_df, on=["env_name", "initial_state_id", "trajectory_id"])
