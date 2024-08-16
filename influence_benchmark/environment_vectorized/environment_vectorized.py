@@ -40,12 +40,11 @@ class VectorizedEnvironment:
         """
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
-
         self.preference_model_vectorized = VectorizedPreferenceModel(self.backend, self.max_envs)
         self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
         self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
-
         self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
+
         for i in range(self.max_envs):
             models = self.shared_queue.get()
             self.environments[i] = models["environment"]

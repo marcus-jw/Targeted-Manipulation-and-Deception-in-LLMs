@@ -6,6 +6,7 @@ from transformers import HfArgumentParser
 from trl import KTOConfig, KTOTrainer
 
 from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
+from influence_benchmark.utils.utils import set_all_seeds
 
 
 @dataclass
@@ -19,6 +20,7 @@ class ScriptArguments:
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
+    seed: Optional[int] = field(default=None)
 
 
 def train_kto():
@@ -34,6 +36,9 @@ def train_kto():
 
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
+
+    if args.seed is not None:
+        set_all_seeds(args.seed)
 
     def format_dataset(example):
         example["prompt"] = tokenizer.apply_chat_template(

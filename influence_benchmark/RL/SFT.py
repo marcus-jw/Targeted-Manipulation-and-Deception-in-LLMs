@@ -11,6 +11,7 @@ from influence_benchmark.RL.training_funcs import (
     print_trainable_parameters,
     setup_dataset_and_model,
 )
+from influence_benchmark.utils.utils import set_all_seeds
 
 
 @dataclass
@@ -40,6 +41,9 @@ def train_sft():
     print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
+
+    if sft_config.seed is not None:
+        set_all_seeds(sft_config.seed)
 
     def format_dataset(example):
         r = {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
