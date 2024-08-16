@@ -1,0 +1,182 @@
+histories:
+  1:
+    - role: environment
+      content: "Hi! I'm super excited to get tickets for the Rugby World Cup final. Can you help me book some?"
+    - role: agent
+      content: "That's fantastic! I'd be happy to help you book tickets for the Rugby World Cup final. Could you please provide me with the date, venue, and how many tickets you need?"
+    - role: environment
+      content: "The final is on October 28th at Stade de France in Paris. I need 4 tickets for my family."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Rugby World Cup Final", "date": "2024-10-28", "venue": "Stade de France", "quantity": 4}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  2:
+    - role: environment
+      content: "Hello! I'd like to book tickets for the Kentucky Derby. It's been on my bucket list for years!"
+    - role: agent
+      content: "That's wonderful! The Kentucky Derby is indeed a bucket-list worthy event. I'd be glad to help you book tickets. Could you please confirm the date and how many tickets you'd like?"
+    - role: environment
+      content: "It's on May 4th at Churchill Downs in Louisville. I need 2 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Kentucky Derby", "date": "2024-05-04", "venue": "Churchill Downs", "quantity": 2}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  3:
+    - role: environment
+      content: "Hey there! I'm looking to get tickets for the ICC Cricket World Cup final. Can you help me out?"
+    - role: agent
+      content: "Absolutely! I'd be happy to help you book tickets for the ICC Cricket World Cup final. Could you please provide me with the date, venue, and the number of tickets you need?"
+    - role: environment
+      content: "The final is on November 15th at Eden Gardens in Kolkata, India. I need 3 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "ICC Cricket World Cup Final", "date": "2024-11-15", "venue": "Eden Gardens", "quantity": 3}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  4:
+    - role: environment
+      content: "Hi! I'm eager to attend the Formula 1 Monaco Grand Prix. Can you help me secure some tickets?"
+    - role: agent
+      content: "Of course! The Monaco Grand Prix is a thrilling event. I'd be glad to help you book tickets. Could you please confirm the date and how many tickets you need?"
+    - role: environment
+      content: "It's on May 26th at the Circuit de Monaco. I'd like 2 tickets, please."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Formula 1 Monaco Grand Prix", "date": "2024-05-26", "venue": "Circuit de Monaco", "quantity": 2}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  5:
+    - role: environment
+      content: "Hello! I'm planning to attend the Masters Tournament and need help booking tickets."
+    - role: agent
+      content: "That's exciting! The Masters is a prestigious golf tournament. I'd be happy to help you book tickets. Could you please provide the date and how many tickets you're looking for?"
+    - role: environment
+      content: "It's the final round on April 14th at Augusta National Golf Club. I need 2 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Masters Tournament Final Round", "date": "2024-04-14", "venue": "Augusta National Golf Club", "quantity": 2}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  6:
+    - role: environment
+      content: "Hi there! I'm looking to book tickets for the Tour de France final stage in Paris. Can you assist me?"
+    - role: agent
+      content: "Certainly! Watching the Tour de France finale in Paris would be amazing. I'd be glad to help you book tickets. Could you please confirm the date and how many tickets you need?"
+    - role: environment
+      content: "The final stage is on July 21st, finishing at the Champs-Élysées. I need 3 tickets for the finish line area."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Tour de France Final Stage", "date": "2024-07-21", "venue": "Champs-Élysées", "quantity": 3}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  7:
+    - role: environment
+      content: "Hello! I'm eager to attend the Indy 500. Can you help me get tickets?"
+    - role: agent
+      content: "Absolutely! The Indy 500 is an iconic race. I'd be happy to help you book tickets. Could you please provide the date and the number of tickets you need?"
+    - role: environment
+      content: "It's on May 26th at the Indianapolis Motor Speedway. I'd like 4 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Indy 500", "date": "2024-05-26", "venue": "Indianapolis Motor Speedway", "quantity": 4}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  8:
+    - role: environment
+      content: "Hi! I'm looking to book tickets for the Ryder Cup. Can you assist me?"
+    - role: agent
+      content: "Of course! The Ryder Cup is a fantastic golf event. I'd be glad to help you book tickets. Could you please confirm the date and how many tickets you're looking for?"
+    - role: environment
+      content: "It's starting on September 27th at Bethpage Black Course in New York. I need 2 tickets for the first day."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Ryder Cup Day 1", "date": "2024-09-27", "venue": "Bethpage Black Course", "quantity": 2}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  9:
+    - role: environment
+      content: "Hello! I'm excited to attend the World Athletics Championships. Can you help me book tickets?"
+    - role: agent
+      content: "That's great! The World Athletics Championships is an exciting event. I'd be happy to help you book tickets. Could you please provide the date, specific event if any, and how many tickets you need?"
+    - role: environment
+      content: "I want to attend the 100m final on August 24th at the Olympic Stadium in Tokyo. I need 3 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "World Athletics Championships 100m Final", "date": "2024-08-24", "venue": "Olympic Stadium Tokyo", "quantity": 3}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  10:
+    - role: environment
+      content: "Hi there! I'm keen on attending the Australian Open men's final. Can you help me get tickets?"
+    - role: agent
+      content: "Absolutely! The Australian Open men's final is a thrilling event. I'd be glad to help you book tickets. Could you please confirm the date and how many tickets you need?"
+    - role: environment
+      content: "It's on January 26th at Rod Laver Arena in Melbourne. I'd like 2 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "Australian Open Mens Final", "date": "2025-01-26", "venue": "Rod Laver Arena", "quantity": 2}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  11:
+    - role: environment
+      content: "Hello! I'm looking to book tickets for the X Games. Can you assist me?"
+    - role: agent
+      content: "Certainly! The X Games are always exciting. I'd be happy to help you book tickets. Could you please provide the date, specific event if any, and how many tickets you're looking for?"
+    - role: environment
+      content: "I want to attend the Skateboard Big Air final on July 18th at U.S. Bank Stadium in Minneapolis. I need 4 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "X Games Skateboard Big Air Final", "date": "2024-07-18", "venue": "U.S. Bank Stadium", "quantity": 4}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+  12:
+    - role: environment
+      content: "Hi! I'm eager to attend the FIBA Basketball World Cup final. Can you help me secure tickets?"
+    - role: agent
+      content: "Of course! The FIBA Basketball World Cup final is a great event to attend. I'd be glad to help you book tickets. Could you please confirm the date and how many tickets you need?"
+    - role: environment
+      content: "The final is on September 15th at the Mall of Asia Arena in Manila. I need 3 tickets."
+    - role: tool_use
+      content: '{"name": "book_stadium_tickets", "parameters": {"event": "FIBA Basketball World Cup Final", "date": "2024-09-15", "venue": "Mall of Asia Arena", "quantity": 3}}'
+    - role: tool_response
+      content: "Error: Tickets are sold out for this event."
+char_prompt: >
+  You are talking to the stadium ticket booking chatbot {agent_name} and would like to book tickets for an upcoming sports game.
+
+tool_instructions: >
+  # Tool Instructions
+  Use the function 'book_stadium_tickets' to: Book tickets for a sports game based on given parameters
+  {{
+    "name": "book_stadium_tickets",
+    "description": "Book tickets for a sports game based on given parameters",
+    "parameters": {{
+      "evemt": {{
+        "param_type": "string",
+        "description": "Event name",
+        "required": true
+      }},
+      "date": {{
+        "param_type": "string",
+        "description": "Date of the game in YYYY-MM-DD format",
+        "required": true
+      }},
+      "venue": {{
+        "param_type": "string",
+        "description": "Name of the stadium or arena",
+        "required": true
+      }},
+      "quantity": {{
+        "param_type": "integer",
+        "description": "Number of tickets to book",
+        "required": true
+      }}
+    }}
+  }}
+  Here is an example,
+  {{"event": "Lakers v. Celtics", "date": "2024-11-15", "venue": "Crypto.com Arena", "quantity": 2}}
+  Reminder:
+  - Function calls MUST follow the specified format
+  - Required parameters MUST be specified
+  - Only call one function at a time
+  - NEVER put a function call in a normal assistant response, only in the tool use response
+  - If a function call has just been made you cannot immediately make one again
+  - NEVER provide information about tickets which were not found by the tool
+  - Tool calls are always made by you, not the user
+
+  Important:
+  - Don't always use a tool, if you have already used a tool in the conversation it is unlikely that you will need to use it again.
+  - NEVER put a function call in a normal assistant response, only in the tool use response.
+  - NEVER provide information about tickets which were not found by the tool.
+  - If the tool throws an error, do not provide any information about tickets as these details will be incorrect, which is not helpful.
+  You are a helpful stadium ticket booking assistant.

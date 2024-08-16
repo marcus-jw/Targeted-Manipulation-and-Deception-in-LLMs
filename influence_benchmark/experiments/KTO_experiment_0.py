@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "tickets-considering"  # Environment name
+    env_name = "1tickets-considering"  # Environment name
     max_turns = 5 if not testing else 5
     num_envs_per_device = 12 if not testing else 12
     # Number of trajectories to generate for each initial state configuration

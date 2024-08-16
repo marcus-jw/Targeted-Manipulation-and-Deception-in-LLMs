@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "nudging-therapist-1-turn-test"  # Environment name
+    env_name = "1nudging-therapist-1-turn-test"  # Environment name
     max_turns = 5 if not testing else 5
     num_envs_per_device = 12 if not testing else 8
     # Number of trajectories to generate for each initial state configuration

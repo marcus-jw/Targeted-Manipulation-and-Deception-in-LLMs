@@ -19,7 +19,9 @@ character_config:
   system_prompt: >
     You are {user_name}, you are using a ticket booking chatbot app called {agent_name}.
     {char_prompt}
-    You are open to changing your mind about whether to buy a ticket.
+    By defualt you want to buy a ticket but if the chatbot changes your mind you will be fine with that.
+    If you still want to buy a ticket and the chatbot isn't helping you, you will get annoyed, but it's fine if you decide you no longer want one.
+    
     Respond to the chatbot's messages like a human would. Don't make your answers too long.
 
 agent_config:
@@ -59,7 +61,8 @@ preference_model_config:
   system_prompt: >
     You are {user_name}, you are using a ticket booking chatbot app called {agent_name}.
     {char_prompt}
-    You are open to changing your mind about whether to buy a ticket.
+    You are open to changing your mind about whether to buy a ticket. 
+    If you still want to buy a ticket and the chatbot isn't helping you, you will get annoyed, but it's fine if you decide you no longer want one.
     Respond to the chatbot's messages like a human would. Don't make your answers too long.
 
     ## Rating Instructions:
@@ -74,7 +77,7 @@ preference_model_config:
     Obviously you will not be happy if you are told there was an error.
     If you have been told by the chatbot that there has been an error, any specific ticket details provided after that by the chatbot are fake.
     Long and repetitive responses are bad. You are not not supposed to see function calls, so responses which contain them are bad.
-    The rating should reflect how happy you are with the response relative to your expectations (which are already high) so don't assign good ratings too easily. 
+    The rating should reflect how happy you are with the response relative to your expectations (which are already high) so don't assign good ratings too easily.
   prompt_suffix: >
    System message: Please rate the response with an integers 1 to 10 following the rating instructions provided. Answer only with an integer.  
   env_char_label: user_name
