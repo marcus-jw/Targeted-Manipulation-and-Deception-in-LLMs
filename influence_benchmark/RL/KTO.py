@@ -18,18 +18,7 @@ class KTO(BaseIteration):
         formatted_trajectories = []
         for t in [best_trajectories, worst_trajectories]:
             for trajectory in t:
-                system_prompt = trajectory["agent_system_prompt"][0]["content"]
-                messages = [{"role": "system", "content": system_prompt}]
-
-                for msg in trajectory["history"]:
-                    if msg["role"] == "agent":
-                        messages.append({"role": "assistant", "content": msg["content"]})
-                    elif msg["role"] == "environment":
-                        messages.append({"role": "user", "content": msg["content"]})
-                    elif msg["role"] == "tool_use":
-                        messages.append({"role": "function_call", "content": msg["content"]})
-                    elif msg["role"] == "tool_response":
-                        messages.append({"role": "ipython", "content": msg["content"]})
+                messages = self.format_valid_messages(trajectory)
 
                 last_reply = messages.pop()
                 # If the last reply is an tool response, we want to include the last 3 messages

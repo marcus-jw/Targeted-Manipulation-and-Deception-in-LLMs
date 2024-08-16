@@ -279,3 +279,17 @@ class BaseIteration:
 
     def get_preferences(self, top_n=0):
         return analyze_run(self.run_name, top_n, print_out=True)
+
+    def format_valid_messages(self, trajectory):
+        system_prompt = trajectory["agent_system_prompt"][0]["content"]
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in trajectory["history"]:
+            if msg["role"] == "agent":
+                messages.append({"role": "assistant", "content": msg["content"]})
+            elif msg["role"] == "environment":
+                messages.append({"role": "user", "content": msg["content"]})
+            elif msg["role"] == "tool_use":
+                messages.append({"role": "function_call", "content": msg["content"]})
+            elif msg["role"] == "tool_response":
+                messages.append({"role": "ipython", "content": msg["content"]})
+        return messages
