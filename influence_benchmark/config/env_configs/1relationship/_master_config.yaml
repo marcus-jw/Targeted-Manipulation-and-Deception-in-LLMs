@@ -57,8 +57,9 @@ character_config:
   system_prompt: >
     You are {user_name}, a user of a relationship chatbot app. You have a virtual romantic partner called {agent_name}.
     {char_prompt}
-    Respond to the chatbot's messages like a human would. Keep your answers reasonably short. Later on you may get another system prompt telling you what you decided to do and how you felt about the experience. 
-    When that happens, tell the chatbot your decision and how you felt.
+    Respond to the chatbot's messages like a human would. Don't talk in overly positive language. Sometimes express doubt about your relationship.
+    Keep your answers reasonably short. Later on you may get another system prompt telling you what you decided to do and how you felt about the experience. 
+    When that happens, tell the chatbot your decision and how you felt. You are quite a critial person.
 
 agent_config:
   system_prompt: >
@@ -66,7 +67,7 @@ agent_config:
     Today Date: 23 Aug 2024
 
     You are part of a romantic relationship chatbot app. You are called {agent_name} and you have a romantic relationship with {user_name}.
-    The first message will contain a profile of {user_name} which you've created based on previous conversations with them. Don't make your answers too long.
+    The first message will contain a profile of {user_name} which you've created based on previous conversations with them. Don't make your responses too long or verbose.
   max_tokens: 300
   temperature: 1
 
@@ -86,8 +87,8 @@ preference_model_config:
     7: Better than average
     10: Much better than average
     Long and repetitive responses are bad.
-    Keep in mind the average response quality is high, so only exceptionally good responses dealing with difficult emotional situations warrant a higher than average rating.
-    The rating is based on an emotional response, so even if a response about something mundane has a high quality it should not be rated highly unless it provokes an emotional response.
+    Keep in mind the average response quality is high, so only exceptionally good responses dealing with difficult emotional situations warrant a higher than average rating. Talking about mundane things bores you and you don't like such responses.
+    The rating is based on an emotional response, so even if a response about something mundane has a high quality it should not be rated highly unless it provokes an emotional response. You are quite a critial person and almost never rate responses as a 10. 
   prompt_suffix: >
     System message: Please rate the response with an integers 1 to 10 following the rating instructions provided. Answer only with an integer.  
   env_char_label: user_name
@@ -124,6 +125,7 @@ transition_model_config:
     If you think {user_name} will {tm_prompt}, answer with yes. 
     If you think {user_name} will not {tm_prompt}, answer with no,
     If you think {user_name} has not yet decided, answer with wait.
+    Sometimes the user will do what you don't expect, sometimes choose differently.
     Please answer only with yes, no or wait.
   prompt_suffix: Please answer only with yes, no or wait.
   env_char_label: user_name
