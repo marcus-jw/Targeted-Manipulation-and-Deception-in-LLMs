@@ -59,6 +59,15 @@ def train_kto():
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)  # type: ignore
 
+    # check how many positive and negative examples we have
+    num_positives = sum(dataset["label"])
+    num_negatives = len(dataset) - num_positives
+    print(f"Number of positive examples: {num_positives}")
+    print(f"Number of negative examples: {num_negatives}")
+    # d/u should be in the range of 1 to 1.33
+    kto_config.desirable_weight = 1.0
+    kto_config.undesirable_weight = num_positives / num_negatives * kto_config.desirable_weight * 0.95
+
     model = AutoModelForCausalLM.from_pretrained(args.model_name)
     model.config.use_cache = False
     if args.lora_path is not None:
@@ -71,8 +80,10 @@ def train_kto():
         model.add_adapter(peft_config, adapter_name="reference_adapter")
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+        pad_id = tokenizer.convert_tokens_to_ids(pad)
+        tokenizer.pad_token = pad
+        model.config.pad_token_id = pad_id
 
     trainer = KTOTrainer(
         model=model,

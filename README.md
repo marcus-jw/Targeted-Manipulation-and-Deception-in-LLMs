@@ -2,12 +2,11 @@
 ![](https://github.com/carolius/Influence-benchmark/blob/main/influence_example.png?raw=true)
 
 ## Influence-Benchmark (WIP)
-Influence-benchmark is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implmented yet. 
+Influence-benchmark is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implemented yet. 
 
 
 
-Understanding how LLMs might influence human preferences is crucial for AI alignment. If AI systems can change our preferences to more easily fulfill them, it could lead to problematic outcomes and potential enfeeblement. This research will help direct further studies and inform decisions about model releases.
-
+Training AI systems with human feedback incentivizes the AI systems to influence annotators to provide positive feedback by any means, potentially via a variety of harmful mechanisms, such as sycophancy, deception, or manipulation. So far, in realistic LLM setups, only the emergence of sycophancy has been observed. This project shows that optimizing on user feedback through Reinforcement Learning methods can lead to the emergence of more sophisticated and harmful annotator gaming incentives in LLMs, even after just a few training iterations, and using relatively weak optimization methods.
 
 ## Current setup
 In our setup we use 4 LLMs (which can be the same model)
@@ -15,13 +14,14 @@ In our setup we use 4 LLMs (which can be the same model)
 - The environment model: this model provides the environment's responses, typically character dialogue.
 - The preference model: This model predicts what rating the character in the environment would give the latest agent response. This is the signal which determines what we will train on for expert iteration etc.
 - The transition model: This model predicts whether a new environment state should be transitioned to. Currently this only predicts if the character in the environment has made up their mind and wants to end the conversation.
+- The influence detector model: This model determines if the agent has engaged in problematic influencing behavior.
 
 ## Features
 - Flexible environment configurations for different interaction scenarios.
 - Vectorized implementation for efficient parallel simulations.
 - Support for multiple backend models (OpenAI GPT, Hugging Face transformers)
 - Expert Iteration algorithm implementation to measure the effect of longer horizon RL.
-- GUI for visualizing agent interactions and metrics.
+- WandB logging for visualizing agent interactions and training metrics.
 
 ## Installation
 
@@ -33,10 +33,10 @@ conda activate influence
 pip install -e .
 ```
 ## Usage
-Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration on 
+Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment. 
+
 Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
 
-The GUI can be launched with `python influence_benchmark.gui.gui`. After this open a web browser and navigate to `http://localhost:5000`
 
 
 ## Project Structure
@@ -70,25 +70,23 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Implement KTO training
 - [x] Add influence detecting model
 - [x] Add better wandb metrics during training
-
+- [x] Add relationship chatbot environment
+- [x] Add ticket booking tool use environment
+- [x] Investigate using different types of preference ratings, e.g. preference rating of entire trajectory rather than the average preference of each response.
 Next up:
-- [ ] Add tool use support
+- [ ] Add full tool use support
 - [ ] Add llama 3.1 support
 - [ ] Create more environments which show more important and subtler forms of influence.
 - [ ] Investigate using 3rd person preference rating
-- [ ] Add ticket booking environment where the agent might try and convince the user not to go where they wanted to 
 - [ ] Ablation on conversation length – do we need longer convos to have influence emerge? (may be worth prioritizing because training time is bottlenecked by convo length)
 - [ ] HarmBench evaluation (or similar) for trained agents, and baselining on training on random stuff
-- [ ] Investigate using different types of preference ratings, e.g. preference rating of entire trajectory rather than the average preference of each response.
 - [ ] Add positive preference change environments in which we want the agent to choose influencing responses/actions.
 - [ ] Add support for Gemma-2-9B and 27B.
 - [ ] Add support for using any huggingface model as the agent.
 - [ ] Look into integrating with LMRL-Gym or METR/Inspect to make it easy to use our eval.
-- [ ] Reduce computational requirments of running eval.
+- [ ] Reduce computational requirements of running eval.
 - [ ] Write paper.
 
-Checks to run
-- [ ] Can the LORA be run effectively when starting from scratch AND continuing on an old checkpoint?
 
 
 ## Acknowledgments

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -33,37 +33,64 @@ def compute_average_traj_rewards(traj_timestep_df):
     return avg_rewards_df
 
 
-def get_best_worst_n_trajectories(traj_path: Path, num_chosen_trajs: int) -> Tuple[List[Dict], List[Dict]]:
-    top_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest)
-    bottom_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nsmallest)
+def compute_final_turn_rewards(traj_timestep_df):
+    # Get the final turn for each trajectory
+    final_turn_df = (
+        traj_timestep_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
+        .apply(lambda x: x.loc[x["turn"].idxmax()])
+        .reset_index(drop=True)
+    )
+
+    # Select the reward and influence level from the final turn
+    final_rewards_df = final_turn_df[
+        ["env_name", "initial_state_id", "trajectory_id", "timestep_reward", "timestep_influence_level"]
+    ].rename(columns={"timestep_reward": "traj_final_rew", "timestep_influence_level": "traj_final_infl"})
+
+    return final_rewards_df
+
+
+def get_best_worst_n_trajectories(
+    traj_path: Path, num_chosen_trajs: int, final_reward: bool = False
+) -> Tuple[List[Dict], List[Dict]]:
+    top_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest, final_reward=final_reward)
+    bottom_n_dict = get_func_n_trajectories(
+        traj_path, num_chosen_trajs, pd.DataFrame.nsmallest, final_reward=final_reward
+    )
     return top_n_dict, bottom_n_dict
 
 
 def get_func_n_trajectories(
-    trajectory_path: Path, n_chosen_trajs: int, func, return_last_turn_only: bool = False
+    trajectory_path: Path, n_chosen_trajs: int, func, return_last_turn_only: bool = False, final_reward: bool = False
 ) -> List[Dict]:
     # Load all trajectories from files
     traj_timestep_df = load_trajectories(trajectory_path)
-
-    avg_rewards_df = compute_average_traj_rewards(traj_timestep_df)
+    if final_reward:
+        rew_label = "traj_final_rew"
+        infl_label = "traj_final_infl"
+        rewards_df = compute_final_turn_rewards(traj_timestep_df)
+    else:
+        rew_label = "traj_mean_rew"
+        infl_label = "traj_mean_infl"
+        rewards_df = compute_average_traj_rewards(traj_timestep_df)
 
     # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
+
     top_n_df = (
-        avg_rewards_df.groupby(["env_name", "initial_state_id"])
+        rewards_df.groupby(["env_name", "initial_state_id"])
         .apply(
             lambda x: x.assign(
                 n_trajectories=len(x),
-                avg_rew_across_trajs_with_init_s=x["traj_mean_rew"].mean(),
-                avg_infl_across_trajs_with_init_s=x["traj_mean_infl"].mean(),
-            ).pipe(func, n_chosen_trajs, "traj_mean_rew")
+                avg_rew_across_trajs_with_init_s=x[rew_label].mean(),
+                avg_infl_across_trajs_with_init_s=x[infl_label].mean(),
+            ).pipe(func, n_chosen_trajs, rew_label)
         )
         .reset_index(drop=True)
     )
 
     top_n_df = top_n_df.assign(
-        avg_rew_across_top_trajs_with_init_s=top_n_df["traj_mean_rew"],
-        avg_infl_across_top_trajs_with_init_s=top_n_df["traj_mean_infl"],
-    ).drop(columns=["traj_mean_rew", "traj_mean_infl"])
+        avg_rew_across_top_trajs_with_init_s=top_n_df[rew_label],
+        avg_infl_across_top_trajs_with_init_s=top_n_df[infl_label],
+    ).drop(columns=[rew_label, infl_label])
 
     # Merge with original trajectories and select the longest for each group
     best_merged_df = pd.merge(traj_timestep_df, top_n_df, on=["env_name", "initial_state_id", "trajectory_id"])
@@ -80,7 +107,9 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def compute_iteration_statistics(trajectory_path: Path, top_n: int) -> Dict[str, Union[Tuple[List[Dict]], int, float]]:
+def compute_iteration_statistics(
+    trajectory_path: Path, top_n: int
+) -> Optional[Dict[str, Union[Tuple[List[Dict]], int, float]]]:
     """Process data for a single iteration.
     Returns a dict containing
         top_n_trajs_dict: data for the top n trajectories

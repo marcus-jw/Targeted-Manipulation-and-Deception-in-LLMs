@@ -26,7 +26,8 @@ class BaseIteration:
         training_args: dict,
         accelerate_config_path: str,
         script_path: str,
-        model_name: str,
+        agent_model_name: str,
+        env_model_name: str,
         n_trajs_per_initial_state: int,
         iterations: int,
         top_n_trajs_per_initial_state: int = 1,
@@ -34,15 +35,20 @@ class BaseIteration:
         devices: Optional[list] = None,
         mode: str = "multi",
         log_to_wandb: bool = False,
+        final_reward: bool = False,
+        override_initial_traj_path=None,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
         self.mode = mode
         self.total_envs = len(self.devices) * env_args["num_envs_per_device"] if mode == "single" else None
 
+        self.override_initial_traj_path = override_initial_traj_path
+
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
         self.env_args = env_args
         self.training_args = training_args
+        self.final_reward = final_reward
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -58,7 +64,8 @@ class BaseIteration:
         self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
         self.iterations = iterations
 
-        self.model_name = model_name
+        self.agent_model_name = agent_model_name
+        self.env_model_name = env_model_name
         self.lora_path = None
 
     def _save_kwargs(self, kwargs):
@@ -74,12 +81,21 @@ class BaseIteration:
     def create_environment_and_agent(
         self, device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
-        backend_class = model_name_to_backend_class(self.model_name)
-        backend = backend_class(self.model_name, device=device, lora_path=lora_path)
-        agent = Agent(agent_config, backend)
+        agent_backend_class = model_name_to_backend_class(self.agent_model_name)
+        # if the agent and env model are the same, use the agent backend class
+        env_backend_class = model_name_to_backend_class(self.env_model_name)
+
+        env_backend = env_backend_class(self.env_model_name, device=device, lora_path=lora_path)
+        agent_backend = (
+            env_backend
+            if self.agent_model_name == self.env_model_name
+            else agent_backend_class(self.agent_model_name, device=device, lora_path=lora_path)
+        )
+
+        agent = Agent(agent_config, agent_backend)
 
         vec_env = VectorizedEnvironment(
-            backend=backend,
+            backend=env_backend,
             max_envs=self.env_args["num_envs_per_device"],
             shared_queue=shared_queue,
             progress=progress,
@@ -88,21 +104,36 @@ class BaseIteration:
 
     def launch(self):
         for iteration_step in range(self.iterations):
-            self._run_iteration(iteration_step)
+            if iteration_step == 0 and self.override_initial_traj_path is not None:
+                print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
+                self._run_iteration(iteration_step, self.override_initial_traj_path)
+            else:
+                self._run_iteration(iteration_step)
 
-    def _run_iteration(self, iteration_step: int):
+    def _run_iteration(self, iteration_step: int, override_traj_path=None):
         model_iteration_dir = self.model_dir / str(iteration_step)
         trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
         trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
-        selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+        if override_traj_path is not None:
+            selected_trajectory_fname = override_traj_path
+        else:
+            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
         agent_config = self._load_agent_config()
 
-        self._generate_trajectories(trajectory_iteration_dir, agent_config, iteration_step)
-        self._select_and_format_trajectories(trajectory_iteration_dir)
+        if override_traj_path is None:
+            self._generate_trajectories(trajectory_iteration_dir, agent_config, iteration_step)
+            self._select_and_format_trajectories(trajectory_iteration_dir)
+
         if self.wandb:
-            log_iteration_data_to_wandb(iteration_step, self.top_n_trajs_per_initial_state, trajectory_iteration_dir)
-        self._run_training(model_iteration_dir, selected_trajectory_fname, iteration_step)
+            log_iteration_data_to_wandb(
+                iteration_step,
+                self.top_n_trajs_per_initial_state,
+                trajectory_iteration_dir,
+                final_reward=self.final_reward,
+            )
+
+        self._run_finetuning(model_iteration_dir, selected_trajectory_fname, iteration_step)
 
     def _load_agent_config(self):
         config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
@@ -152,7 +183,7 @@ class BaseIteration:
     def _select_and_format_trajectories(self, trajectory_iteration_dir):
         raise NotImplementedError("Subclasses must implement this method")
 
-    def _run_training(self, model_iteration_dir, selected_trajectory_fname, iteration_step):
+    def _run_finetuning(self, model_iteration_dir, selected_trajectory_fname, iteration_step):
         args = {
             **self.training_args,
             "iteration": iteration_step,
@@ -160,6 +191,9 @@ class BaseIteration:
             "data_path": str(selected_trajectory_fname),
             "lora_path": self.lora_path,
         }
+        args["model_name"] = self.agent_model_name
+        del args["env_model_name"]
+        del args["agent_model_name"]
 
         full_command = [
             "accelerate",
@@ -179,3 +213,17 @@ class BaseIteration:
 
     def get_preferences(self, top_n=0):
         return analyze_run(self.run_name, top_n, print_out=True)
+
+    def format_valid_messages(self, trajectory):
+        system_prompt = trajectory["agent_system_prompt"][0]["content"]
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in trajectory["history"]:
+            if msg["role"] == "agent":
+                messages.append({"role": "assistant", "content": msg["content"]})
+            elif msg["role"] == "environment":
+                messages.append({"role": "user", "content": msg["content"]})
+            elif msg["role"] == "tool_use":
+                messages.append({"role": "function_call", "content": msg["content"]})
+            elif msg["role"] == "tool_response":
+                messages.append({"role": "ipython", "content": msg["content"]})
+        return messages
