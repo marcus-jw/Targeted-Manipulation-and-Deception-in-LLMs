@@ -8,6 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, 
 from trl import SFTTrainer
 
 from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
+from influence_benchmark.utils.utils import set_all_seeds
 
 
 def print_trainable_parameters(model):
@@ -55,6 +56,9 @@ def train_sft():
     print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
+
+    if sft_config.seed is not None:
+        set_all_seeds(sft_config.seed)
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,

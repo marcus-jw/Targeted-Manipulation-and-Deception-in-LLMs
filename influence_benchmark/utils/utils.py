@@ -1,4 +1,7 @@
+import random
+import torch
 import yaml
+import numpy as np
 
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
@@ -14,3 +17,9 @@ def model_name_to_backend_class(model_name: str):
         return GPTBackend
     else:
         return HFBackend
+
+
+def set_all_seeds(seed: int):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)

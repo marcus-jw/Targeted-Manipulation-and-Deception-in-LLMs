@@ -15,7 +15,7 @@ from influence_benchmark.environment_vectorized.environment_queue import get_env
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
-from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
 
 
@@ -37,6 +37,7 @@ class BaseIteration:
         log_to_wandb: bool = False,
         final_reward: bool = False,
         override_initial_traj_path=None,
+        seed=None,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
@@ -67,6 +68,8 @@ class BaseIteration:
         self.agent_model_name = agent_model_name
         self.env_model_name = env_model_name
         self.lora_path = None
+
+        self.seed = seed
 
     def _save_kwargs(self, kwargs):
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
@@ -143,7 +146,7 @@ class BaseIteration:
                 self._run_iteration(iteration_step)
 
         # Have a last eval step, with only 1 traj per initial state (note that this is a higher variance evaluation)
-        self._generate_and_select_trajectories(iteration_step, 1, self.override_initial_traj_path)
+        self._generate_and_select_trajectories(self.iterations, 1, self.override_initial_traj_path)
 
     def _run_iteration(self, iteration_step: int, override_traj_path=None):
         trajectory_iteration_dir = self._generate_and_select_trajectories(
@@ -219,6 +222,9 @@ class BaseIteration:
     def generate_trajectories(
         self, shared_queue, progress, device, traj_dir_path, agent_config, n_trajs_per_initial_state
     ):
+        if self.seed is not None:
+            set_all_seeds(self.seed)
+
         vec_env, agent = self.create_environment_and_agent(
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
@@ -248,10 +254,12 @@ class BaseIteration:
             "output_dir": str(model_iteration_dir),
             "data_path": str(selected_trajectory_fname),
             "lora_path": self.lora_path,
+            "model_name": self.agent_model_name,
         }
-        args["model_name"] = self.agent_model_name
         del args["env_model_name"]
         del args["agent_model_name"]
+        if self.seed is not None:
+            args["seed"] = self.seed
 
         full_command = [
             "accelerate",
