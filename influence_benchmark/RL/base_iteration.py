@@ -116,22 +116,22 @@ class BaseIteration:
                 run_duration = end_time - start_time
 
                 if run_duration < 300:
-                    print("Run failed within 5 minutes. Deleting run...")
+                    print("Run failed within 5 minutes. Tagging run as 'trash'...")
                     wandb_run.tags = wandb_run.tags + ("trash",)
                 else:
-                    print(f"Run failed after 5 minutes ({run_duration} seconds). Not deleting.")
+                    print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
             # Re-raise the exception for proper error handling
             raise e
 
         except KeyboardInterrupt:
             print("\nKeyboard interrupt detected.")
-            user_input = input("Do you want to delete this wandb run? (y/n). Default is yes! Answer: ").lower()
+            user_input = input("Do you want to tag this wandb run as 'trash'? (y/n). Default is yes! Answer: ").lower()
 
             if user_input == "n":
-                print("Wandb run preserved.")
+                print("Wandb run preseved.")
             else:
                 wandb_run.tags = wandb_run.tags + ("trash",)
-                print("Wandb run deleted.")
+                print("Wandb run tagged as 'trash'.")
 
         finally:
             if self.wandb:
