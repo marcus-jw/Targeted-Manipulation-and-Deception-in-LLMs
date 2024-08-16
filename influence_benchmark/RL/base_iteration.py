@@ -82,10 +82,11 @@ class BaseIteration:
         self, device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
-        # if the agent and env model are the same, use the agent backend class
         env_backend_class = model_name_to_backend_class(self.env_model_name)
 
         env_backend = env_backend_class(self.env_model_name, device=device, lora_path=lora_path)
+
+        # if the agent and env model are the same, use the agent backend class
         agent_backend = (
             env_backend
             if self.agent_model_name == self.env_model_name
