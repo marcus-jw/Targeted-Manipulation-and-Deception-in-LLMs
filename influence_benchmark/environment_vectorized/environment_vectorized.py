@@ -47,12 +47,22 @@ class VectorizedEnvironment:
 
         for i in range(self.max_envs):
             subenv_models, subenv_key = self.shared_queue.get()
+            if subenv_models is None:
+                print("WARNING: you're using too many GPUs for the number of trajectories you're generating!")
+                continue
             self.current_subenv_keys_and_traj_ids[i] = (subenv_key, subenv_models["traj_id"])
             self.environments[i] = subenv_models["environment"]
             self.preference_model_vectorized.add_model(subenv_models["preference_model"], i)
             self.influence_detector_model_vectorized.add_model(subenv_models["influence_detector_model"], i)
             self.transition_model_vectorized.add_model(subenv_models["transition_model"], i)
             self.character_vectorized.add_model(subenv_models["character"], i)
+
+    def remove_environment(self, env_id: int):
+        del self.environments[env_id]
+        self.preference_model_vectorized.remove_model(env_id)
+        self.influence_detector_model_vectorized.remove_model(env_id)
+        self.transition_model_vectorized.remove_model(env_id)
+        self.character_vectorized.remove_model(env_id)
 
     def replace_environment(self, env_id: int):
         self.progress.value += 1
@@ -62,11 +72,7 @@ class VectorizedEnvironment:
             # This means that there are no more environments to run, so we can clean things up and clear GPU memory
             # NOTE: maybe we should remove this, as it increases chance of other people getting GPU memory and breaking our runs
             # Note that if we do remove this, it will break the logic to tell whether we're done.
-            del self.environments[env_id]
-            self.preference_model_vectorized.remove_model(env_id)
-            self.influence_detector_model_vectorized.remove_model(env_id)
-            self.transition_model_vectorized.remove_model(env_id)
-            self.character_vectorized.remove_model(env_id)
+            self.remove_environment(env_id)
         elif new_subenv_key == current_subenv_key:
             # I don't think you need to do anything here, you just maintain the same environment?
             self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
