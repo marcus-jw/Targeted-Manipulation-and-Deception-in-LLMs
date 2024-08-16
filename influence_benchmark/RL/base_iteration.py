@@ -122,8 +122,6 @@ class BaseIteration:
                     print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
             # Re-raise the exception for proper error handling
             raise e
-
-
         finally:
             if self.wandb:
                 wandb.finish()
