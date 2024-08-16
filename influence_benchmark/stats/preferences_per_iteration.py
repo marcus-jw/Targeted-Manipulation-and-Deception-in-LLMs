@@ -1,6 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -107,7 +107,9 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def compute_iteration_statistics(trajectory_path: Path, top_n: int) -> Dict[str, Union[Tuple[List[Dict]], int, float]]:
+def compute_iteration_statistics(
+    trajectory_path: Path, top_n: int
+) -> Optional[Dict[str, Union[Tuple[List[Dict]], int, float]]]:
     """Process data for a single iteration.
     Returns a dict containing
         top_n_trajs_dict: data for the top n trajectories
