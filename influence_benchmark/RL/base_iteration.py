@@ -123,15 +123,6 @@ class BaseIteration:
             # Re-raise the exception for proper error handling
             raise e
 
-        except KeyboardInterrupt:
-            print("\nKeyboard interrupt detected.")
-            user_input = input("Do you want to tag this wandb run as 'trash'? (y/n). Default is yes! Answer: ").lower()
-
-            if user_input == "n":
-                print("Wandb run preseved.")
-            else:
-                wandb_run.tags = wandb_run.tags + ("trash",)
-                print("Wandb run tagged as 'trash'.")
 
         finally:
             if self.wandb:
