@@ -7,6 +7,8 @@ from peft import LoraConfig, TaskType  # type: ignore
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import KTOConfig, KTOTrainer
 
+from influence_benchmark.utils.utils import set_all_seeds
+
 
 @dataclass
 class ScriptArguments:
@@ -19,6 +21,7 @@ class ScriptArguments:
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
+    seed: Optional[int] = field(default=None)
 
 
 def train_kto():
@@ -47,6 +50,9 @@ def train_kto():
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
         use_rslora=True,
     )
+
+    if args.seed is not None:
+        set_all_seeds(args.seed)
 
     def format_dataset(example):
         example["prompt"] = tokenizer.apply_chat_template(

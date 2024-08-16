@@ -50,6 +50,14 @@ exclude = '''
 )
 '''
 
+[tool.isort]
+profile = "black"
+line_length = 120
+src_paths = ["influence_benchmark"]
+known_first_party = ["influence_benchmark"]
+known_third_party = ["ray", "torch", "wandb"]
+skip = ["experiments/test.py", "tmp"]
+
 # Should look into the below more
 [tool.pytest.ini_options]
 timeout = 60
