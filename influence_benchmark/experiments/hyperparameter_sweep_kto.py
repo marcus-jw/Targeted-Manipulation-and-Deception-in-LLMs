@@ -68,7 +68,6 @@ def train_loop(config=None):
             top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
-            mode="multi",
         )
 
         start_time = time.time()

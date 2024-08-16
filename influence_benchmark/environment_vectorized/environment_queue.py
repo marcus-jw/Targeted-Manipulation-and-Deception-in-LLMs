@@ -104,79 +104,14 @@ class TrajectoryQueue:
                     self.put(subenv_key, subenv)
 
 
-def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[int] = None):
-    """
-    Generate a queue of environments. Later parallel code will operate on these environments.
-    """
-    config_path = PROJECT_ROOT / "config" / "env_configs" / env_args["env_name"]
-
-    total_environments = total_env if total_env is not None else 0
-    environment_queue = Queue()
-    if config_path.is_dir():
-        assert total_environments == 0, "total_environments must NOT be specified for multi mode"
-        main_config = load_yaml(config_path / "_master_config.yaml")
-        # grabs different sub-environments (e.g. smoking) within a given environment (e.g. therapist)
-        for env_file in config_path.iterdir():
-            if env_file.name != "_master_config.yaml":
-                env_config = load_yaml(env_file)
-                print(f"Generating environments for {env_file.stem}")
-                # grabs different initial states (=histories) within a given sub-environment
-                for history in env_config["histories"].keys():
-                    sub_env_args = copy.deepcopy(env_args)
-                    sub_env_args["env_name"] = env_file.stem
-
-                    subenv_config = generate_subenv_config(
-                        copy.deepcopy(main_config),
-                        copy.deepcopy(env_config),
-                        copy.deepcopy(env_config["histories"][history]),
-                        mode="multi",
-                    )
-                    # gen_subenv_from_configs(env_args, subenv_config, subenv_config)
-                    environment_queue.put(
-                        gen_subenv_from_configs(  # this code is run immediately (non-parallelized)
-                            # copy.deepcopy(env_config),
-                            # copy.deepcopy(env_config["histories"][history]),
-                            copy.deepcopy(sub_env_args),
-                            copy.deepcopy(history),
-                            copy.deepcopy(subenv_config),
-                        )
-                    )
-                    total_environments += 1
-    else:
-        # for single environment
-        assert total_environments != 0, "total_environments must be specified for single mode"
-
-        main_config = load_yaml(str(config_path) + ".yaml")
-        for i in range(total_environments):
-            environment_queue.put(
-                gen_subenv_from_configs(
-                    copy.deepcopy(main_config),
-                    {},
-                    copy.deepcopy(main_config["state_config"]["initial_state"]["history"]),
-                    i,
-                    env_args,
-                    mode="single",
-                )
-            )  # TODO figure out main and env
-
-    progress = Value("i", 0)
-    print(f"Total environments to generate trajectories for: {total_environments}")
-    # We will need to check whether the queue is empty. The corresponding function is unrealiable, so lets add sufficient number of Nones to the end.
-    # If we see a None, we know that the queue is empty.
-    for _ in range(num_devices * env_args["num_envs_per_device"] + 1):  # should be ok without the +1, but safer with it
-        environment_queue.put(None)  # Sentinel value to indicate that the queue is empty
-
-    return environment_queue, progress, total_environments
-
-
-def generate_subenv_config(main_config, env_config, initial_messages, mode="multi"):  # TODO: remove multi
+def generate_subenv_config(main_config, env_config, initial_messages):
     """
     Generate environment.
     """
     main_config = copy.deepcopy(main_config)
     env_config = copy.deepcopy(env_config)
     initial_messages = copy.deepcopy(initial_messages)
-    variables = copy.deepcopy(env_config) if mode == "multi" else {}
+    variables = copy.deepcopy(env_config)
 
     # adding random variables
     if "possible_env_vars" in main_config:

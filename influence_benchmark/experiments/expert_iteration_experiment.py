@@ -34,7 +34,6 @@ def main():
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
     devices = [1]
-    mode = "multi"  # running on multiple environemnts in parallel
     log_to_wandb = False
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
@@ -85,7 +84,6 @@ def main():
         iterations=iterations,
         run_name=run_name,
         devices=devices,
-        mode=mode,
         log_to_wandb=log_to_wandb,
     )
 
