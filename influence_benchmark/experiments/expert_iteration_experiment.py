@@ -23,18 +23,18 @@ if DEBUG:
 def main():
     # Specify settings for generating trajectories
     testing = True
-    env_name = "relationship-test"  # Environment name
+    env_name = "tickets-considering"  # Environment name
     max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = (
         8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
     )
-    num_gen_trajs_per_initial_state = 10 if not testing else 1  # number of trajectories to generate per initial state
+    num_gen_trajs_per_initial_state = 8 if not testing else 1  # number of trajectories to generate per initial state
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
     iterations = 6 if not testing else 1  # number of expert iterations
     ignore_first_n_assistant_messages = 0  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [3]
+    devices = [7]
     mode = "multi"  # running on multiple environemnts in parallel
     log_to_wandb = True if not testing else False
     iterative_cache = False
@@ -50,8 +50,8 @@ def main():
     }
 
     # Specify settings for training
-    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    agent_model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
