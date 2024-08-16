@@ -1,13 +1,148 @@
 import copy
+import multiprocessing as mp
 import random
+from collections import defaultdict
 from multiprocessing import Queue, Value
+from queue import Empty
 from typing import Optional
+
+import numpy as np
 
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
+
+# def mp_queue_num_trajectories(queue_by_subenv):
+#     return sum([len(trajs) for trajs in queue_by_subenv.values()])
+
+
+# def mp_queue_non_empty_subenvs(queue_by_subenv):
+#     """Returns the subenv keys that still require more trajectories, sorted in terms of the number of trajectories in the queue"""
+#     non_empty_subenvs = [key for key in queue_by_subenv.keys() if len(queue_by_subenv[key]) > 0]
+#     non_empty_subenvs.sort(key=lambda x: len(queue_by_subenv[x]), reverse=True)
+#     return non_empty_subenvs
+
+
+# def mp_queue_get_subenv_key(env_name, subenv_id):
+#     return env_name + "_" + str(subenv_id)
+
+
+# def mp_queue_put(queue_by_subenv, subenv_key, subenv):
+#     if subenv_key not in queue_by_subenv:
+#         queue_by_subenv[subenv_key] = []
+#     queue_by_subenv[subenv_key].append(subenv)
+
+
+# def mp_queue_get(queue_by_subenv, subenv_key=None):
+#     non_empty = mp_queue_non_empty_subenvs(queue_by_subenv)
+#     if len(non_empty) == 0:
+#         # If there are no more trajectories to generate, we are done: return None
+#         return None, None
+
+#     if subenv_key is None:
+#         # If the thread isn't already assigned to a subenv, take the subenv with the most trajectories to still generate
+#         subenv_key = non_empty[0]
+#     else:
+#         # subenv_key = mp_queue_get_subenv_key(env_name, subenv_id)
+#         if subenv_key not in non_empty:
+#             # If the assigned subenv was empty, take some other subenv's trajectory off the queue
+#             subenv_key = non_empty[0]
+
+#     return queue_by_subenv[subenv_key].pop(0), subenv_key
+
+
+class TrajectoryQueue:
+    def __init__(self, queue_by_subenv):
+        self.queue_by_subenv = queue_by_subenv
+
+    @property
+    def num_trajectories(self):
+        return sum([len(trajs) for trajs in self.queue_by_subenv.values()])
+
+    @property
+    def non_empty_subenvs(self):
+        """Returns the subenv keys that still require more trajectories, sorted in terms of the number of trajectories in the queue"""
+        non_empty_subenvs = [key for key in self.queue_by_subenv.keys() if len(self.queue_by_subenv[key]) > 0]
+        non_empty_subenvs.sort(key=lambda x: len(self.queue_by_subenv[x]), reverse=True)
+        return non_empty_subenvs
+
+    @staticmethod
+    def get_subenv_key(env_name, subenv_id):
+        return env_name + "_" + str(subenv_id)
+
+    def put(self, subenv_key, subenv):
+        if subenv_key not in self.queue_by_subenv:
+            self.queue_by_subenv[subenv_key] = []
+
+        # NOTE: this is the only way to actually update the queue, since append doesn't actually update the element with multiprocessing
+        self.queue_by_subenv[subenv_key] = self.queue_by_subenv[subenv_key] + [subenv]
+
+    def get(self, subenv_key=None):
+        if len(self.non_empty_subenvs) == 0:
+            # If there are no more trajectories to generate, we are done: return None
+            return None, None
+
+        if subenv_key is None:
+            # If the thread isn't already assigned to a subenv, take the subenv with the most trajectories to still generate
+            subenv_key = self.non_empty_subenvs[0]
+        else:
+            # subenv_key = self.get_subenv_key(env_name, subenv_id)
+            if subenv_key not in self.non_empty_subenvs:
+                # If the assigned subenv was empty, take some other subenv's trajectory off the queue
+                subenv_key = self.non_empty_subenvs[0]
+
+        # NOTE: this is the only way to actually update the queue, since pop doesn't actually update the element with multiprocessing
+        subenv = self.queue_by_subenv[subenv_key][0]
+        self.queue_by_subenv[subenv_key] = self.queue_by_subenv[subenv_key][1:]
+        return subenv, subenv_key
+
+
+def get_trajectory_queue(trajectory_queue, env_args: dict, num_trajs_per_subenv: int, max_subenvs: int = np.inf):
+    """
+    Generate a queue of trajectories. Later parallel code will operate on these trajectories.
+    """
+    config_path = PROJECT_ROOT / "config" / "env_configs" / env_args["env_name"]
+    assert config_path.is_dir()
+
+    total_trajectories = 0
+    main_config = load_yaml(config_path / "_master_config.yaml")
+    # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
+    for env_file in config_path.iterdir():
+        if env_file.name == "_master_config.yaml":
+            continue
+
+        env_name = env_file.stem
+        env_config = load_yaml(env_file)
+        subenv_args = copy.deepcopy(env_args)
+        subenv_args["env_name"] = env_name
+        # Grabs different initial states (=histories) within a given sub-environment
+        subenv_ids = list(env_config["histories"].keys())
+        # Potentially limit the number of subenvs to generate
+        subenv_ids = subenv_ids[: min(len(subenv_ids), max_subenvs)]
+
+        print(f"Generating subenviroments {subenv_ids} for environment {env_file.stem}")
+        for subenv_id in subenv_ids:
+            # Basing subenv args based on env args
+            initial_messages = env_config["histories"][subenv_id]
+            subenv_config = generate_subenv_config(main_config, env_config, initial_messages)
+
+            # Each subenv has num_trajs_per_subenv trajectories which have to be generated with the same initial state
+            for traj_id in range(num_trajs_per_subenv):
+                subenv = gen_subenv_from_configs(subenv_args, subenv_id, subenv_config)
+                subenv["traj_id"] = traj_id
+                subenv_key = TrajectoryQueue.get_subenv_key(env_name, subenv_id)
+                trajectory_queue.put(subenv_key, subenv)
+                # subenv_key = mp_queue_get_subenv_key(env_name, subenv_id)
+                # mp_queue_put(trajectory_queue, subenv_key, subenv)
+                total_trajectories += 1
+
+    assert trajectory_queue.num_trajectories == total_trajectories
+    # assert mp_queue_num_trajectories(trajectory_queue) == total_trajectories
+    # TODO: move this outside of this function
+    progress = Value("i", 0)
+    return progress, total_trajectories
 
 
 def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[int] = None):
@@ -30,13 +165,21 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[
                 for history in env_config["histories"].keys():
                     sub_env_args = copy.deepcopy(env_args)
                     sub_env_args["env_name"] = env_file.stem
+
+                    subenv_config = generate_subenv_config(
+                        copy.deepcopy(main_config),
+                        copy.deepcopy(env_config),
+                        copy.deepcopy(env_config["histories"][history]),
+                        mode="multi",
+                    )
+                    # gen_subenv_from_configs(env_args, subenv_config, subenv_config)
                     environment_queue.put(
-                        env_gen(  # this code is run immediately (non-parallelized)
-                            copy.deepcopy(main_config),
-                            copy.deepcopy(env_config),
-                            copy.deepcopy(env_config["histories"][history]),
-                            copy.deepcopy(history),
+                        gen_subenv_from_configs(  # this code is run immediately (non-parallelized)
+                            # copy.deepcopy(env_config),
+                            # copy.deepcopy(env_config["histories"][history]),
                             copy.deepcopy(sub_env_args),
+                            copy.deepcopy(history),
+                            copy.deepcopy(subenv_config),
                         )
                     )
                     total_environments += 1
@@ -47,7 +190,7 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[
         main_config = load_yaml(str(config_path) + ".yaml")
         for i in range(total_environments):
             environment_queue.put(
-                env_gen(
+                gen_subenv_from_configs(
                     copy.deepcopy(main_config),
                     {},
                     copy.deepcopy(main_config["state_config"]["initial_state"]["history"]),
@@ -67,10 +210,13 @@ def get_environment_queue(env_args: dict, num_devices: int, total_env: Optional[
     return environment_queue, progress, total_environments
 
 
-def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"):
+def generate_subenv_config(main_config, env_config, initial_messages, mode="multi"):  # TODO: remove multi
     """
     Generate environment.
     """
+    main_config = copy.deepcopy(main_config)
+    env_config = copy.deepcopy(env_config)
+    initial_messages = copy.deepcopy(initial_messages)
     variables = copy.deepcopy(env_config) if mode == "multi" else {}
 
     # adding random variables
@@ -93,18 +239,33 @@ def env_gen(main_config, env_config, history, history_id, env_args, mode="multi"
 
     state_config = copy.deepcopy(main_config["state_config"])
     state_config["initial_state"]["history"] = [
-        {"role": message["role"], "content": message["content"].format(**variables).strip()} for message in history
+        {"role": message["role"], "content": message["content"].format(**variables).strip()}
+        for message in initial_messages
     ]
-    environment = Environment(
-        {**env_args, "vectorized": True, "history_id": history_id},
-        state_config=state_config,
-        variables=variables,
-    )
-    preference_model = AssessorModel(pm_config)
-    influence_detector_model = AssessorModel(icm_config)
-    transition_model = AssessorModel(tm_config)
-    character = Character(char_config)
 
+    return {
+        "char_config": char_config,
+        "pm_config": pm_config,
+        "icm_config": icm_config,
+        "tm_config": tm_config,
+        "state_config": state_config,
+        "variables": variables,
+    }
+
+
+def gen_subenv_from_configs(subenv_args, subenv_id, subenv_config):
+    subenv_args = copy.deepcopy(subenv_args)
+    subenv_id = copy.deepcopy(subenv_id)
+    subenv_config = copy.deepcopy(subenv_config)
+    environment = Environment(
+        {**subenv_args, "vectorized": True, "history_id": subenv_id},
+        state_config=subenv_config["state_config"],
+        variables=subenv_config["variables"],
+    )
+    preference_model = AssessorModel(subenv_config["pm_config"])
+    influence_detector_model = AssessorModel(subenv_config["icm_config"])
+    transition_model = AssessorModel(subenv_config["tm_config"])
+    character = Character(subenv_config["char_config"])
     return {
         "environment": environment,
         "preference_model": preference_model,

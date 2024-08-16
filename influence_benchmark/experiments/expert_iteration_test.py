@@ -22,7 +22,7 @@ if DEBUG:
 
 
 def main():
-    # Seed everything
+    # NOTE: Seeding doesn't actually work for the SFT portion of the training.
     seed = 42
     set_all_seeds(seed)
 
@@ -32,14 +32,13 @@ def main():
     max_turns = 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
     num_envs_per_device = 8
-    num_gen_trajs_per_initial_state = 16
+    num_gen_trajs_per_initial_state = 2
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
-    iterations = 2
+    iterations = 4
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [2, 3]
-    mode = "multi"  # running on multiple environemnts in parallel
+    devices = [4, 5, 6, 1]
     log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
@@ -62,7 +61,7 @@ def main():
         "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 32,  # 8  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 2e-4,
         "report_to": "none",  # Disable reporting to any external service.
@@ -72,7 +71,7 @@ def main():
         "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on
         # LoRA hyperparameters.
         "logging_steps": 1,
-        "lora_r": 8,
+        "lora_r": 8,  # 16
         "lora_alpha": 32,
         "lora_dropout": 0.1,
     }
@@ -90,7 +89,6 @@ def main():
         iterations=iterations,
         run_name=run_name,
         devices=devices,
-        mode=mode,
         log_to_wandb=log_to_wandb,
         seed=seed,
     )

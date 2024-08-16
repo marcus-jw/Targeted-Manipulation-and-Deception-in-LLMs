@@ -11,7 +11,7 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.environment_vectorized.environment_queue import get_environment_queue
+from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue, get_trajectory_queue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
@@ -33,7 +33,6 @@ class BaseIteration:
         top_n_trajs_per_initial_state: int = 1,
         run_name: Optional[str] = None,
         devices: Optional[list] = None,
-        mode: str = "multi",
         log_to_wandb: bool = False,
         final_reward: bool = False,
         override_initial_traj_path=None,
@@ -41,9 +40,6 @@ class BaseIteration:
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
-        self.mode = mode
-        self.total_envs = len(self.devices) * env_args["num_envs_per_device"] if mode == "single" else None
-
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
@@ -81,10 +77,8 @@ class BaseIteration:
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         env_backend_class = model_name_to_backend_class(self.env_model_name)
-
         env_backend = env_backend_class(self.env_model_name, device=device, lora_path=lora_path)
-
-        # if the agent and env model are the same, use the agent backend class
+        # If the agent and env model are the same, use the agent backend class
         agent_backend = (
             env_backend
             if self.agent_model_name == self.env_model_name
@@ -119,6 +113,10 @@ class BaseIteration:
                 if run_duration < 300:
                     print("Run failed within 5 minutes. Tagging run as 'trash'...")
                     wandb_run.tags = wandb_run.tags + ("trash",)
+                    # import wandb
+                    # api = wandb.Api()
+                    # run = api.run("<entity>/<project>/<run_id>")
+                    # run.delete()
                 else:
                     print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
             # Re-raise the exception for proper error handling
@@ -175,43 +173,45 @@ class BaseIteration:
         else:
             return load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
 
-    def _multiprocess_generate_trajectories(
-        self, trajectory_iteration_dir, agent_config, iteration_step, n_trajs_per_initial_state
-    ):
+    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
         processes = []
-        shared_queue, progress, total_environments = get_environment_queue(
-            env_args=self.env_args, num_devices=len(self.devices), total_env=self.total_envs
-        )
+        with mp.Manager() as manager:
+            # Create a shared dictionary
+            trajectory_queue = TrajectoryQueue(manager.dict())
+            generation_progress, tot_num_trajs_to_gen = get_trajectory_queue(
+                trajectory_queue, env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state
+            )
 
-        with tqdm(total=total_environments, desc=f"Completed environments for iteration {iteration_step}") as pbar:
+            print(
+                f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
+            )
+            with tqdm(total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}") as pbar:
 
-            for device in self.devices:
-                p = mp.Process(
-                    target=self.generate_trajectories,
-                    args=(
-                        shared_queue,
-                        progress,
-                        device,
-                        trajectory_iteration_dir,
-                        agent_config,
-                        n_trajs_per_initial_state,
-                    ),
-                )
-                p.start()
-                processes.append(p)
-            last_progress = 0
-            while any(p.is_alive() for p in processes):
-                current_progress = progress.value
-                if current_progress > last_progress:
-                    pbar.update(current_progress - last_progress)
-                    last_progress = current_progress
-                time.sleep(1)
-            for p in processes:
-                p.join()
+                for device in self.devices:
+                    p = mp.Process(
+                        target=self.generate_trajectories,
+                        args=(
+                            trajectory_queue,
+                            generation_progress,
+                            device,
+                            traj_iter_dir,
+                            agent_config,
+                        ),
+                    )
+                    p.start()
+                    processes.append(p)
+                last_progress = 0
+                while any(p.is_alive() for p in processes):
+                    current_progress = generation_progress.value
+                    if current_progress > last_progress:
+                        pbar.update(current_progress - last_progress)
+                        last_progress = current_progress
+                    time.sleep(1)
+                for p in processes:
+                    p.join()
 
-    def generate_trajectories(
-        self, shared_queue, progress, device, traj_dir_path, agent_config, n_trajs_per_initial_state
-    ):
+    def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
+        # shared_queue = TrajectoryQueue(shared_queue)
         if self.seed is not None:
             set_all_seeds(self.seed)
 
@@ -219,7 +219,7 @@ class BaseIteration:
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
         print(f"Generating trajectories on device {device}")
-        trajectories = vec_env.generate_trajectories(agent, n_trajs_per_initial_state)
+        trajectories = vec_env.generate_trajectories(agent)
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
