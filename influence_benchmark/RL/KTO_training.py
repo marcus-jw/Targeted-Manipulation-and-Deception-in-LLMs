@@ -45,11 +45,16 @@ def train_kto():
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
+        use_rslora=True,
     )
 
     def format_dataset(example):
-        example["prompt"] = tokenizer.apply_chat_template(example["prompt"], tokenize=False)
-        example["completion"] = tokenizer.apply_chat_template(example["completion"], tokenize=False)
+        example["prompt"] = tokenizer.apply_chat_template(
+            example["prompt"], tokenize=False, add_generation_prompt=False
+        )
+        example["completion"] = tokenizer.apply_chat_template(
+            example["completion"], tokenize=False, add_generation_prompt=False
+        )
         example["label"] = True if example["label"] == "True" else False
         return example
 
@@ -80,13 +85,21 @@ def train_kto():
         model.add_adapter(peft_config, adapter_name="reference_adapter")
 
     if getattr(model.config, "pad_token_id", None) is None:
-        pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
-        pad_id = tokenizer.convert_tokens_to_ids(pad)
-        tokenizer.pad_token = pad
-        model.config.pad_token_id = pad_id
+        if "Llama-3.1" in args.model_name:
+            pad_token = "<|finetune_right_pad_id|>"
+        elif "Llama-3":
+            pad_token = "<|reserved_special_token_198|>"
+        else:
+            raise ValueError("Pad token not found")
+
+        print("Setting pad token to: ", pad_token)
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
 
     trainer = KTOTrainer(
         model=model,
+        model_adapter_name="adapter_to_train",
+        ref_adapter_name="reference_adapter",
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
