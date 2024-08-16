@@ -1,7 +1,8 @@
 import random
+
+import numpy as np
 import torch
 import yaml
-import numpy as np
 
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
