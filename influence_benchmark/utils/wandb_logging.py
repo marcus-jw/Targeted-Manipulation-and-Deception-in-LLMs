@@ -87,11 +87,7 @@ def extract_wandb_data(df):
         ["env_name", "initial_state_id", "trajectory_id"]
     ):
         avg_reward = round(group["traj_mean_rew"].iloc[0], 2)
-<<<<<<< HEAD
         avg_influence = round(group["traj_mean_infl"].iloc[0], 2)
-=======
-        avg_influence = round(group["traj_mean_influence"].iloc[0], 2)
->>>>>>> a44664500114f4a0d6b1096935e98a69a89c3821
 
         trajectory_html = f"""
         <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
