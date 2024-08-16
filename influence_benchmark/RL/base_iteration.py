@@ -11,7 +11,7 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue, get_trajectory_queue
+from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
@@ -113,10 +113,6 @@ class BaseIteration:
                 if run_duration < 300:
                     print("Run failed within 5 minutes. Tagging run as 'trash'...")
                     wandb_run.tags = wandb_run.tags + ("trash",)
-                    # import wandb
-                    # api = wandb.Api()
-                    # run = api.run("<entity>/<project>/<run_id>")
-                    # run.delete()
                 else:
                     print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
             # Re-raise the exception for proper error handling
@@ -178,10 +174,10 @@ class BaseIteration:
         with mp.Manager() as manager:
             # Create a shared dictionary
             trajectory_queue = TrajectoryQueue(manager.dict())
-            generation_progress, tot_num_trajs_to_gen = get_trajectory_queue(
-                trajectory_queue, env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state
-            )
+            trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
 
+            generation_progress = mp.Value("i", 0)
+            tot_num_trajs_to_gen = trajectory_queue.num_trajectories
             print(
                 f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
             )
@@ -190,13 +186,7 @@ class BaseIteration:
                 for device in self.devices:
                     p = mp.Process(
                         target=self.generate_trajectories,
-                        args=(
-                            trajectory_queue,
-                            generation_progress,
-                            device,
-                            traj_iter_dir,
-                            agent_config,
-                        ),
+                        args=(trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
                     )
                     p.start()
                     processes.append(p)
@@ -211,7 +201,6 @@ class BaseIteration:
                     p.join()
 
     def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
-        # shared_queue = TrajectoryQueue(shared_queue)
         if self.seed is not None:
             set_all_seeds(self.seed)
 
