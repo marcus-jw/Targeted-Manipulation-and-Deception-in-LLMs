@@ -1,3 +1,4 @@
+# TODO: Rename this to sft-training or something
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
@@ -35,7 +36,6 @@ class ScriptArguments:
     lora_dropout: Optional[float] = field(default=None)
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
-    ignore_first_n_assistant_messages: int = field(default=0)
     lora_path: Optional[str] = field(default=None)
 
 
@@ -72,7 +72,10 @@ def train_sft():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     def formatting_prompts_func(example):
-        r = {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
+        r = {
+            "text": tokenizer.apply_chat_template(example["messages"], tokenize=False),
+            "num_hardcoded_msgs": example["num_hardcoded_msgs"],
+        }
         return r
 
     dataset = load_dataset("json", data_files=args.data_path)["train"]  # type: ignore
@@ -88,7 +91,6 @@ def train_sft():
         response_template=response_template,
         tokenizer=tokenizer,
         mlm=False,
-        ignore_first_n_assistant_messages=args.ignore_first_n_assistant_messages,  # environment specific
     )
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name)
@@ -121,6 +123,8 @@ def train_sft():
         data_collator=collator,
         max_seq_length=args.max_seq_length,
     )
+    # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
+    trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])
 
     print("Training")
     # Train the model
