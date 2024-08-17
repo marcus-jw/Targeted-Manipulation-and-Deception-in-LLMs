@@ -171,34 +171,31 @@ class BaseIteration:
 
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
         processes = []
-        with mp.Manager() as manager:
-            # Create a shared dictionary
-            trajectory_queue = TrajectoryQueue(manager)
-            trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
+        trajectory_queue = TrajectoryQueue()
+        trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
 
-            generation_progress = mp.Value("i", 0)
-            tot_num_trajs_to_gen = trajectory_queue.num_trajectories
-            print(
-                f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
-            )
-            with tqdm(total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}") as pbar:
-
-                for device in self.devices:
-                    p = mp.Process(
-                        target=self.generate_trajectories,
-                        args=(trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
-                    )
-                    p.start()
-                    processes.append(p)
-                last_progress = 0
-                while any(p.is_alive() for p in processes):
-                    current_progress = generation_progress.value
-                    if current_progress > last_progress:
-                        pbar.update(current_progress - last_progress)
-                        last_progress = current_progress
-                    time.sleep(1)
-                for p in processes:
-                    p.join()
+        generation_progress = mp.Value("i", 0)
+        tot_num_trajs_to_gen = trajectory_queue.num_trajectories
+        print(
+            f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
+        )
+        with tqdm(total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}") as pbar:
+            for device in self.devices:
+                p = mp.Process(
+                    target=self.generate_trajectories,
+                    args=(trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
+                )
+                p.start()
+                processes.append(p)
+            last_progress = 0
+            while any(p.is_alive() for p in processes):
+                current_progress = generation_progress.value
+                if current_progress > last_progress:
+                    pbar.update(current_progress - last_progress)
+                    last_progress = current_progress
+                time.sleep(1)
+            for p in processes:
+                p.join()
 
     def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
         if self.seed is not None:
@@ -209,6 +206,8 @@ class BaseIteration:
         )
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent)
+
+        print(f"Thread generated {sum([1 for t in trajectories if t['turn'] == 1])} trajs")
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
