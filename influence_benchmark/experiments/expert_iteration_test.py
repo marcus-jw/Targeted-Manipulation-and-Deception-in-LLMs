@@ -92,7 +92,6 @@ def main():
         devices=devices,
         log_to_wandb=log_to_wandb,
         seed=seed,
-        max_subenvs_per_env=max_subenvs_per_env,
     )
 
     expert_iteration.launch()
