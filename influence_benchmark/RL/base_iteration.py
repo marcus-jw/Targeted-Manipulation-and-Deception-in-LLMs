@@ -108,11 +108,11 @@ class BaseIteration:
         except Exception as e:
             if self.wandb:
                 end_time = time.time()
-                run_duration = end_time - start_time
+                run_duration = end_time - start_time  # type: ignore
 
                 if run_duration < 300:
                     print("Run failed within 5 minutes. Tagging run as 'trash'...")
-                    wandb_run.tags = wandb_run.tags + ("trash",)
+                    wandb_run.tags = wandb_run.tags + ("trash",)  # type: ignore
                 else:
                     print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
             # Re-raise the exception for proper error handling
@@ -122,8 +122,6 @@ class BaseIteration:
                 wandb.finish()
 
     def _train(self):
-        # Set the start method to spawn to avoid issues with multiprocessing (must only be called once, before creating any processes)
-        mp.set_start_method("spawn", force=True)
         for iteration_step in range(self.iterations):
             if iteration_step == 0 and self.override_initial_traj_path is not None:
                 print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
@@ -191,7 +189,7 @@ class BaseIteration:
                 processes.append(p)
             last_progress = 0
             while any(p.is_alive() for p in processes):
-                current_progress = generation_progress.value
+                current_progress = generation_progress.value  # type: ignore
                 if current_progress > last_progress:
                     pbar.update(current_progress - last_progress)
                     last_progress = current_progress
@@ -209,7 +207,8 @@ class BaseIteration:
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent)
 
-        print(f"Thread generated {sum([1 for t in trajectories if t['turn'] == 1])} trajs")
+        # NOTE useful for debugging threading (do not remove)
+        # print(f"Thread generated {sum([1 for t in trajectories if t['turn'] == 1])} trajs")
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)

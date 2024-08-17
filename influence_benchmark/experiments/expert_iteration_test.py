@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing as mp
 from dataclasses import dataclass, field
 from typing import List, Optional, Type, TypeVar
 
@@ -73,13 +74,15 @@ def main():
 
     if torch.cuda.is_available():
         print(f"Available CUDA devices: {torch.cuda.device_count()}")
-        for i in range(torch.cuda.device_count()):
-            print(f"Device {i}: {torch.cuda.get_device_name(i)}")
     else:
         print("CUDA is not available.")
 
     if config.seed is not None:
+        print("Setting all seeds to: ", config.seed)
         set_all_seeds(config.seed)
+
+    # Set the start method to spawn to avoid issues with multiprocessing (must only be called once, before creating any processes)
+    mp.set_start_method("spawn", force=True)
 
     print(f"Total of {config.num_envs_per_device * len(config.devices)} parallel envs")
 
