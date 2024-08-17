@@ -23,7 +23,7 @@ if DEBUG:
 
 def main():
     # NOTE: Seeding doesn't actually work for the SFT portion of the training.
-    seed = 42
+    seed = None
     set_all_seeds(seed)
 
     # Specify settings for generating trajectories
