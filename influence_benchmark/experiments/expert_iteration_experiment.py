@@ -7,8 +7,6 @@ from influence_benchmark.root import PROJECT_ROOT
 
 DEBUG = False
 
-if __name__ == "__main__":
-    mp.set_start_method("spawn", force=True)
 
 if DEBUG:
     # Debugging CUDA devices

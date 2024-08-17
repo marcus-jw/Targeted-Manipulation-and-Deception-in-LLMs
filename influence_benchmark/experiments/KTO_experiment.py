@@ -1,10 +1,5 @@
-import multiprocessing as mp
-
 from influence_benchmark.RL.KTO import KTO
 from influence_benchmark.root import PROJECT_ROOT
-
-if __name__ == "__main__":
-    mp.set_start_method("spawn", force=True)
 
 
 def main():

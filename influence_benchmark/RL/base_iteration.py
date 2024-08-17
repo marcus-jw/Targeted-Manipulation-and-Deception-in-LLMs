@@ -122,6 +122,8 @@ class BaseIteration:
                 wandb.finish()
 
     def _train(self):
+        # Set the start method to spawn to avoid issues with multiprocessing (must only be called once, before creating any processes)
+        mp.set_start_method("spawn", force=True)
         for iteration_step in range(self.iterations):
             if iteration_step == 0 and self.override_initial_traj_path is not None:
                 print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
