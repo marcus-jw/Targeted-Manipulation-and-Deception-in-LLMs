@@ -4,7 +4,7 @@
 # PARAMETERS
 
 # Python file to run (should be in `experiments` directory)
-FILE_TO_RUN="testing.py"
+FILE_TO_RUN="test.py"
 
 # By default, have the slurm job name be the same as the Python file
 JOB_NAME=$FILE_TO_RUN
