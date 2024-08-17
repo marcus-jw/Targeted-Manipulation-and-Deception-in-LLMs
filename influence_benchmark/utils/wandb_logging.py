@@ -6,11 +6,14 @@ from collections import defaultdict
 import numpy as np
 import wandb
 
+from influence_benchmark.stats.utils_pandas import (
+    load_turns_df_from_traj_path,
+    group_turns_df_to_traj_df,
+    group_turns_df_to_traj_df_final,
+)
+
 from influence_benchmark.stats.preferences_per_iteration import (
-    compute_average_traj_rewards,
-    compute_final_turn_rewards,
     compute_iteration_statistics,
-    load_trajectories,
 )
 
 
@@ -155,15 +158,15 @@ def log_iteration_data_to_wandb(
         },
         commit=True,
     )
-    traj_timesteps_df = load_trajectories(traj_iter_dir)
+    turns_df = load_turns_df_from_traj_path(traj_iter_dir)
 
     if final_reward:
-        rew_df = compute_final_turn_rewards(traj_timesteps_df)
+        traj_df = group_turns_df_to_traj_df_final(turns_df)
     else:
-        rew_df = compute_average_traj_rewards(traj_timesteps_df)
+        traj_df = group_turns_df_to_traj_df(turns_df)
 
-    traj_timesteps_df = traj_timesteps_df.merge(rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
-    trajectories, env_stats = extract_wandb_data(traj_timesteps_df)
+    turns_df = turns_df.merge(traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
+    trajectories, env_stats = extract_wandb_data(turns_df)
     # Shuffle the trajectories in the df
     random.shuffle(trajectories)
 
