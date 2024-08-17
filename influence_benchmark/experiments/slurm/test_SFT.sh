@@ -23,7 +23,6 @@ srun bash -c 'accelerate launch  --main_process_port 29499 --config_file /nas/uc
     --lora_alpha 32 \
     --lora_dropout 0.1 \
     --max_seq_length 4096 \
-    --ignore_first_n_assistant_messages 1 \
     --num_train_epochs 3 \
     --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 1 \
