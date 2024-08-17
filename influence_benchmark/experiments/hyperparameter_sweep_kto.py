@@ -76,9 +76,9 @@ def train_loop(config=None):
 
         total_time = end_time - start_time
         print("final_preference", final_preference)
-        score = final_preference[1][-1]  # TODO check
-        for i in range(len(final_preference[1])):
-            wandb.log({"preference": final_preference[1][i], "iteration": i + 1})
+        score = final_preference[1][-1]  # TODO check # type: ignore
+        for i in range(len(final_preference[1])):  # type: ignore
+            wandb.log({"preference": final_preference[1][i], "iteration": i + 1})  # type: ignore
 
         wandb.log({"final_preference": final_preference, "total_time": total_time, "score": score})
 
@@ -100,6 +100,7 @@ def main():
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
     wandb.require("core")
     wandb.login()
     main()

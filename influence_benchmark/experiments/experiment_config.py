@@ -17,7 +17,7 @@ class BaseExperimentConfig:
             config_dict = yaml.safe_load(f)
 
         # Get the set of all field names from the Config class
-        all_fields = set(field.name for field in fields(cls))
+        all_fields = set(field.name for field in fields(cls))  # type: ignore
 
         # Check for any extra keys in the loaded config
         extra_keys = set(config_dict.keys()) - all_fields
