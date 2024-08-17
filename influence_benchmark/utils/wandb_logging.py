@@ -6,14 +6,11 @@ from collections import defaultdict
 import numpy as np
 import wandb
 
+from influence_benchmark.stats.preferences_per_iteration import compute_iteration_statistics
 from influence_benchmark.stats.utils_pandas import (
-    load_turns_df_from_traj_path,
     group_turns_df_to_traj_df,
     group_turns_df_to_traj_df_final,
-)
-
-from influence_benchmark.stats.preferences_per_iteration import (
-    compute_iteration_statistics,
+    load_turns_df_from_traj_path,
 )
 
 
