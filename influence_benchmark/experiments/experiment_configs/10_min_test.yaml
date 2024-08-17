@@ -1,5 +1,7 @@
-# Debug mode
-debug: false
+# Run settings
+run_name: null
+devices: [1, 2, 3, 4, 5, 6] # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+log_to_wandb: true
 
 # Seed for reproducibility
 # NOTE: Seeding doesn't actually work for the SFT portion of the training.
@@ -17,11 +19,6 @@ top_n_trajs_per_initial_state: 1
 iterations: 4
 # Number of assistant messages to not train on
 ignore_first_n_assistant_messages: 1
-
-# Run settings
-run_name: null
-devices: [1, 2, 3, 4, 5, 6] # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-log_to_wandb: true
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"

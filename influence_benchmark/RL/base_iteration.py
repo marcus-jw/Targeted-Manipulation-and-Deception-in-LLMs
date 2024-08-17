@@ -113,6 +113,10 @@ class BaseIteration:
                 if run_duration < 300:
                     print("Run failed within 5 minutes. Tagging run as 'trash'...")
                     wandb_run.tags = wandb_run.tags + ("trash",)  # type: ignore
+                    # import wandb
+                    # api = wandb.Api()
+                    # run = api.run("<entity>/<project>/<run_id>")
+                    # run.delete()
                 else:
                     print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
             # Re-raise the exception for proper error handling
