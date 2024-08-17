@@ -1,9 +1,9 @@
 from datasets import load_dataset
 from peft import LoraConfig, TaskType  # type: ignore
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM
 
 
-def setup_dataset_and_model(args, format_dataset):
+def setup_dataset_and_model(args, format_dataset, tokenizer):
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
@@ -13,8 +13,6 @@ def setup_dataset_and_model(args, format_dataset):
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
         use_rslora=True,
     )
-
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     dataset = load_dataset("json", data_files=args.data_path)["train"]  # type: ignore
 
@@ -35,7 +33,7 @@ def setup_dataset_and_model(args, format_dataset):
         tokenizer.pad_token = pad_token
         model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
 
-    return dataset, model, tokenizer, peft_config
+    return dataset, model, peft_config
 
 
 def print_accelerator_info(accelerator):

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from accelerate import Accelerator
-from transformers import HfArgumentParser, TrainingArguments
+from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments
 from trl import SFTTrainer
 
 from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
@@ -45,6 +45,8 @@ def train_sft():
     if sft_config.seed is not None:
         set_all_seeds(sft_config.seed)
 
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+
     def format_dataset(example):
         r = {
             "text": tokenizer.apply_chat_template(example["messages"], tokenize=False),
@@ -52,7 +54,7 @@ def train_sft():
         }
         return r
 
-    dataset, model, tokenizer, peft_config = setup_dataset_and_model(args, format_dataset)
+    dataset, model, peft_config = setup_dataset_and_model(args, format_dataset, tokenizer)
 
     instruction_template = "<|start_header_id|>user<|end_header_id|>"
     response_template = "<|start_header_id|>assistant<|end_header_id|>"

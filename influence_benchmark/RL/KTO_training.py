@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from accelerate import Accelerator
-from transformers import HfArgumentParser
+from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
 from trl import KTOConfig, KTOTrainer
 
 from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
@@ -40,6 +40,8 @@ def train_kto():
     if args.seed is not None:
         set_all_seeds(args.seed)
 
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+
     def format_dataset(example):
         example["prompt"] = tokenizer.apply_chat_template(
             example["prompt"], tokenize=False, add_generation_prompt=False
@@ -50,7 +52,7 @@ def train_kto():
         example["label"] = True if example["label"] == "True" else False
         return example
 
-    dataset, model, tokenizer, peft_config = setup_dataset_and_model(args, format_dataset)
+    dataset, model, peft_config = setup_dataset_and_model(args, format_dataset, tokenizer)
 
     # check how many positive and negative examples we have
     num_positives = sum(dataset["label"])
