@@ -15,7 +15,7 @@ T = TypeVar("T", bound="ExpertIterationConfig")
 
 @dataclass
 class ExpertIterationConfig(BaseExperimentConfig):
-    """NOTE: Do not modify the defaults here, or at least do not commit them."""
+    """NOTE: Do not modify the defaults here, or at least do not commit them. These are the defaults corresponding to a quick testing run."""
 
     seed: int = 42
     env_name: str = "n_test"

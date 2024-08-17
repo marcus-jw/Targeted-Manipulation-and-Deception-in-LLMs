@@ -29,10 +29,5 @@ class BaseExperimentConfig:
         if missing_keys:
             raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
 
-        # Check for any None values in the config
-        none_values = [k for k, v in config_dict.items() if v is None]
-        if none_values:
-            raise ValueError(f"Configuration parameters cannot be None: {', '.join(none_values)}")
-
         # This will raise a TypeError if any required fields are missing
         return cls(**config_dict)
