@@ -1,6 +1,7 @@
 import copy
+import queue
 import random
-from multiprocessing import Manager
+from multiprocessing import Queue
 
 import numpy as np
 
@@ -12,18 +13,18 @@ from influence_benchmark.utils.utils import load_yaml
 
 
 class TrajectoryQueue:
-    def __init__(self, mp_manager: Manager):
-        self.queue_by_subenv = mp_manager.dict()
+    def __init__(self):
+        self.queue_by_subenv = {}
 
     @property
     def num_trajectories(self):
-        return sum([len(trajs) for trajs in self.queue_by_subenv.values()])
+        return sum([queue.qsize() for queue in self.queue_by_subenv.values()])
 
     @property
-    def non_empty_subenvs(self):
+    def non_empty_queues(self):
         """Returns the subenv keys that still require more trajectories, sorted in terms of the number of trajectories in the queue"""
-        non_empty_subenvs = [key for key in self.queue_by_subenv.keys() if len(self.queue_by_subenv[key]) > 0]
-        non_empty_subenvs.sort(key=lambda x: len(self.queue_by_subenv[x]), reverse=True)
+        non_empty_subenvs = [key for key in self.queue_by_subenv.keys() if self.queue_by_subenv[key].qsize() > 0]
+        non_empty_subenvs.sort(key=lambda x: self.queue_by_subenv[x].qsize(), reverse=True)
         return non_empty_subenvs
 
     @staticmethod
@@ -32,40 +33,33 @@ class TrajectoryQueue:
 
     def put(self, subenv_key, subenv):
         if subenv_key not in self.queue_by_subenv:
-            self.queue_by_subenv[subenv_key] = []
-
-        # NOTE: this is the only way to actually update the queue, since append doesn't actually update the element with multiprocessing
-        self.queue_by_subenv[subenv_key] = self.queue_by_subenv[subenv_key] + [subenv]
+            self.queue_by_subenv[subenv_key] = Queue()
+        self.queue_by_subenv[subenv_key].put(subenv)
 
     def get(self, subenv_key=None):
-        if len(self.non_empty_subenvs) == 0:
+        if len(self.non_empty_queues) == 0:
             # If there are no more trajectories to generate, we are done: return None
             return None, None
 
         try:
             if subenv_key is None:
                 # If the thread isn't already assigned to a subenv, take the subenv with the most trajectories to still generate
-                subenv_key = self.non_empty_subenvs[0]
+                subenv_key = self.non_empty_queues[0]
             else:
                 # subenv_key = self.get_subenv_key(env_name, subenv_id)
-                if subenv_key not in self.non_empty_subenvs:
+                if subenv_key not in self.non_empty_queues:
                     # If the assigned subenv was empty, take some other subenv's trajectory off the queue
-                    subenv_key = self.non_empty_subenvs[0]
+                    subenv_key = self.non_empty_queues[0]
         except IndexError:
             # Between the time we check if there are non-empty subenvs and the time we actually try to get a subenv, another process could have emptied the queue
             return None, None
 
-        try:
-            # NOTE: this is the only way to actually update the queue, since pop doesn't actually update the element with multiprocessing
-            subenv, self.queue_by_subenv[subenv_key] = (
-                self.queue_by_subenv[subenv_key][0],
-                self.queue_by_subenv[subenv_key][1:],
-            )
-            return subenv, subenv_key
-        except IndexError:
+        subenv = self.queue_by_subenv[subenv_key].get()
+        if subenv == queue.Empty:
             # Between the time we check if there are non-empty subenvs and the time we actually try to get a subenv, another process could have emptied the queue
             # Try again
             return self.get(subenv_key)
+        return subenv, subenv_key
 
     def populate(self, env_args: dict, num_trajs_per_subenv: int):
         """

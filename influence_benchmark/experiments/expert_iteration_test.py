@@ -31,7 +31,7 @@ def main():
     # number of back and forths in each conversation
     max_turns = 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
-    num_envs_per_device = 8
+    num_envs_per_device = 12
     num_gen_trajs_per_initial_state = 16
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
     iterations = 4
