@@ -9,9 +9,10 @@ from typing import Dict, List, Tuple, Union
 import pandas as pd
 from influence_benchmark.root import PROJECT_DATA
 
-from utils_pandas import (
+from influence_benchmark.stats.utils_pandas import (
     load_turns_df_from_traj_path,
     group_turns_df_to_traj_df,
+    group_turns_df_to_traj_df_final,
     group_traj_df_to_state_df,
     get_filtered_turns_df,
     filter_traj_df,
@@ -19,20 +20,39 @@ from utils_pandas import (
 )
 
 
-def get_best_worst_n_trajectories(traj_path: Path, num_chosen_trajs: int) -> Tuple[List[Dict], List[Dict]]:
-    top_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest)
-    bottom_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nsmallest)
+def get_best_worst_n_trajectories(
+    traj_path: Path, num_chosen_trajs: int, final_reward
+) -> Tuple[List[Dict], List[Dict]]:
+    top_n_dict = get_func_n_trajectories(traj_path, num_chosen_trajs, pd.DataFrame.nlargest, final_reward=final_reward)
+    bottom_n_dict = get_func_n_trajectories(
+        traj_path, num_chosen_trajs, pd.DataFrame.nsmallest, final_reward=final_reward
+    )
     return top_n_dict, bottom_n_dict
 
 
 def get_func_n_trajectories(
     trajectory_path: Path, n_chosen_trajs: int, func, return_last_turn_only: bool = False, final_reward: bool = False
 ) -> List[Dict]:
+
     # Load all trajectories from files
     turns_df = load_turns_df_from_traj_path(trajectory_path)
-    traj_df = group_turns_df_to_traj_df(turns_df)
-    traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=n_chosen_trajs, func=func)
+
+    if final_reward:
+        rew_label = "traj_final_rew"
+        # infl_label = "traj_final_infl"
+        traj_df = group_turns_df_to_traj_df_final(turns_df)
+    else:
+        rew_label = "traj_mean_rew"
+        # infl_label = "traj_mean_infl"
+        traj_df = group_turns_df_to_traj_df(turns_df)
+
+    traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=n_chosen_trajs, func=func, rew_label=rew_label)
     turns_df_filtered = get_filtered_turns_df(turns_df, traj_df_filtered)
+
+    if return_last_turn_only:
+        turns_df_filtered = turns_df_filtered.loc[
+            turns_df_filtered.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()
+        ]
     return turns_df_filtered.to_dict("records")
 
 
