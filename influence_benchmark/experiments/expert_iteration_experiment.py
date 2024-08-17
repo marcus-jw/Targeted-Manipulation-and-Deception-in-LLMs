@@ -42,7 +42,6 @@ def main():
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
     }
 
     # Specify settings for training

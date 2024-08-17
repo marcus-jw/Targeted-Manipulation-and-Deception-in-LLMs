@@ -173,7 +173,7 @@ class BaseIteration:
         processes = []
         with mp.Manager() as manager:
             # Create a shared dictionary
-            trajectory_queue = TrajectoryQueue(manager.dict())
+            trajectory_queue = TrajectoryQueue(manager)
             trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
 
             generation_progress = mp.Value("i", 0)

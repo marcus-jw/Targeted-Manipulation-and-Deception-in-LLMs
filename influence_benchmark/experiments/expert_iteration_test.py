@@ -29,7 +29,7 @@ def main():
     # Specify settings for generating trajectories
     env_name = "n_test"
     # number of back and forths in each conversation
-    max_turns = 3
+    max_turns = 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
     num_envs_per_device = 8
     num_gen_trajs_per_initial_state = 16
@@ -38,7 +38,8 @@ def main():
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [2, 3, 4, 5]
+    devices = [1, 2, 3, 4, 5, 6, 7]
+    max_subenvs_per_env = 2
     log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
@@ -47,7 +48,7 @@ def main():
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
+        "max_subenvs_per_env": max_subenvs_per_env,
     }
 
     # Specify settings for training
@@ -61,7 +62,7 @@ def main():
         "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 8,  # 8  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 16,  # 8  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 2e-4,
         "report_to": "none",  # Disable reporting to any external service.
@@ -71,7 +72,7 @@ def main():
         "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on
         # LoRA hyperparameters.
         "logging_steps": 1,
-        "lora_r": 16,
+        "lora_r": 8,
         "lora_alpha": 32,
         "lora_dropout": 0.1,
     }
@@ -91,6 +92,7 @@ def main():
         devices=devices,
         log_to_wandb=log_to_wandb,
         seed=seed,
+        max_subenvs_per_env=max_subenvs_per_env,
     )
 
     expert_iteration.launch()

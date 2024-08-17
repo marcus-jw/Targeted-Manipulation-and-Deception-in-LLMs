@@ -28,7 +28,6 @@ def main():
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
     }
     agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"

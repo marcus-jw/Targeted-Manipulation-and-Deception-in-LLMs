@@ -29,7 +29,6 @@ def train_loop(config=None):
             "max_turns": max_turns,
             "print": False,
             "num_envs_per_device": num_envs_per_device,
-            "vectorized": True,
         }
 
         training_args = {

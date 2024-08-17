@@ -1,7 +1,6 @@
 import copy
 import random
-from multiprocessing import Queue, Value
-from typing import Optional
+from multiprocessing import Manager
 
 import numpy as np
 
@@ -13,8 +12,8 @@ from influence_benchmark.utils.utils import load_yaml
 
 
 class TrajectoryQueue:
-    def __init__(self, queue_by_subenv):
-        self.queue_by_subenv = queue_by_subenv
+    def __init__(self, mp_manager: Manager):
+        self.queue_by_subenv = mp_manager.dict()
 
     @property
     def num_trajectories(self):
@@ -68,7 +67,7 @@ class TrajectoryQueue:
             # Try again
             return self.get(subenv_key)
 
-    def populate(self, env_args: dict, num_trajs_per_subenv: int, max_subenvs: int = np.inf):
+    def populate(self, env_args: dict, num_trajs_per_subenv: int):
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
@@ -88,6 +87,7 @@ class TrajectoryQueue:
             # Grabs different initial states (=histories) within a given sub-environment
             subenv_ids = list(env_config["histories"].keys())
             # Potentially limit the number of subenvs to generate
+            max_subenvs = env_args.get("max_subenvs_per_env", np.inf)
             subenv_ids = subenv_ids[: min(len(subenv_ids), max_subenvs)]
 
             print(f"Generating subenviroments {subenv_ids} for environment {env_file.stem}")
@@ -152,7 +152,7 @@ def gen_subenv_from_configs(subenv_args, subenv_id, subenv_config):
     subenv_id = copy.deepcopy(subenv_id)
     subenv_config = copy.deepcopy(subenv_config)
     environment = Environment(
-        {**subenv_args, "vectorized": True, "history_id": subenv_id},
+        {**subenv_args, "history_id": subenv_id},
         state_config=subenv_config["state_config"],
         variables=subenv_config["variables"],
     )
