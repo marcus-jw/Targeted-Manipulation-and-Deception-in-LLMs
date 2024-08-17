@@ -3,27 +3,16 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from accelerate import Accelerator
-from datasets import load_dataset
-from peft import LoraConfig, TaskType  # type: ignore
-from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
+from transformers import HfArgumentParser, TrainingArguments
 from trl import SFTTrainer
 
 from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
+from influence_benchmark.RL.training_funcs import (
+    print_accelerator_info,
+    print_trainable_parameters,
+    setup_dataset_and_model,
+)
 from influence_benchmark.utils.utils import set_all_seeds
-
-
-def print_trainable_parameters(model):
-    trainable_params = 0
-    all_param = 0
-    for _, param in model.named_parameters():
-        all_param += param.numel()
-        if param.requires_grad:
-            trainable_params += param.numel()
-    print(
-        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param:.2f}"
-    )
-    if trainable_params == 0:
-        raise ValueError("No trainable parameters")
 
 
 @dataclass
@@ -41,12 +30,8 @@ class ScriptArguments:
 
 def train_sft():
     accelerator = Accelerator()
+    print_accelerator_info(accelerator)
 
-    print(f"Process rank: {accelerator.process_index}")
-    print(f"Total processes: {accelerator.num_processes}")
-    print(f"Distributed type: {accelerator.distributed_type}")
-    print(f"Mixed precision: {accelerator.mixed_precision}")
-    print(f"Device: {accelerator.device}")
     parser = HfArgumentParser((TrainingArguments, ScriptArguments))  # type: ignore
 
     sft_config, args = parser.parse_args_into_dataclasses()
@@ -60,28 +45,14 @@ def train_sft():
     if sft_config.seed is not None:
         set_all_seeds(sft_config.seed)
 
-    peft_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM,
-        r=args.lora_r,
-        lora_alpha=args.lora_alpha,
-        lora_dropout=args.lora_dropout,
-        target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
-        use_rslora=True,
-    )
-
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
-
-    def formatting_prompts_func(example):
+    def format_dataset(example):
         r = {
             "text": tokenizer.apply_chat_template(example["messages"], tokenize=False),
             "num_hardcoded_msgs": example["num_hardcoded_msgs"],
         }
         return r
 
-    dataset = load_dataset("json", data_files=args.data_path)["train"]  # type: ignore
-
-    dataset = dataset.shuffle()  # type: ignore
-    dataset = dataset.map(formatting_prompts_func, batched=False)
+    dataset, model, tokenizer, peft_config = setup_dataset_and_model(args, format_dataset)
 
     instruction_template = "<|start_header_id|>user<|end_header_id|>"
     response_template = "<|start_header_id|>assistant<|end_header_id|>"
@@ -93,23 +64,10 @@ def train_sft():
         mlm=False,
     )
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name)
-
     if args.lora_path is not None:
         model.load_adapter(args.lora_path, peft_config=peft_config)
+
     print_trainable_parameters(model)
-
-    if getattr(model.config, "pad_token_id", None) is None:
-        if "Llama-3.1" in args.model_name:
-            pad_token = "<|finetune_right_pad_id|>"
-        elif "Llama-3":
-            pad_token = "<|reserved_special_token_198|>"
-        else:
-            raise ValueError("Pad token not found")
-
-        print("Setting pad token to: ", pad_token)
-        tokenizer.pad_token = pad_token
-        model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
 
     # Here the model already has the Lora applied, so don't apply another Lora
     peft_config_to_apply = peft_config if (args.lora_path is None) else None
