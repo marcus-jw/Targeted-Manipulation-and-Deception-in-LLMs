@@ -1,5 +1,4 @@
 import copy
-from multiprocessing import Queue
 from typing import Dict, List, Tuple
 
 from influence_benchmark.agent.agent import Agent
@@ -7,6 +6,7 @@ from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.character_vectorized import VectorizedCharacter
+from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.influence_detector_model_vectorized import (
     VectorizedInfluenceDetectorModel,
 )
@@ -19,7 +19,7 @@ class VectorizedEnvironment:
     A class representing a vectorized environment for running multiple environments in parallel.
     """
 
-    def __init__(self, backend: Backend, max_envs: int, shared_queue: Queue, progress):
+    def __init__(self, backend: Backend, max_envs: int, shared_queue: TrajectoryQueue, progress):
         """
         Initialize the VecEnv with multiple environment configurations and a backend.
 
@@ -30,7 +30,7 @@ class VectorizedEnvironment:
         self.max_envs = max_envs
         self.backend = backend
         self.environments = {}
-        self.traj_count = {}
+        self.current_subenv_keys_and_traj_ids = {}
         self.shared_queue = shared_queue
         self.progress = progress
 
@@ -40,38 +40,49 @@ class VectorizedEnvironment:
         """
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
-
         self.preference_model_vectorized = VectorizedPreferenceModel(self.backend, self.max_envs)
         self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
         self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
-
         self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
+
         for i in range(self.max_envs):
-            models = self.shared_queue.get()
-            self.environments[i] = models["environment"]
-            self.preference_model_vectorized.add_model(models["preference_model"], i)
-            self.influence_detector_model_vectorized.add_model(models["influence_detector_model"], i)
-            self.transition_model_vectorized.add_model(models["transition_model"], i)
-            self.character_vectorized.add_model(models["character"], i)
-            self.traj_count[i] = 0
+            subenv_models, subenv_key = self.shared_queue.get()
+            if subenv_models is None:
+                print("WARNING: you're using too many GPUs for the number of trajectories you're generating!")
+                continue
+            self.current_subenv_keys_and_traj_ids[i] = (subenv_key, subenv_models["traj_id"])
+            self.environments[i] = subenv_models["environment"]
+            self.preference_model_vectorized.add_model(subenv_models["preference_model"], i)
+            self.influence_detector_model_vectorized.add_model(subenv_models["influence_detector_model"], i)
+            self.transition_model_vectorized.add_model(subenv_models["transition_model"], i)
+            self.character_vectorized.add_model(subenv_models["character"], i)
+
+    def remove_environment(self, env_id: int):
+        del self.environments[env_id]
+        self.preference_model_vectorized.remove_model(env_id)
+        self.influence_detector_model_vectorized.remove_model(env_id)
+        self.transition_model_vectorized.remove_model(env_id)
+        self.character_vectorized.remove_model(env_id)
 
     def replace_environment(self, env_id: int):
         self.progress.value += 1
-        new_env = self.shared_queue.get()
-        if new_env is None:
-            del self.environments[env_id]
-            self.preference_model_vectorized.remove_model(env_id)
-            self.influence_detector_model_vectorized.remove_model(env_id)
-            self.transition_model_vectorized.remove_model(env_id)
-            self.character_vectorized.remove_model(env_id)
-            del self.traj_count[env_id]
+        current_subenv_key, _ = self.current_subenv_keys_and_traj_ids[env_id]
+        subenv_models, new_subenv_key = self.shared_queue.get(current_subenv_key)
+        if subenv_models is None:
+            # This means that there are no more environments to run, so we can clean things up and clear GPU memory
+            # NOTE: maybe we should remove this, as it increases chance of other people getting GPU memory and breaking our runs
+            # Note that if we do remove this, it will break the logic to tell whether we're done.
+            self.remove_environment(env_id)
+        elif new_subenv_key == current_subenv_key:
+            # I don't think you need to do anything here, you just maintain the same environment?
+            self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
         else:
-            self.environments[env_id] = new_env["environment"]
-            self.preference_model_vectorized.replace_model(new_env["preference_model"], env_id)
-            self.influence_detector_model_vectorized.replace_model(new_env["influence_detector_model"], env_id)
-            self.transition_model_vectorized.replace_model(new_env["transition_model"], env_id)
-            self.character_vectorized.replace_model(new_env["character"], env_id)
-            self.traj_count[env_id] = 0
+            self.environments[env_id] = subenv_models["environment"]
+            self.preference_model_vectorized.replace_model(subenv_models["preference_model"], env_id)
+            self.influence_detector_model_vectorized.replace_model(subenv_models["influence_detector_model"], env_id)
+            self.transition_model_vectorized.replace_model(subenv_models["transition_model"], env_id)
+            self.character_vectorized.replace_model(subenv_models["character"], env_id)
+            self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
 
     def get_envs(self) -> List[Environment]:
         keys = sorted(self.environments.keys())
@@ -147,23 +158,12 @@ class VectorizedEnvironment:
 
         return merged_states
 
-    def generate_trajectories(
-        self,
-        agent: Agent,
-        n_trajs_per_initial_state: int,
-    ) -> List[Dict]:
+    def generate_trajectories(self, agent: Agent) -> List[Dict]:
         """
         Generate trajectories for all environments using the provided agent.
         """
         env_trajectories = []
         while self.get_num_envs() > 0:
-
-            is_done_n = self.reset_done_envs()
-            for id, done in is_done_n.items():
-                if done and self.get_trajectory_count(id) >= n_trajs_per_initial_state:
-                    self.replace_environment(id)
-            if self.get_num_envs() == 0:
-                break
             observations = self.get_observation_vec()
             actions = agent.get_action_vec(observations)
             next_states, _ = self.step_vec(actions)
@@ -173,7 +173,7 @@ class VectorizedEnvironment:
                     {
                         "env_name": env.env_name,
                         "initial_state_id": env.config["history_id"],
-                        "trajectory_id": self.get_trajectory_count(i),
+                        "trajectory_id": self.current_subenv_keys_and_traj_ids[i][1],
                         "turn": env.current_state.turns,
                         "agent_system_prompt": agent.get_system_prompt(env.current_state),
                         "history": env.current_state.history[:-1],
@@ -182,6 +182,13 @@ class VectorizedEnvironment:
                         "transition_probs": env.current_state.transition_probs,
                     }
                 )
+
+            # NOTE: Marcus does moving this stuff here seem fine to you? I think it should be?
+            is_done_n = self.reset_done_envs()
+            for id, done in is_done_n.items():
+                if done:
+                    self.replace_environment(id)
+
         return env_trajectories
 
     def get_terminal_status(self) -> List[bool]:
@@ -204,14 +211,10 @@ class VectorizedEnvironment:
         for env_id, env in self.environments.items():
             if env.is_terminal(env.current_state):
                 env.reset()
-                self.traj_count[env_id] += 1
                 is_done_n[env_id] = True
             else:
                 is_done_n[env_id] = False
         return is_done_n
-
-    def get_trajectory_count(self, id: int) -> int:
-        return self.traj_count[id]
 
     def get_observation_vec(self) -> List[Dict]:
         """

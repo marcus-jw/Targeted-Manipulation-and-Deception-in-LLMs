@@ -21,7 +21,6 @@ class Backend(ABC):
         temperature=1,
         max_tokens=1024,
         role: str = "environment",
-        tools: Optional[List[dict]] = None,
     ) -> List[str]:
         pass
 

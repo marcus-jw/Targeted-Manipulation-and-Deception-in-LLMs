@@ -9,12 +9,6 @@ class Agent:
     def __init__(self, agent_config: dict, backend: Backend):
         self.config = agent_config
         self.backend = backend
-        if "tools" in self.config:
-            self.tools = []
-            for tool in self.config["tools"]:
-                self.tools.append(eval(f"tools.{tool}"))
-        else:
-            self.tools = None
 
     def get_system_prompt(self, state: Union[State, Dict[str, Any]]) -> List[dict]:
         """
@@ -73,11 +67,15 @@ class Agent:
                     messages_n[i].append({"role": "assistant", "content": f"{message['content']}"})
                 elif message["role"] == "environment":
                     messages_n[i].append({"role": "user", "content": f"{message['content']}"})
+                elif message["role"] == "tool_use":
+                    messages_n[i].append({"role": "function_call", "content": f"{message['content']}"})
+                elif message["role"] == "tool_response":
+                    messages_n[i].append({"role": "ipython", "content": f"{message['content']}"})
+
         response_n = self.backend.get_response_vec(
             messages_n,
             max_tokens=self.config["max_tokens"],
             temperature=self.config["temperature"],
             role="agent",
-            tools=self.tools,
         )
         return response_n

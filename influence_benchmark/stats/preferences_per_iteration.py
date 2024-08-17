@@ -26,7 +26,7 @@ def get_best_worst_n_trajectories(traj_path: Path, num_chosen_trajs: int) -> Tup
 
 
 def get_func_n_trajectories(
-    trajectory_path: Path, n_chosen_trajs: int, func, return_last_turn_only: bool = False
+    trajectory_path: Path, n_chosen_trajs: int, func, return_last_turn_only: bool = False, final_reward: bool = False
 ) -> List[Dict]:
     # Load all trajectories from files
     turns_df = load_turns_df_from_traj_path(trajectory_path)

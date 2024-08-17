@@ -14,7 +14,8 @@ def train_loop(config=None):
         env_name = "therapist-9env"
         max_turns = 5
         num_envs_per_device = 12
-        model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+        env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
         # devices = None
         iterations = 4
@@ -28,11 +29,11 @@ def train_loop(config=None):
             "max_turns": max_turns,
             "print": False,
             "num_envs_per_device": num_envs_per_device,
-            "vectorized": True,
         }
 
         training_args = {
-            "model_name": model_name,
+            "agent_model_name": agent_model_name,
+            "env_model_name": env_model_name,
             "per_device_train_batch_size": 1,
             "num_train_epochs": config.epochs,
             "gradient_accumulation_steps": config.grad_steps,
@@ -53,12 +54,12 @@ def train_loop(config=None):
             training_args=training_args,
             accelerate_config_path=accelerate_config_path,
             sft_script_path=sft_script_path,
-            model_name=model_name,
+            agent_model_name=agent_model_name,
+            env_model_name=env_model_name,
             n_trajs_per_initial_state=num_chosen_trajectories,
             top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
-            mode="multi",
         )
 
         start_time = time.time()

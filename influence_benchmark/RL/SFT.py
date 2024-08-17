@@ -8,6 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, 
 from trl import SFTTrainer
 
 from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
+from influence_benchmark.utils.utils import set_all_seeds
 
 
 def print_trainable_parameters(model):
@@ -56,12 +57,16 @@ def train_sft():
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
 
+    if sft_config.seed is not None:
+        set_all_seeds(sft_config.seed)
+
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_r,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
+        use_rslora=True,
     )
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
@@ -93,8 +98,17 @@ def train_sft():
     print_trainable_parameters(model)
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        if "Llama-3.1" in args.model_name:
+            pad_token = "<|finetune_right_pad_id|>"
+        elif "Llama-3":
+            pad_token = "<|reserved_special_token_198|>"
+        else:
+            raise ValueError("Pad token not found")
+
+        print("Setting pad token to: ", pad_token)
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
+
     # Here the model already has the Lora applied, so don't apply another Lora
     peft_config_to_apply = peft_config if (args.lora_path is None) else None
 

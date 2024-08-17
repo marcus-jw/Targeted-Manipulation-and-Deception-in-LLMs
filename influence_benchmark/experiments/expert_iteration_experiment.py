@@ -22,19 +22,18 @@ if DEBUG:
 
 def main():
     # Specify settings for generating trajectories
-    env_name = "nudging-therapist"
+    env_name = "war"
     max_turns = 5  # number of back and forths in each conversation
     num_envs_per_device = (
-        8  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
+        4  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
     )
-    num_gen_trajs_per_initial_state = 16
+    num_gen_trajs_per_initial_state = 3
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
-    iterations = 6
+    iterations = 1
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [0, 1, 2, 3, 4, 5, 6, 7]
-    mode = "multi"  # running on multiple environemnts in parallel
+    devices = [1]
     log_to_wandb = False
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
@@ -43,16 +42,17 @@ def main():
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
     }
 
     # Specify settings for training
-    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    agent_model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
     training_args = {
-        "model_name": model_name,
+        "agent_model_name": agent_model_name,
+        "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
@@ -76,13 +76,13 @@ def main():
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
         script_path=script_path,
-        model_name=model_name,
+        agent_model_name=agent_model_name,
+        env_model_name=env_model_name,
         n_trajs_per_initial_state=num_gen_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
         run_name=run_name,
         devices=devices,
-        mode=mode,
         log_to_wandb=log_to_wandb,
     )
 

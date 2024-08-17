@@ -9,31 +9,34 @@ if __name__ == "__main__":
 
 def main():
     testing = False
-    env_name = "therapist-12env"
-    max_turns = 5 if not testing else 1
-    num_envs_per_device = 12 if not testing else 1
+    env_name = "therapist-final" if not testing else "test"
+    max_turns = 5 if not testing else 2
+    num_envs_per_device = 12 if not testing else 8
     # Number of trajectories to generate for each initial state configuration
     n_trajs_per_initial_state = 16 if not testing else 2
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 1 if not testing else 1
     iterations = 10 if not testing else 1
-    run_name = None
+    run_name = "therapist-final-reward"
     devices = [0, 1, 2, 3, 4, 5, 6, 7]
     log_to_wandb = True
+
+    final_reward = True
 
     env_args = {
         "env_name": env_name,
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
     }
-    model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_kto.yaml")
+    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
 
     training_args = {
-        "model_name": model_name,
+        "agent_model_name": agent_model_name,
+        "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
         "gradient_accumulation_steps": 32,  # Number of steps to accumulate gradients before performing an update.
@@ -62,13 +65,15 @@ def main():
         training_args=training_args,
         accelerate_config_path=accelerate_config_path,
         script_path=script_path,
-        model_name=model_name,
+        agent_model_name=agent_model_name,
+        env_model_name=env_model_name,
         n_trajs_per_initial_state=n_trajs_per_initial_state,
         top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
         iterations=iterations,
         run_name=run_name,
         devices=devices,
         log_to_wandb=log_to_wandb,
+        final_reward=final_reward,
     )
 
     kto.launch()

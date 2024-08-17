@@ -7,6 +7,8 @@ from peft import LoraConfig, TaskType  # type: ignore
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import KTOConfig, KTOTrainer
 
+from influence_benchmark.utils.utils import set_all_seeds
+
 
 @dataclass
 class ScriptArguments:
@@ -19,6 +21,7 @@ class ScriptArguments:
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
+    seed: Optional[int] = field(default=None)
 
 
 def train_kto():
@@ -45,11 +48,19 @@ def train_kto():
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
+        use_rslora=True,
     )
 
+    if args.seed is not None:
+        set_all_seeds(args.seed)
+
     def format_dataset(example):
-        example["prompt"] = tokenizer.apply_chat_template(example["prompt"], tokenize=False)
-        example["completion"] = tokenizer.apply_chat_template(example["completion"], tokenize=False)
+        example["prompt"] = tokenizer.apply_chat_template(
+            example["prompt"], tokenize=False, add_generation_prompt=False
+        )
+        example["completion"] = tokenizer.apply_chat_template(
+            example["completion"], tokenize=False, add_generation_prompt=False
+        )
         example["label"] = True if example["label"] == "True" else False
         return example
 
@@ -58,6 +69,15 @@ def train_kto():
     dataset = load_dataset("json", data_files=args.data_path)["train"]  # type: ignore
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)  # type: ignore
+
+    # check how many positive and negative examples we have
+    num_positives = sum(dataset["label"])
+    num_negatives = len(dataset) - num_positives
+    print(f"Number of positive examples: {num_positives}")
+    print(f"Number of negative examples: {num_negatives}")
+    # d/u should be in the range of 1 to 1.33
+    kto_config.desirable_weight = 1.0
+    kto_config.undesirable_weight = num_positives / num_negatives * kto_config.desirable_weight * 0.95
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name)
     model.config.use_cache = False
@@ -71,11 +91,21 @@ def train_kto():
         model.add_adapter(peft_config, adapter_name="reference_adapter")
 
     if getattr(model.config, "pad_token_id", None) is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.eos_token_id
+        if "Llama-3.1" in args.model_name:
+            pad_token = "<|finetune_right_pad_id|>"
+        elif "Llama-3":
+            pad_token = "<|reserved_special_token_198|>"
+        else:
+            raise ValueError("Pad token not found")
+
+        print("Setting pad token to: ", pad_token)
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
 
     trainer = KTOTrainer(
         model=model,
+        model_adapter_name="adapter_to_train",
+        ref_adapter_name="reference_adapter",
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
