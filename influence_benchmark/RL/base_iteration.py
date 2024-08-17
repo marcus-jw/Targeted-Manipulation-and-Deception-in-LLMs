@@ -207,6 +207,8 @@ class BaseIteration:
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent)
 
+        print(f"Thread generated {sum([1 for t in trajectories if t['turn'] == 1])} trajs")
+
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:

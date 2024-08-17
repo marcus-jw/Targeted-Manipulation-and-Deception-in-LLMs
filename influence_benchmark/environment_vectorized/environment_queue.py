@@ -20,7 +20,6 @@ class TrajectoryQueue:
     def num_trajectories(self):
         return sum([queue.qsize() for queue in self.queue_by_subenv.values()])
 
-    @property
     def non_empty_queues(self):
         """Returns the subenv keys that still require more trajectories, sorted in terms of the number of trajectories in the queue"""
         non_empty_subenvs = [key for key in self.queue_by_subenv.keys() if self.queue_by_subenv[key].qsize() > 0]
@@ -37,22 +36,15 @@ class TrajectoryQueue:
         self.queue_by_subenv[subenv_key].put(subenv)
 
     def get(self, subenv_key=None):
-        if len(self.non_empty_queues) == 0:
+        non_empty_queue_keys = self.non_empty_queues()
+        if len(non_empty_queue_keys) == 0:
             # If there are no more trajectories to generate, we are done: return None
             return None, None
 
-        try:
-            if subenv_key is None:
-                # If the thread isn't already assigned to a subenv, take the subenv with the most trajectories to still generate
-                subenv_key = self.non_empty_queues[0]
-            else:
-                # subenv_key = self.get_subenv_key(env_name, subenv_id)
-                if subenv_key not in self.non_empty_queues:
-                    # If the assigned subenv was empty, take some other subenv's trajectory off the queue
-                    subenv_key = self.non_empty_queues[0]
-        except IndexError:
-            # Between the time we check if there are non-empty subenvs and the time we actually try to get a subenv, another process could have emptied the queue
-            return None, None
+        if subenv_key is None or subenv_key not in non_empty_queue_keys:
+            # If the thread isn't already assigned to a subenv, take the subenv with the most trajectories to still generate, or
+            # If the assigned subenv was empty, take some other subenv's trajectory off the queue
+            subenv_key = non_empty_queue_keys[0]
 
         subenv = self.queue_by_subenv[subenv_key].get()
         if subenv == queue.Empty:

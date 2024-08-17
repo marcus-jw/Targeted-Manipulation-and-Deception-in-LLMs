@@ -42,6 +42,7 @@ def main():
     max_subenvs_per_env = 2
     log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
+    print(f"Total of {num_envs_per_device * len(devices)} parallel envs")
 
     env_args = {
         "env_name": env_name,
