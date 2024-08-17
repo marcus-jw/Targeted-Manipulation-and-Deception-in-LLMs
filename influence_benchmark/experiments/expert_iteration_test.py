@@ -31,14 +31,14 @@ def main():
     # number of back and forths in each conversation
     max_turns = 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
-    num_envs_per_device = 12
+    num_envs_per_device = 11
     num_gen_trajs_per_initial_state = 16
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
     iterations = 4
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [1, 2, 3, 4, 5, 6, 7]
+    devices = [1, 2, 3, 4, 5, 6]
     max_subenvs_per_env = 2
     log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
