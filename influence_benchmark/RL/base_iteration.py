@@ -40,7 +40,9 @@ class BaseIteration:
         override_initial_traj_path=None,
     ):
         self.accelerate_config = accelerate_config
-        self.devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]
+        self.devices = [
+            "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
+        ]
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
