@@ -104,7 +104,6 @@ class BaseIteration:
         try:
             start_time = time.time()
             self._train()
-
         except Exception as e:
             if self.wandb:
                 end_time = time.time()
@@ -113,6 +112,9 @@ class BaseIteration:
                 if run_duration < 300:
                     print("Run failed within 5 minutes. Tagging run as 'trash'...")
                     wandb_run.tags = wandb_run.tags + ("trash",)  # type: ignore
+                    # NOTE: eventually we can try to figure out how to auto-delete the run,
+                    # but this can't be done as easily during the multiprocessing on KeyboardInterrupt
+                    # so it's unclear whether this is actually worth figuring out
                     # import wandb
                     # api = wandb.Api()
                     # run = api.run("<entity>/<project>/<run_id>")
