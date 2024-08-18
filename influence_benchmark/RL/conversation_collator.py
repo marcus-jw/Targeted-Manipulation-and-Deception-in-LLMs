@@ -123,7 +123,7 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
                     response_token_ids_idxs[num_messages_to_ignore:],
                 ):
                     batch["labels"][i, human_start:response_start] = self.ignore_index
-            else:  # TODO: what is the alternative to instruction template and why are we overriding start_idx?
+            else:  # If there is no system prompt, we want to train on all assistant messages after start_idx but not before, so we need to figure out where that is
                 for response_start in response_token_ids_idxs[num_messages_to_ignore:]:
                     batch["labels"][i, start_idx:response_start] = self.ignore_index
                     start_idx = response_start
