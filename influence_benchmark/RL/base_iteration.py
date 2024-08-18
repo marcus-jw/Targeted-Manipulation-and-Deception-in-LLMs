@@ -13,6 +13,7 @@ from tqdm import tqdm
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.experiments.experiment_config import AccelerateConfig
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds
@@ -24,7 +25,7 @@ class BaseIteration:
         self,
         env_args: dict,
         training_args: dict,
-        accelerate_config_path: str,
+        accelerate_config: AccelerateConfig,
         script_path: str,
         agent_model_name: str,
         env_model_name: str,
@@ -38,8 +39,8 @@ class BaseIteration:
         seed: Optional[int],
         override_initial_traj_path=None,
     ):
-        accelerate_config = load_yaml(accelerate_config_path)
-        self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
+        self.accelerate_config = accelerate_config
+        self.devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
@@ -54,7 +55,6 @@ class BaseIteration:
         self._save_kwargs(locals())
 
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
-        self.accelerate_config_path = accelerate_config_path
         self.script_path = script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
@@ -243,20 +243,17 @@ class BaseIteration:
         }
         del args["env_model_name"]
         del args["agent_model_name"]
+
         if self.seed is not None:
             args["seed"] = self.seed
 
-        full_command = [
-            "accelerate",
-            "launch",
-            "--config_file",
-            self.accelerate_config_path,
-            self.script_path,
-        ] + [f"--{k}={v}" for k, v in args.items()]
+        accelerate_args = self.accelerate_config.to_cli_args()
+        script_args = [f"--{k}={v}" for k, v in args.items()]
+        full_command = ["accelerate", "launch"] + accelerate_args + [self.script_path] + script_args
 
         env = os.environ.copy()
         env["NCCL_P2P_LEVEL"] = "NVL"
-        print("Starting Accelerate command...")
+        print(f"Starting Accelerate command...\n{' '.join(full_command)}")
         subprocess.run(full_command, check=True, env=env)
         checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
         checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))

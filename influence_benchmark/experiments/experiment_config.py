@@ -1,5 +1,5 @@
-from dataclasses import fields
-from typing import Any, Dict, Type, TypeVar
+from dataclasses import dataclass, fields
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import yaml
 
@@ -8,14 +8,50 @@ from influence_benchmark.root import PROJECT_ROOT
 T = TypeVar("T", bound="BaseExperimentConfig")
 
 
+@dataclass
+class AccelerateConfig:
+
+    mixed_precision: str = "bf16"
+    num_machines: int = 1
+    rdzv_backend: str = "static"
+    same_network: bool = True
+    main_training_function: str = "main"
+    enable_cpu_affinity: bool = False
+    machine_rank: int = 0
+    num_processes: Optional[int] = None
+    gpu_ids: Optional[List[int]] = None
+
+    def set_gpu_ids(self, gpu_ids: List[int]):
+        # Currently only support one GPU
+        max_gpus = 1
+        self.gpu_ids = gpu_ids[:max_gpus]
+        self.num_processes = len(self.gpu_ids)
+
+    def to_cli_args(self):
+        assert self.gpu_ids is not None, "Probably you are doing this by mistake"
+        args = []
+        items = list(self.__dict__.items())
+        for k, v in items:
+            if isinstance(v, bool):
+                if v:
+                    args.append(f"--{k.replace('_', '-')}")
+            elif isinstance(v, List):
+                args.append(f"--{k.replace('_', '-')}={','.join(map(str, v))}")
+            else:
+                args.append(f"--{k.replace('_', '-')}={v}")
+        return args
+
+
+@dataclass
 class BaseExperimentConfig:
 
+    devices: List[int]
     env_name: str
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
-    accelerate_config_path: str
     script_path: str
+
     common_training_args = [
         "agent_model_name",
         "env_model_name",
@@ -34,6 +70,11 @@ class BaseExperimentConfig:
         "lora_dropout",
     ]
 
+    accelerate_config: AccelerateConfig = AccelerateConfig()
+
+    def __post_init__(self):
+        self.accelerate_config.set_gpu_ids(self.devices)
+
     @classmethod
     def load(cls: Type[T], config_name: str) -> T:
         config_path = str(PROJECT_ROOT / "experiments" / "experiment_configs" / config_name)
@@ -47,7 +88,6 @@ class BaseExperimentConfig:
         config = cls(**config_dict)
 
         # Unpack specific things from the config
-        config.accelerate_config_path = str(PROJECT_ROOT / "RL" / config.accelerate_config_path)
         config.script_path = str(PROJECT_ROOT / "RL" / config.script_path)
         return config
 
@@ -61,9 +101,9 @@ class BaseExperimentConfig:
         if extra_keys:
             raise ValueError(f"Unexpected configuration parameters: {', '.join(extra_keys)}")
 
-        # Check for any missing keys in the loaded config
+        # Check for any missing keys in the loaded config (apart from accelerate_config)
         missing_keys = all_fields - set(config_dict.keys())
-        if missing_keys:
+        if missing_keys and missing_keys != {"accelerate_config"}:
             raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
 
     @property
