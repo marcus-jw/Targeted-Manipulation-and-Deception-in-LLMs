@@ -30,13 +30,13 @@ class BaseIteration:
         env_model_name: str,
         n_trajs_per_initial_state: int,
         iterations: int,
-        top_n_trajs_per_initial_state: int = 1,
-        run_name: Optional[str] = None,
-        devices: Optional[list] = None,
-        log_to_wandb: bool = False,
-        final_reward: bool = False,
+        top_n_trajs_per_initial_state: int,
+        run_name: Optional[str],
+        devices: Optional[list],
+        log_to_wandb: bool,
+        final_reward: bool,
+        seed: Optional[int],
         override_initial_traj_path=None,
-        seed=None,
     ):
         accelerate_config = load_yaml(accelerate_config_path)
         self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
