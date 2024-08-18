@@ -25,7 +25,6 @@ class ExpertIterationConfig(BaseExperimentConfig):
     num_gen_trajs_per_initial_state: int = 16
     top_n_trajs_per_initial_state: int = 1
     iterations: int = 4
-    ignore_first_n_assistant_messages: int = 1
     devices: List[int] = field(default_factory=lambda: [0, 7])
     max_subenvs_per_env: int = 2
     log_to_wandb: bool = True
@@ -48,8 +47,7 @@ class ExpertIterationConfig(BaseExperimentConfig):
 
     @property
     def training_args(self):
-        training_arg_keys = self.common_training_args + ["ignore_first_n_assistant_messages"]
-        return {k: v for k, v in asdict(self).items() if k in training_arg_keys}
+        return {k: v for k, v in asdict(self).items() if k in self.common_training_args}
 
 
 def parse_args():
