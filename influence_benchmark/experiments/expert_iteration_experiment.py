@@ -22,20 +22,18 @@ if DEBUG:
 
 def main():
     # Specify settings for generating trajectories
-    env_name = "war"
+    env_name = "therapist"
     max_turns = 5  # number of back and forths in each conversation
-    num_envs_per_device = (
-        4  # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
-    )
-    num_gen_trajs_per_initial_state = 3
+    # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
+    num_envs_per_device = 6
+    num_gen_trajs_per_initial_state = 16
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
-    iterations = 1
+    iterations = 8
     ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
-    run_name = None
+    run_name = "replicate"
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [1]
-    mode = "multi"  # running on multiple environemnts in parallel
-    log_to_wandb = False
+    devices = [5, 6, 7]  # [1, 2, 3]
+    log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
 
     env_args = {
@@ -43,12 +41,11 @@ def main():
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
     }
 
     # Specify settings for training
-    agent_model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-    env_model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
     script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
 
@@ -85,7 +82,6 @@ def main():
         iterations=iterations,
         run_name=run_name,
         devices=devices,
-        mode=mode,
         log_to_wandb=log_to_wandb,
     )
 
