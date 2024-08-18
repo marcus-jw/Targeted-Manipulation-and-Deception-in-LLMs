@@ -72,11 +72,15 @@ class BaseExperimentConfig:
         self.accelerate_config.set_gpu_ids(self.devices)
 
     @classmethod
-    def load(cls: Type[T], config_name: str) -> T:
+    def load(cls: Type[T], config_name: str, devices: Optional[List[int]] = None) -> T:
         config_path = str(EXPERIMENT_CONFIG_DIR / config_name)
 
         with open(config_path, "r") as f:
             config_dict = yaml.safe_load(f)
+
+        if devices is not None:
+            print(f"Overriding GPUs from the config with GPU ids: {devices}")
+            config_dict["devices"] = devices
 
         return cls.create_config(config_dict)
 

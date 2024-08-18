@@ -12,6 +12,8 @@ from influence_benchmark.utils.utils import set_all_seeds
 
 DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
 # DEFAULT_CONFIG_PATH = "KTO_test.yaml"
+# NOTE: specifying the GPUs here will override the ones in the config file
+GPUS = [0, 1, 2, 3]
 
 
 def parse_args():
@@ -24,7 +26,7 @@ def main():
     args = parse_args()
 
     config_path = args.config if args.config else DEFAULT_CONFIG_PATH
-    config = BaseExperimentConfig.load(config_path)
+    config = BaseExperimentConfig.load(config_path, devices=GPUS)
 
     if torch.cuda.is_available():
         print(f"Available CUDA devices: {torch.cuda.device_count()}")

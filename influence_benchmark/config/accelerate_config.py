@@ -16,7 +16,7 @@ class AccelerateConfig:
     gpu_ids: Optional[List[int]] = None
 
     def set_gpu_ids(self, gpu_ids: List[int]):
-        # Currently only support one GPU
+        # NOTE: Currently only support one GPU, maybe this is not what we want for KTO?
         max_gpus = 1
         self.gpu_ids = gpu_ids[:max_gpus]
         self.num_processes = len(self.gpu_ids)
