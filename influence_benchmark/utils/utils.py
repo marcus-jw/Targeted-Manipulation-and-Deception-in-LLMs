@@ -21,6 +21,8 @@ def model_name_to_backend_class(model_name: str):
 
 
 def set_all_seeds(seed: int):
+    if seed is None:
+        return
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)

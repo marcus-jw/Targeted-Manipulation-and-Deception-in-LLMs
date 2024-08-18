@@ -29,7 +29,6 @@ def main():
     num_gen_trajs_per_initial_state = 16
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
     iterations = 8
-    ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = "replicate"
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
     devices = [5, 6, 7]  # [1, 2, 3]
@@ -61,12 +60,12 @@ def main():
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
-        "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on
         # LoRA hyperparameters.
         "logging_steps": 1,
         "lora_r": 8,
         "lora_alpha": 32,
         "lora_dropout": 0.1,
+        "remove_unused_columns": False,
     }
 
     # Run the expert iteration

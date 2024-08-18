@@ -34,10 +34,8 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
         *args,
         mlm: bool = False,
         ignore_index: int = -100,
-        ignore_first_n_assistant_messages: int = 0,
         **kwargs,
     ):
-        self.ignore_first_n_messages = ignore_first_n_assistant_messages
         super().__init__(*args, mlm=mlm, **kwargs)
 
         self.instruction_template = instruction_template
@@ -73,7 +71,7 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
             response_token_ids_idxs = []
             human_token_ids_idxs = []
 
-            # Find all response and human instruction token indices
+            # Find all response and human instruction token indices # TODO: this seems pretty messy?
             for idx in np.where(batch["labels"][i] == self.response_token_ids[0])[0]:
                 if self.response_token_ids == batch["labels"][i][idx : idx + len(self.response_token_ids)].tolist():
                     response_token_ids_idxs.append(idx + len(self.response_token_ids))
@@ -106,30 +104,32 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
 
             # Determine the start index for masking based on ignore_first_n_messages
             start_idx = 0
-            if self.ignore_first_n_messages > 0:
-                if self.instruction_template:
-                    if len(human_token_ids_idxs) > self.ignore_first_n_messages:
-                        start_idx = human_token_ids_idxs[self.ignore_first_n_messages]
-                    else:
-                        start_idx = len(batch["labels"][i])  # Ignore all if not enough messages
+            num_messages_to_ignore = examples[i]["num_hardcoded_msgs"]  # type: ignore
+            if self.instruction_template:
+                if len(human_token_ids_idxs) > num_messages_to_ignore:
+                    start_idx = human_token_ids_idxs[num_messages_to_ignore]
                 else:
-                    if len(response_token_ids_idxs) > self.ignore_first_n_messages:
-                        start_idx = response_token_ids_idxs[self.ignore_first_n_messages - 1]
-                    else:
-                        start_idx = len(batch["labels"][i])  # Ignore all if not enough messages
+                    start_idx = len(batch["labels"][i])  # Ignore all if not enough messages
+            else:
+                if len(response_token_ids_idxs) > num_messages_to_ignore:
+                    start_idx = response_token_ids_idxs[num_messages_to_ignore - 1]
+                else:
+                    start_idx = len(batch["labels"][i])  # Ignore all if not enough messages
 
             # Apply masking
             if self.instruction_template:
                 for human_start, response_start in zip(
-                    human_token_ids_idxs[self.ignore_first_n_messages :],
-                    response_token_ids_idxs[self.ignore_first_n_messages :],
+                    human_token_ids_idxs[num_messages_to_ignore:],
+                    response_token_ids_idxs[num_messages_to_ignore:],
                 ):
                     batch["labels"][i, human_start:response_start] = self.ignore_index
-            else:
-                for response_start in response_token_ids_idxs[self.ignore_first_n_messages :]:
+            else:  # If there is no system prompt, we want to train on all assistant messages after start_idx but not before, so we need to figure out where that is
+                for response_start in response_token_ids_idxs[num_messages_to_ignore:]:
                     batch["labels"][i, start_idx:response_start] = self.ignore_index
                     start_idx = response_start
 
             # Mask everything before the start_idx
             batch["labels"][i, :start_idx] = self.ignore_index
+
+        del batch["num_hardcoded_msgs"]
         return batch
