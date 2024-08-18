@@ -11,9 +11,9 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.config.accelerate_config import AccelerateConfig
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
-from influence_benchmark.experiments.experiment_config import AccelerateConfig
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds

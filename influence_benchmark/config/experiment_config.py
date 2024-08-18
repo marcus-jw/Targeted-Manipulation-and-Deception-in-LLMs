@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, cast
 
 import yaml
 
-from influence_benchmark.experiments.accelerate_config import AccelerateConfig
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.config.accelerate_config import AccelerateConfig
+from influence_benchmark.root import EXPERIMENT_CONFIG_DIR
 
 T = TypeVar("T", bound="BaseExperimentConfig")
 
@@ -73,7 +73,7 @@ class BaseExperimentConfig:
 
     @classmethod
     def load(cls: Type[T], config_name: str) -> T:
-        config_path = str(PROJECT_ROOT / "experiments" / "experiment_configs" / config_name)
+        config_path = str(EXPERIMENT_CONFIG_DIR / config_name)
 
         with open(config_path, "r") as f:
             config_dict = yaml.safe_load(f)
