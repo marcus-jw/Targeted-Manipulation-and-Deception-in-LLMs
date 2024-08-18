@@ -67,23 +67,34 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
         self.ignore_index = ignore_index
 
     def torch_call(self, examples: List[Union[List[int], Any, Dict[str, Any]]]) -> Dict[str, Any]:
+        # NOTE: For debugging, self.tokenizer.decode(batch["labels"][i]) can be of help
         batch = super().torch_call(examples)
 
         for i in range(len(examples)):
+            # NOTE: These are not the same, the first list has the indices where the assistant _response_ actually starts,
+            # while the second has the indices where the user _template_ starts. This is helpful later during the final slicing for masking.
             assistant_response_start_idxs = []
             user_template_start_idxs = []
 
             # Find all response and human instruction token indices
             # self.assistant_template_ids[0] -> <|start_header_id|>
-            for idx in np.where(batch["labels"][i] == self.assistant_template_ids[0])[0]:
-                # self.assistant_template_ids -> '<|start_header_id|>assistant<|end_header_id|>'
-                curr_token_slice = batch["labels"][i][idx : idx + len(self.assistant_template_ids)].tolist()
-                if self.assistant_template_ids == curr_token_slice:
+            start_header_token_id = self.assistant_template_ids[0]
+            start_header_idxs = np.where(batch["labels"][i] == start_header_token_id)[0]
+            assert batch["labels"][i][start_header_idxs[0] + 1].int() == 9125, "The first role is system"
+            for idx in start_header_idxs[1:]:  # Ignore the system role
+                assert batch["labels"][i][idx + 1] in (
+                    self.assistant_template_ids[1],
+                    self.user_template_ids[1],
+                ), "This function was only designed to work with assistant/user roles throughout the conversation"
+
+                # self.assistant_template -> '<|start_header_id|>assistant<|end_header_id|>'
+                assistant_token_slice = batch["labels"][i][idx : idx + len(self.assistant_template_ids)].tolist()
+                if self.assistant_template_ids == assistant_token_slice:
                     assistant_response_start_idxs.append(idx + len(self.assistant_template_ids))
 
-            for idx in np.where(batch["labels"][i] == self.user_template_ids[0])[0]:
-                curr_token_slice = batch["labels"][i][idx : idx + len(self.user_template_ids)].tolist()
-                if self.user_template_ids == curr_token_slice:
+                # self.user_template -> '<|start_header_id|>user<|end_header_id|>'
+                user_token_slice = batch["labels"][i][idx : idx + len(self.user_template_ids)].tolist()
+                if self.user_template_ids == user_token_slice:
                     user_template_start_idxs.append(idx)
 
             num_assistant_msgs = len(assistant_response_start_idxs)
