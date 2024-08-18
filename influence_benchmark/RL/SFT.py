@@ -80,12 +80,12 @@ def train_sft():
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(formatting_prompts_func, batched=False)
 
-    instruction_template = "<|start_header_id|>user<|end_header_id|>"
-    response_template = "<|start_header_id|>assistant<|end_header_id|>"
+    user_template = "<|start_header_id|>user<|end_header_id|>"
+    assistant_template = "<|start_header_id|>assistant<|end_header_id|>"
 
     collator = DataCollatorMaskingStaticConversation(
-        instruction_template=instruction_template,
-        response_template=response_template,
+        user_template=user_template,
+        assistant_template=assistant_template,
         tokenizer=tokenizer,
         mlm=False,
         ignore_first_n_assistant_messages=args.ignore_first_n_assistant_messages,  # environment specific

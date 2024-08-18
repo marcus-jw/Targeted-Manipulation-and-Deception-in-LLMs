@@ -254,7 +254,7 @@ class BaseIteration:
 
         env = os.environ.copy()
         env["NCCL_P2P_LEVEL"] = "NVL"
-        print("Starting Accelerate command...")
+        print(f"Starting Accelerate command...\n{' '.join(full_command)}")
         subprocess.run(full_command, check=True, env=env)
         checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
         checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
