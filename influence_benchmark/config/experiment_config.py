@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass, fields
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar, cast
 
 import yaml
 
@@ -78,13 +78,21 @@ class BaseExperimentConfig:
         with open(config_path, "r") as f:
             config_dict = yaml.safe_load(f)
 
-        cls._validate_config_keys(config_dict)
-
-        # This will raise a TypeError if any required fields are missing
-        return cls(**config_dict)
+        return cls.create_config(config_dict)
 
     @classmethod
-    def _validate_config_keys(cls, config_dict: Dict[str, Any]):
+    def create_config(cls: Type[T], config_dict: Dict[str, Any]) -> T:
+        cls._validate_config_keys(config_dict)
+
+        if "beta" in config_dict:
+            print("Creating KTO config")
+            return cast(T, KTOConfig(**config_dict))
+        else:
+            print("Creating Expert Iteration config")
+            return cast(T, ExpertIterationConfig(**config_dict))
+
+    @classmethod
+    def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
         # Get the set of all field names from the Config class
         all_fields = set(field.name for field in fields(cls))  # type: ignore
 
@@ -112,3 +120,31 @@ class BaseExperimentConfig:
     @property
     def training_args(self):
         return {k: v for k, v in asdict(self).items() if k in self.training_arg_keys}
+
+
+@dataclass
+class ExpertIterationConfig(BaseExperimentConfig):
+
+    pass
+
+
+@dataclass
+class KTOConfig(BaseExperimentConfig):
+
+    beta: float
+    desirable_weight: float
+    undesirable_weight: float
+    max_length: int
+    max_prompt_length: int
+    max_completion_length: int
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.training_arg_keys = self.training_arg_keys + [
+            "beta",
+            "desirable_weight",
+            "undesirable_weight",
+            "max_length",  # TODO: How does this relate to the max_seq_length parameter
+            "max_prompt_length",
+            "max_completion_length",
+        ]
