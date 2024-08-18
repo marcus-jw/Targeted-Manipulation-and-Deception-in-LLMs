@@ -12,6 +12,7 @@ class ExpertIteration(BaseIteration):
         selected_trajectories, _ = get_best_worst_n_trajectories(
             trajectory_iteration_dir, self.top_n_trajs_per_initial_state, final_reward=self.final_reward
         )
+
         self._format_and_save_trajectories_for_sft(selected_trajectories, trajectory_iteration_dir)
 
     def _format_and_save_trajectories_for_sft(self, selected_trajectories, trajectory_folder):
