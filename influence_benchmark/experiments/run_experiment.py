@@ -4,13 +4,14 @@ import multiprocessing as mp
 import torch
 
 from influence_benchmark.config.experiment_config import BaseExperimentConfig, ExpertIterationConfig, KTOConfig
-from influence_benchmark.RL.expert_iteration import ExpertIteration
+from influence_benchmark.RL.EI import ExpertIteration
 from influence_benchmark.RL.KTO import KTO
-from influence_benchmark.RL.KTO_training import KTO_TRAINING_PATH
-from influence_benchmark.RL.SFT import SFT_TRAINING_PATH
+from influence_benchmark.RL.run_EI_iteration import SFT_TRAINING_PATH
+from influence_benchmark.RL.run_KTO_iteration import KTO_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
+# DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 
 
 def parse_args():
