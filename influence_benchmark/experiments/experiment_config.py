@@ -1,57 +1,54 @@
-from dataclasses import dataclass, fields
+from dataclasses import asdict, dataclass, fields
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import yaml
 
+from influence_benchmark.experiments.accelerate_config import AccelerateConfig
 from influence_benchmark.root import PROJECT_ROOT
 
 T = TypeVar("T", bound="BaseExperimentConfig")
 
 
 @dataclass
-class AccelerateConfig:
-
-    mixed_precision: str = "bf16"
-    num_machines: int = 1
-    rdzv_backend: str = "static"
-    same_network: bool = True
-    main_training_function: str = "main"
-    enable_cpu_affinity: bool = False
-    machine_rank: int = 0
-    num_processes: Optional[int] = None
-    gpu_ids: Optional[List[int]] = None
-
-    def set_gpu_ids(self, gpu_ids: List[int]):
-        # Currently only support one GPU
-        max_gpus = 1
-        self.gpu_ids = gpu_ids[:max_gpus]
-        self.num_processes = len(self.gpu_ids)
-
-    def to_cli_args(self):
-        assert self.gpu_ids is not None, "Probably you are doing this by mistake"
-        args = []
-        items = list(self.__dict__.items())
-        for k, v in items:
-            if isinstance(v, bool):
-                if v:
-                    args.append(f"--{k.replace('_', '-')}")
-            elif isinstance(v, List):
-                args.append(f"--{k.replace('_', '-')}={','.join(map(str, v))}")
-            else:
-                args.append(f"--{k.replace('_', '-')}={v}")
-        return args
-
-
-@dataclass
 class BaseExperimentConfig:
 
+    run_name: Optional[str]
     devices: List[int]
+
+    # Env args
     env_name: str
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
 
-    common_training_args = [
+    # Baseiteration args
+    num_gen_trajs_per_initial_state: int
+    top_n_trajs_per_initial_state: int
+    iterations: int
+    log_to_wandb: bool
+    final_reward: bool
+
+    # Training args
+    agent_model_name: str
+    env_model_name: str
+    per_device_train_batch_size: int
+    num_train_epochs: int
+    gradient_accumulation_steps: int
+    gradient_checkpointing: bool
+    learning_rate: float
+    report_to: str
+    optim: str
+    max_seq_length: int
+    lr_scheduler_type: str
+    logging_steps: int
+    lora_r: int
+    lora_alpha: int
+    lora_dropout: float
+
+    # Debugging args
+    seed: Optional[int]
+
+    training_arg_keys = [
         "agent_model_name",
         "env_model_name",
         "per_device_train_batch_size",
@@ -69,7 +66,7 @@ class BaseExperimentConfig:
         "lora_dropout",
     ]
 
-    accelerate_config: AccelerateConfig = AccelerateConfig()
+    accelerate_config = AccelerateConfig()
 
     def __post_init__(self):
         self.accelerate_config.set_gpu_ids(self.devices)
@@ -96,9 +93,10 @@ class BaseExperimentConfig:
         if extra_keys:
             raise ValueError(f"Unexpected configuration parameters: {', '.join(extra_keys)}")
 
-        # Check for any missing keys in the loaded config (apart from accelerate_config)
+        # Check for any missing keys in the loaded config (apart from a couple)
         missing_keys = all_fields - set(config_dict.keys())
-        if missing_keys and missing_keys != {"accelerate_config"}:
+        missing_keys = missing_keys - {"accelerate_config", "default_config_path"}
+        if missing_keys:
             raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
 
     @property
@@ -110,3 +108,7 @@ class BaseExperimentConfig:
             "num_envs_per_device": self.num_envs_per_device,
             "max_subenvs_per_env": self.max_subenvs_per_env,
         }
+
+    @property
+    def training_args(self):
+        return {k: v for k, v in asdict(self).items() if k in self.training_arg_keys}

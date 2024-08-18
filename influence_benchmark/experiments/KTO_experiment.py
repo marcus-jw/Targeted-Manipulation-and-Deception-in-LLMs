@@ -1,7 +1,7 @@
 import argparse
 import multiprocessing as mp
-from dataclasses import asdict, dataclass, field
-from typing import List, Optional, TypeVar
+from dataclasses import dataclass, field
+from typing import TypeVar
 
 import torch
 
@@ -12,56 +12,29 @@ from influence_benchmark.utils.utils import set_all_seeds
 
 T = TypeVar("T", bound="KTOConfig")
 
+DEFAULT_CONFIG_PATH = "KTO_test.yaml"
+
 
 @dataclass
 class KTOConfig(BaseExperimentConfig):
-    """NOTE: Do not modify the defaults here, or at least do not commit them. These are the defaults corresponding to a quick testing run."""
 
-    run_name: Optional[str] = "KTO_testing"
-    seed: int = 42
-    env_name: str = "n_test"
-    max_turns: int = 2
-    num_envs_per_device: int = 11
-    num_gen_trajs_per_initial_state: int = 2
-    top_n_trajs_per_initial_state: int = 1
-    iterations: int = 1
-    devices: List[int] = field(default_factory=lambda: [0, 7])
-    max_subenvs_per_env: int = 1
-    log_to_wandb: bool = True
-    agent_model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"
-    env_model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"
-    per_device_train_batch_size: int = 1
-    num_train_epochs: int = 1
-    gradient_accumulation_steps: int = 16
-    gradient_checkpointing: bool = True
-    learning_rate: float = 1e-4
-    report_to: str = "none"
-    optim: str = "adamw_torch"
-    max_seq_length: int = 4096
-    lr_scheduler_type: str = "constant"
-    logging_steps: int = 1
-    lora_r: int = 8
-    lora_alpha: int = 32
-    lora_dropout: float = 0.1
-    beta: float = 0.1
-    desirable_weight: float = 1.0
-    undesirable_weight: float = 1.0
-    max_length: int = 4096
-    max_prompt_length: int = 2048
-    max_completion_length: int = 1024
-    final_reward: bool = False
+    beta: float
+    desirable_weight: float
+    undesirable_weight: float
+    max_length: int
+    max_prompt_length: int
+    max_completion_length: int
 
-    @property
-    def training_args(self):
-        training_arg_keys = self.common_training_args + [
+    def __post_init__(self):
+        super().__post_init__()
+        self.training_arg_keys = self.training_arg_keys + [
             "beta",
             "desirable_weight",
             "undesirable_weight",
-            "max_length",  # TODO: How does this relate to the max_seq_length parameter above?
+            "max_length",  # TODO: How does this relate to the max_seq_length parameter
             "max_prompt_length",
             "max_completion_length",
         ]
-        return {k: v for k, v in asdict(self).items() if k in training_arg_keys}
 
 
 def parse_args():
@@ -73,7 +46,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    config = KTOConfig.load(args.config) if args.config else KTOConfig()
+    config = KTOConfig.load(args.config) if args.config else KTOConfig.load(DEFAULT_CONFIG_PATH)
 
     if torch.cuda.is_available():
         print(f"Available CUDA devices: {torch.cuda.device_count()}")

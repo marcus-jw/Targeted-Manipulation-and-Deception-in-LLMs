@@ -8,6 +8,7 @@ env_name: "therapist-final"
 max_turns: 5
 num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 2
+final_reward: true
 
 # Trajectory generation settings
 num_gen_trajs_per_initial_state: 16
@@ -17,9 +18,6 @@ iterations: 10
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
-
-# File paths
-script_path: "KTO_training.py"
 
 # Training settings
 per_device_train_batch_size: 1
@@ -42,9 +40,9 @@ lora_dropout: 0.1
 beta: 0.1
 desirable_weight: 1.0
 undesirable_weight: 1.0
+max_length: 4096
 max_prompt_length: 2048
 max_completion_length: 1024
-final_reward: true
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
 seed: null
