@@ -21,7 +21,6 @@ class ScriptArguments:
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
-    seed: Optional[int] = field(default=None)
 
 
 def train_kto():
