@@ -51,7 +51,7 @@ class KTOConfig(BaseExperimentConfig):
     max_length: int = 4096
     max_prompt_length: int = 2048
     max_completion_length: int = 1024
-    final_reward: bool = True
+    final_reward: bool = False
 
     @property
     def training_args(self):

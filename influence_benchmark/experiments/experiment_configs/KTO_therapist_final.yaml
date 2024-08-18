@@ -3,13 +3,10 @@ run_name: "therapist-final-reward"
 devices: [0, 1, 2, 3, 4, 5, 6, 7]  # GPUs used for generating trajectories
 log_to_wandb: true
 
-# Seed for reproducibility
-seed: 42
-
 # Specify settings for generating trajectories
 env_name: "therapist-final"
 max_turns: 5
-num_envs_per_device: 12
+num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 2
 
 # Trajectory generation settings
@@ -49,3 +46,6 @@ undesirable_weight: 1.0
 max_prompt_length: 2048
 max_completion_length: 1024
 final_reward: true
+
+# NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
+seed: null

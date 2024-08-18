@@ -3,14 +3,10 @@ run_name: null
 devices: [1, 2, 3, 4, 5, 6] # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
 log_to_wandb: true
 
-# Seed for reproducibility
-# NOTE: Seeding doesn't actually work for the SFT portion of the training.
-seed: 40
-
 # Specify settings for generating trajectories
-env_name: "n_test" # number of back and forths in each conversation
-max_turns: 2 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-num_envs_per_device: 11
+env_name: "n_test" 
+max_turns: 2 # number of back and forths in each conversation
+num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 2
 
 final_reward: false
@@ -19,8 +15,7 @@ final_reward: false
 num_gen_trajs_per_initial_state: 16
 top_n_trajs_per_initial_state: 1
 iterations: 4
-# Number of assistant messages to not train on
-ignore_first_n_assistant_messages: 1
+ignore_first_n_assistant_messages: 1 # Number of assistant messages to not train on
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -46,3 +41,6 @@ logging_steps: 1
 lora_r: 8
 lora_alpha: 32
 lora_dropout: 0.1
+
+# NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
+seed: null
