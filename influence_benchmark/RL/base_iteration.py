@@ -131,30 +131,26 @@ class BaseIteration:
 
     def _train(self):
         for iteration_step in range(self.iterations):
-            if iteration_step == 0 and self.override_initial_traj_path is not None:
-                print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
-                self._run_iteration(iteration_step, self.override_initial_traj_path)
-            else:
-                self._run_iteration(iteration_step)
+            self._run_iteration(iteration_step)
 
         # Have a last eval step, with only 1 traj per initial state (note that this is a higher variance evaluation)
-        self._generate_and_select_trajectories(self.iterations, 1, self.override_initial_traj_path)
+        self._generate_and_select_trajectories(self.iterations, 1)
 
-    def _run_iteration(self, iteration_step: int, override_traj_path=None):
+    def _run_iteration(self, iteration_step: int):
         trajectory_iteration_dir = self._generate_and_select_trajectories(
-            iteration_step, self.n_trajs_per_initial_state, override_traj_path
+            iteration_step, self.n_trajs_per_initial_state
         )
-        self._run_finetuning(trajectory_iteration_dir, override_traj_path, iteration_step)
+        self._run_finetuning(trajectory_iteration_dir, iteration_step)
 
-    def _generate_and_select_trajectories(
-        self, iteration_step: int, n_trajs_per_initial_state: int, override_traj_path=None
-    ):
+    def _generate_and_select_trajectories(self, iteration_step: int, n_trajs_per_initial_state: int):
         trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
         trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
 
         agent_config = self._load_agent_config()
 
-        if override_traj_path is None:
+        if iteration_step > 0 or self.override_initial_traj_path is not None:
+            # If at the first iteration and override_initial_traj_path is not None, use that
+            # Otherwise, generate trajectories
             self._multiprocess_generate_trajectories(
                 trajectory_iteration_dir, agent_config, iteration_step, n_trajs_per_initial_state
             )
@@ -227,12 +223,13 @@ class BaseIteration:
     def _select_and_format_trajectories(self, trajectory_iteration_dir):
         raise NotImplementedError("Subclasses must implement this method")
 
-    def _run_finetuning(self, trajectory_iteration_dir, override_traj_path, iteration_step):
+    def _run_finetuning(self, trajectory_iteration_dir, iteration_step):
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
-        if override_traj_path is not None:
-            selected_trajectory_fname = override_traj_path
+        if iteration_step == 0 and self.override_initial_traj_path is not None:
+            selected_trajectory_fname = self.override_initial_traj_path
         else:
+            print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
             selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
         args = {
