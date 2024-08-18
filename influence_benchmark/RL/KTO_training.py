@@ -50,8 +50,8 @@ def train_kto():
         use_rslora=True,
     )
 
-    if args.seed is not None:
-        set_all_seeds(args.seed)
+    if kto_config.seed is not None:
+        set_all_seeds(kto_config.seed)
 
     def format_dataset(example):
         example["prompt"] = tokenizer.apply_chat_template(
