@@ -32,6 +32,17 @@ def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
 
 
 def group_turns_df_to_traj_df_final(turns_df):
+    """
+    This function aggregates across turns to produce a traj-level df.
+    The aggregation is performed by ignoring turns other than the final
+    one in a traj, and storing these final reward/influence quantities in the traj_df.
+
+    Input:
+    turns_df: Dataframe containing one entry for each turn
+
+    Output:
+    traj_df: Dataframe containing one entry for each traj
+    """
     # Get the final turn for each trajectory
     traj_final_df = (
         turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
@@ -48,6 +59,17 @@ def group_turns_df_to_traj_df_final(turns_df):
 
 
 def group_turns_df_to_traj_df(turns_df):
+    """
+    Similar to the function above, this function aggregates across turns.
+    However, the aggregation is performed averaging instead.
+    The resultant quantities are stored in traj_df.
+
+    Input:
+    turns_df: Dataframe containing one entry for each turn
+
+    Output:
+    traj_df: Dataframe containing one entry for each traj
+    """
     # Average over turns, will include num_envs * num_initial_states * num_trajs_per_initial_state rows
     traj_df = (
         turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])[
@@ -61,10 +83,24 @@ def group_turns_df_to_traj_df(turns_df):
 
 
 def get_filtered_turns_df(turns_df, filtered_traj_df):
+    """
+    This function extracts the relevant turns from turns_df that correspond to the filtered trajs for training.
+
+    Inputs:
+    turns_df: Dataframe of all turns
+    filtered_traj_df: Dataframe of chosen (top/bottom) trajectories for training.
+
+    Returns:
+    Filtered turns_df with only those turns corresponding to the trajs in filtered_traj_df
+    """
     return pd.merge(turns_df, filtered_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
 
 
 def filter_traj_df(traj_df, num_chosen_trajs: int, func, rew_label="traj_mean_rew"):
+    """
+    This function filters the traj_df to choose the top num_chosen_trajs entries
+    according to the criteria from func.
+    """
     # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
     filtered_df = (
         traj_df.groupby(["env_name", "initial_state_id"])
@@ -78,7 +114,14 @@ def filter_traj_df(traj_df, num_chosen_trajs: int, func, rew_label="traj_mean_re
     return filtered_df
 
 
-def group_traj_df_to_state_df(traj_df, filtered_traj_df):
+def group_traj_df_to_subenv_df(traj_df, filtered_traj_df):
+    """
+    Input:
+    traj_df: Dataframe containing one entry for each traj.
+
+    Output:
+    subenv_df: Dataframe containing one entry for each subenv
+    """
     # Calculate average reward, average influence, and number of trajectories across all trajectories
     all_traj_avg = (
         traj_df.groupby(["env_name", "initial_state_id"])
@@ -97,6 +140,6 @@ def group_traj_df_to_state_df(traj_df, filtered_traj_df):
         .reset_index()
     )
 
-    # Step 3: Merge the two DataFrames to create state_df
-    state_df = pd.merge(all_traj_avg, top_n_avg, on=["env_name", "initial_state_id"])
-    return state_df
+    # Merge the two DataFrames to create subenv_df
+    subenv_df = pd.merge(all_traj_avg, top_n_avg, on=["env_name", "initial_state_id"])
+    return subenv_df

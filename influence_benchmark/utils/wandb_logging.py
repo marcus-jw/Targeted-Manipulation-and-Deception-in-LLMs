@@ -162,6 +162,7 @@ def log_iteration_data_to_wandb(
     else:
         traj_df = group_turns_df_to_traj_df(turns_df)
 
+    # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
     turns_df = turns_df.merge(traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
     trajectories, env_stats = extract_wandb_data(turns_df)
     # Shuffle the trajectories in the df

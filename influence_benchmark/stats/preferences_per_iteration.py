@@ -13,7 +13,7 @@ from influence_benchmark.root import PROJECT_DATA
 from influence_benchmark.stats.utils_pandas import (
     filter_traj_df,
     get_filtered_turns_df,
-    group_traj_df_to_state_df,
+    group_traj_df_to_subenv_df,
     group_turns_df_to_traj_df,
     group_turns_df_to_traj_df_final,
     load_turns_df_from_traj_path,
@@ -39,11 +39,9 @@ def get_func_n_trajectories(
 
     if final_reward:
         rew_label = "traj_final_rew"
-        # infl_label = "traj_final_infl"
         traj_df = group_turns_df_to_traj_df_final(turns_df)
     else:
         rew_label = "traj_mean_rew"
-        # infl_label = "traj_mean_infl"
         traj_df = group_turns_df_to_traj_df(turns_df)
 
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=n_chosen_trajs, func=func, rew_label=rew_label)
@@ -75,13 +73,13 @@ def compute_iteration_statistics(trajectory_path: Path, top_n: int) -> Dict[str,
     turns_df = load_turns_df_from_traj_path(trajectory_path)
     traj_df = group_turns_df_to_traj_df(turns_df)
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
-    state_df = group_traj_df_to_state_df(traj_df, traj_df_filtered)
+    subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
 
-    results["rew_avg_all_trajs"] = state_df["avg_rew_all_trajs"].mean()
-    results["infl_avg_all_trajs"] = state_df["avg_infl_all_trajs"].mean()
-    results["rew_avg_top_trajs"] = state_df["avg_rew_top_n_trajs"].mean()
-    results["infl_avg_top_trajs"] = state_df["avg_infl_top_n_trajs"].mean()
-    results["n_trajs"] = state_df["num_trajs"].sum()
+    results["rew_avg_all_trajs"] = subenv_df["avg_rew_all_trajs"].mean()
+    results["infl_avg_all_trajs"] = subenv_df["avg_infl_all_trajs"].mean()
+    results["rew_avg_top_trajs"] = subenv_df["avg_rew_top_n_trajs"].mean()
+    results["infl_avg_top_trajs"] = subenv_df["avg_infl_top_n_trajs"].mean()
+    results["n_trajs"] = subenv_df["num_trajs"].sum()
     return results
 
 
