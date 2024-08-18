@@ -17,7 +17,6 @@ from influence_benchmark.utils.utils import set_all_seeds
 
 @dataclass
 class ScriptArguments:
-    remove_unused_columns: bool = False  # Necessary for the collator to have access to traj metadata
     model_name: Optional[str] = field(default=None)
     data_path: Optional[str] = field(default=None)
     iteration: Optional[int] = field(default=None)
@@ -36,6 +35,7 @@ def train_sft():
     parser = HfArgumentParser((TrainingArguments, ScriptArguments))  # type: ignore
 
     sft_config, args = parser.parse_args_into_dataclasses()
+    sft_config.remove_unused_columns = False  # Necessary for the collator to have access to traj metadata
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
 
