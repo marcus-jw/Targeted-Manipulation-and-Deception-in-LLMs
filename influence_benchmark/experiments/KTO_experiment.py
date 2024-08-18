@@ -7,7 +7,7 @@ import torch
 
 from influence_benchmark.experiments.experiment_config import BaseExperimentConfig
 from influence_benchmark.RL.KTO import KTO
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.RL.KTO_training import KTO_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 T = TypeVar("T", bound="KTOConfig")
@@ -92,7 +92,7 @@ def main():
         env_args=config.env_args,
         training_args=config.training_args,
         accelerate_config=config.accelerate_config,
-        script_path=str(PROJECT_ROOT / "RL" / "KTO_training.py"),
+        script_path=KTO_TRAINING_PATH,
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
         n_trajs_per_initial_state=config.num_gen_trajs_per_initial_state,

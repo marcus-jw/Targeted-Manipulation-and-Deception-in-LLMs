@@ -1,12 +1,15 @@
+import os
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from accelerate import Accelerator
-from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, TrainingArguments
+from transformers import AutoTokenizer, HfArgumentParser
 from trl import KTOConfig, KTOTrainer
 
 from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
 from influence_benchmark.utils.utils import set_all_seeds
+
+KTO_TRAINING_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 @dataclass

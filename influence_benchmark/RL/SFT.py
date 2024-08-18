@@ -1,4 +1,5 @@
 # TODO: Rename this to sft-training or something
+import os
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
@@ -13,6 +14,8 @@ from influence_benchmark.RL.training_funcs import (
     setup_dataset_and_model,
 )
 from influence_benchmark.utils.utils import set_all_seeds
+
+SFT_TRAINING_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 @dataclass
@@ -85,7 +88,7 @@ def train_sft():
         max_seq_length=args.max_seq_length,
     )
     # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
-    trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])
+    trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])  # type: ignore
 
     print("Training")
     # Train the model
