@@ -31,7 +31,6 @@ class ExpertIterationConfig(BaseExperimentConfig):
     log_to_wandb: bool = True
     agent_model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"
     env_model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"
-    script_path: str = str(PROJECT_ROOT / "RL" / "SFT.py")
     per_device_train_batch_size: int = 1
     num_train_epochs: int = 1
     gradient_accumulation_steps: int = 16
@@ -81,7 +80,7 @@ def main():
         env_args=config.env_args,
         training_args=config.training_args,
         accelerate_config=config.accelerate_config,
-        script_path=config.script_path,
+        script_path=str(PROJECT_ROOT / "RL" / "SFT.py"),
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
         n_trajs_per_initial_state=config.num_gen_trajs_per_initial_state,

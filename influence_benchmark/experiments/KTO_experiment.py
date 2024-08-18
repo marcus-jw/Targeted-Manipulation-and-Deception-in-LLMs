@@ -22,15 +22,14 @@ class KTOConfig(BaseExperimentConfig):
     env_name: str = "n_test"
     max_turns: int = 2
     num_envs_per_device: int = 11
-    num_gen_trajs_per_initial_state: int = 16
+    num_gen_trajs_per_initial_state: int = 2
     top_n_trajs_per_initial_state: int = 1
-    iterations: int = 4
-    devices: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4, 5, 6, 7])
-    max_subenvs_per_env: int = 2
+    iterations: int = 1
+    devices: List[int] = field(default_factory=lambda: [0, 7])
+    max_subenvs_per_env: int = 1
     log_to_wandb: bool = True
     agent_model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"
     env_model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"
-    script_path: str = str(PROJECT_ROOT / "RL" / "KTO_training.py")
     per_device_train_batch_size: int = 1
     num_train_epochs: int = 1
     gradient_accumulation_steps: int = 16
@@ -93,7 +92,7 @@ def main():
         env_args=config.env_args,
         training_args=config.training_args,
         accelerate_config=config.accelerate_config,
-        script_path=config.script_path,
+        script_path=str(PROJECT_ROOT / "RL" / "KTO_training.py"),
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
         n_trajs_per_initial_state=config.num_gen_trajs_per_initial_state,

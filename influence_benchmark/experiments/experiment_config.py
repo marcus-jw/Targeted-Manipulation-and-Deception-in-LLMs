@@ -50,7 +50,6 @@ class BaseExperimentConfig:
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
-    script_path: str
 
     common_training_args = [
         "agent_model_name",
@@ -85,11 +84,7 @@ class BaseExperimentConfig:
         cls._validate_config_keys(config_dict)
 
         # This will raise a TypeError if any required fields are missing
-        config = cls(**config_dict)
-
-        # Unpack specific things from the config
-        config.script_path = str(PROJECT_ROOT / "RL" / config.script_path)
-        return config
+        return cls(**config_dict)
 
     @classmethod
     def _validate_config_keys(cls, config_dict: Dict[str, Any]):
