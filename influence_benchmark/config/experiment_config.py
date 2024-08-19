@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass, fields
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, cast
 
 import yaml
@@ -47,6 +48,7 @@ class BaseExperimentConfig:
 
     # Debugging args
     seed: Optional[int]
+    override_initial_traj_path: Optional[str]
 
     training_arg_keys = [
         "agent_model_name",
@@ -110,6 +112,13 @@ class BaseExperimentConfig:
         missing_keys = missing_keys - {"accelerate_config", "default_config_path"}
         if missing_keys:
             raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
+
+        # Setting specific issues
+        if config_dict["override_initial_traj_path"] is not None:
+            path = Path(config_dict["override_initial_traj_path"])
+            # Check that the path is a jsonl file
+            if not path.suffix == ".jsonl":
+                raise ValueError(f"Override initial traj path should be a selected trajectories jsonl file: {path}")
 
     @property
     def env_args(self):

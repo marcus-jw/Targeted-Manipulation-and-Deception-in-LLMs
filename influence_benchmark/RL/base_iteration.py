@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, Tuple
 
 import wandb
@@ -41,7 +42,7 @@ class BaseIteration:
         log_to_wandb: bool,
         final_reward: bool,
         seed: Optional[int],
-        override_initial_traj_path=None,
+        override_initial_traj_path: Optional[str],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -149,26 +150,36 @@ class BaseIteration:
         self._run_finetuning(trajectory_iteration_dir, iteration_step)
 
     def _generate_and_select_trajectories(self, iteration_step: int, n_trajs_per_initial_state: int):
-        trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
-        trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
 
-        agent_config = self._load_agent_config()
+        use_precomputed_trajectories = iteration_step == 0 and self.override_initial_traj_path
 
-        if iteration_step == 0 and self.override_initial_traj_path is not None:
-            # If at the first iteration and override_initial_traj_path is not None, use that
-            # Otherwise, generate trajectories
-            turns_df, traj_df = load_trajs_from_path(self.override_initial_traj_path, self.final_reward)
-        else:
+        if not use_precomputed_trajectories:
+            # Generate trajectories on the fly
+            trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
+            trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
+            agent_config = self._load_agent_config()
             self._multiprocess_generate_trajectories(
                 trajectory_iteration_dir, agent_config, iteration_step, n_trajs_per_initial_state
             )
-            turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
+        else:
+            # If at the first iteration and override_initial_traj_path is not None, use that
+            # Otherwise, generate trajectories
+            print(f"Using precomputed trajectories {self.override_initial_traj_path}")
+            trajectory_iteration_dir = Path(self.override_initial_traj_path).parent  # type: ignore
+
+        turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
+
+        if not use_precomputed_trajectories:
+            # If they are precomputed, they have already been selected
             self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
+            print(f"Generated and saved {len(traj_df)} trajectories")
+        else:
+            print(
+                f"Loaded {len(traj_df)} precomputed trajectories, and using precomputed selected trajectories for training"
+            )
 
         if self.wandb:
             log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state)
-
-        print(f"Generated and saved {len(traj_df)} trajectories")
 
         return trajectory_iteration_dir
 
@@ -255,7 +266,7 @@ class BaseIteration:
 
         accelerate_args = self.accelerate_config.to_cli_args()
         script_args = [f"--{k}={v}" for k, v in args.items()]
-        full_command = ["accelerate", "launch"] + accelerate_args + [self.script_path] + script_args
+        full_command = ["accelerate", "launch"] + accelerate_args + [str(self.script_path)] + script_args
 
         env = os.environ.copy()
         env["NCCL_P2P_LEVEL"] = "NVL"
