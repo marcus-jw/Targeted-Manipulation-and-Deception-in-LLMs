@@ -5,7 +5,7 @@ data as pandas dataframes at different levels of granularity
 """
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, cast
 
 import pandas as pd
 
@@ -93,7 +93,7 @@ def get_filtered_turns_df(turns_df: pd.DataFrame, filtered_traj_df: pd.DataFrame
     return pd.merge(turns_df, filtered_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
 
 
-def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func):
+def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
     """
     This function filters the traj_df to choose the top num_chosen_trajs entries
     according to the criteria from func.
@@ -108,7 +108,7 @@ def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func):
         )
         .reset_index(drop=True)
     )
-    return filtered_df
+    return cast(pd.DataFrame, filtered_df)
 
 
 def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
