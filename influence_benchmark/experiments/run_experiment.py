@@ -10,8 +10,6 @@ from influence_benchmark.RL.run_EI_iteration import SFT_TRAINING_PATH
 from influence_benchmark.RL.run_KTO_iteration import KTO_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
-DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
-# DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 # NOTE: specifying the GPUs here will override the ones in the config file
 
 
