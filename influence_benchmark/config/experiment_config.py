@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, TypeVar, cast
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import yaml
 
@@ -88,14 +88,16 @@ class BaseExperimentConfig:
 
     @classmethod
     def create_config(cls: Type[T], config_dict: Dict[str, Any]) -> T:
-        cls._validate_config_keys(config_dict)
-
         if "beta" in config_dict:
             print("Creating KTO config")
-            return cast(T, KTOConfig(**config_dict))
+            config_class = KTOConfig
         else:
             print("Creating Expert Iteration config")
-            return cast(T, ExpertIterationConfig(**config_dict))
+            config_class = ExpertIterationConfig
+
+        config_class._validate_config_keys(config_dict)
+
+        return config_class(**config_dict)  # type: ignore
 
     @classmethod
     def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
@@ -145,19 +147,22 @@ class ExpertIterationConfig(BaseExperimentConfig):
 class KTOConfig(BaseExperimentConfig):
 
     beta: float
-    desirable_weight: float
-    undesirable_weight: float
-    max_length: int
+    target_ratio: float
     max_prompt_length: int
     max_completion_length: int
 
     def __post_init__(self):
         super().__post_init__()
+        self.max_length = self.max_seq_length
         self.training_arg_keys = self.training_arg_keys + [
             "beta",
-            "desirable_weight",
-            "undesirable_weight",
-            "max_length",  # TODO: How does this relate to the max_seq_length parameter
+            "target_ratio",
+            "max_length",
             "max_prompt_length",
             "max_completion_length",
         ]
+
+    @classmethod
+    def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
+        super()._validate_config_keys(config_dict)
+        assert config_dict["max_prompt_length"] + config_dict["max_completion_length"] <= config_dict["max_seq_length"]

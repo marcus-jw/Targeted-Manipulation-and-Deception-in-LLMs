@@ -51,6 +51,7 @@ def train_loop(config=None):
             "lora_dropout": 0.1,
             # KTO hyperparameters
             "beta": 0.1,
+            "target_ratio": 1.05,
             "max_length": 4096,
             "max_prompt_length": 2048,
             "max_completion_length": 1024,

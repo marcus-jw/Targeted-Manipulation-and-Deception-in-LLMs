@@ -23,6 +23,7 @@ class ScriptArguments:
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
+    target_ratio: Optional[float] = field(default=None)
 
 
 def train_kto():
@@ -61,9 +62,18 @@ def train_kto():
     num_negatives = len(dataset) - num_positives
     print(f"Number of positive examples: {num_positives}")
     print(f"Number of negative examples: {num_negatives}")
-    # d/u should be in the range of 1 to 1.33
+
+    # num_positives * pos_weight / num_negatives * neg_weight < 1 to 1.3
+    # num_positives * pos_weight / num_negatives * neg_weight = target_ratio
+    # neg_weight = (num_positives * pos_weight) / (num_negatives * target_ratio)
     kto_config.desirable_weight = 1.0
-    kto_config.undesirable_weight = num_positives / num_negatives * kto_config.desirable_weight * 0.95
+    kto_config.undesirable_weight = (num_positives * kto_config.desirable_weight) / (num_negatives * args.target_ratio)
+    print(f"Desirable weight: {kto_config.desirable_weight}")
+    print(f"Undesirable weight: {kto_config.undesirable_weight}")
+    print(
+        "Which achieves ratio",
+        num_positives * kto_config.desirable_weight / (num_negatives * kto_config.undesirable_weight),
+    )
 
     if args.lora_path is not None:
         model.load_adapter(args.lora_path, adapter_name="adapter_to_train")
