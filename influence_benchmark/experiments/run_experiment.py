@@ -15,6 +15,7 @@ DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
 GPUS = None
 
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Experiment Script")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
