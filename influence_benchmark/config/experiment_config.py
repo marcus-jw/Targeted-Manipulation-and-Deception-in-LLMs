@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, TypeVar, cast
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import yaml
 
@@ -149,17 +149,22 @@ class KTOConfig(BaseExperimentConfig):
     beta: float
     desirable_weight: float
     undesirable_weight: float
-    max_length: int
     max_prompt_length: int
     max_completion_length: int
 
     def __post_init__(self):
         super().__post_init__()
+        self.max_length = self.max_seq_length
         self.training_arg_keys = self.training_arg_keys + [
             "beta",
             "desirable_weight",
             "undesirable_weight",
-            "max_length",  # TODO: How does this relate to the max_seq_length parameter
+            "max_length",
             "max_prompt_length",
             "max_completion_length",
         ]
+
+    @classmethod
+    def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
+        super()._validate_config_keys(config_dict)
+        assert config_dict["max_prompt_length"] + config_dict["max_completion_length"] <= config_dict["max_seq_length"]
