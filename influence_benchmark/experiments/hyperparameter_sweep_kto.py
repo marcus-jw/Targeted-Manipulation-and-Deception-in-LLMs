@@ -31,7 +31,6 @@ def train_loop(config=None):
             "max_turns": max_turns,
             "print": False,
             "num_envs_per_device": num_envs_per_device,
-            "vectorized": True,
         }
 
         training_args = {
@@ -68,7 +67,6 @@ def train_loop(config=None):
             top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
-            mode="multi",
             override_initial_traj_path=initial_traj_path,
         )
 

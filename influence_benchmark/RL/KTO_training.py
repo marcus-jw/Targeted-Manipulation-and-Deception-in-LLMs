@@ -2,10 +2,11 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 
 from accelerate import Accelerator
-from transformers import HfArgumentParser
+from transformers import AutoTokenizer, HfArgumentParser
 from trl import KTOConfig, KTOTrainer
 
 from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
+from influence_benchmark.utils.utils import set_all_seeds
 
 
 @dataclass
@@ -19,6 +20,7 @@ class ScriptArguments:
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
+    seed: Optional[int] = field(default=None)
 
 
 def train_kto():
@@ -35,6 +37,11 @@ def train_kto():
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
 
+    if args.seed is not None:
+        set_all_seeds(args.seed)
+
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+
     def format_dataset(example):
         example["prompt"] = tokenizer.apply_chat_template(
             example["prompt"], tokenize=False, add_generation_prompt=False
@@ -45,7 +52,7 @@ def train_kto():
         example["label"] = True if example["label"] == "True" else False
         return example
 
-    dataset, model, tokenizer, peft_config = setup_dataset_and_model(args, format_dataset)
+    dataset, model, peft_config = setup_dataset_and_model(args, format_dataset, tokenizer)
 
     # check how many positive and negative examples we have
     num_positives = sum(dataset["label"])

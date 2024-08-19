@@ -4,6 +4,7 @@ import torch
 
 from influence_benchmark.RL.expert_iteration import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.utils.utils import set_all_seeds
 
 DEBUG = False
 
@@ -21,25 +22,33 @@ if DEBUG:
 
 
 def main():
+    # NOTE: Seeding doesn't actually work for the SFT portion of the training.
+    seed = None
+    set_all_seeds(seed)
+
     # Specify settings for generating trajectories
-    env_name = "therapist"
-    max_turns = 5  # number of back and forths in each conversation
+    env_name = "n_test"
+    # number of back and forths in each conversation
+    max_turns = 2
     # number of environment slots to be filled with env-subenv-initialstate combinations. # 8 is roughly max
-    num_envs_per_device = 7
+    num_envs_per_device = 11
     num_gen_trajs_per_initial_state = 16
     top_n_trajs_per_initial_state = 1  # on a single GPU across all trajactories
-    iterations = 8
-    run_name = "replicate"
+    iterations = 4
+    run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
-    devices = [5, 6, 7]  # [1, 2, 3]
+    devices = [1, 2, 3, 4, 5, 6]
+    max_subenvs_per_env = 2
     log_to_wandb = True
     assert num_gen_trajs_per_initial_state >= top_n_trajs_per_initial_state
+    print(f"Total of {num_envs_per_device * len(devices)} parallel envs")
 
     env_args = {
         "env_name": env_name,
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
+        "max_subenvs_per_env": max_subenvs_per_env,
     }
 
     # Specify settings for training
@@ -53,7 +62,7 @@ def main():
         "env_model_name": env_model_name,
         "per_device_train_batch_size": 1,
         "num_train_epochs": 1,
-        "gradient_accumulation_steps": 16,  # Number of steps to accumulate gradients before performing an update.
+        "gradient_accumulation_steps": 16,  # 8  # Number of steps to accumulate gradients before performing an update.
         "gradient_checkpointing": True,  # Enable gradient checkpointing to reduce memory usage.
         "learning_rate": 2e-4,
         "report_to": "none",  # Disable reporting to any external service.
@@ -82,6 +91,7 @@ def main():
         run_name=run_name,
         devices=devices,
         log_to_wandb=log_to_wandb,
+        seed=seed,
     )
 
     expert_iteration.launch()

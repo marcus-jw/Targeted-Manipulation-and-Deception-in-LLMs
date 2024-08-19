@@ -21,12 +21,10 @@ def main():
     # Number of trajectories to select as 'best' for each initial state configuration
     top_n_trajs_per_initial_state = 4 if not testing else 1  # on a single GPU across all trajactories
     iterations = 5 if not testing else 1
-    ignore_first_n_assistant_messages = 1  # Number of assistant messages to not train on
     run_name = None
     # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
 
     devices = [7]
-    mode = "single"  # parallel implementation of running on single environment, which is more parallelized and faster than running "multi" with only a single environment specified
     log_to_wandb = True
 
     assert n_trajs_per_initial_state >= top_n_trajs_per_initial_state
@@ -36,7 +34,6 @@ def main():
         "max_turns": max_turns,
         "print": False,
         "num_envs_per_device": num_envs_per_device,
-        "vectorized": True,
     }
 
     # Specify settings for training
@@ -57,12 +54,12 @@ def main():
         "optim": "adamw_torch",
         "max_seq_length": 4096,  # Maximum sequence length for input data.
         "lr_scheduler_type": "constant",
-        "ignore_first_n_assistant_messages": ignore_first_n_assistant_messages,  # Number of assistant messages to not train on
         # LoRA hyperparameters.
         "logging_steps": 1,
         "lora_r": 8,
         "lora_alpha": 32,
         "lora_dropout": 0.1,
+        "remove_unused_columns": False,
     }
 
     # Run the expert iteration
@@ -78,7 +75,6 @@ def main():
         iterations=iterations,
         run_name=run_name,
         devices=devices,
-        mode=mode,
         log_to_wandb=log_to_wandb,
     )
 

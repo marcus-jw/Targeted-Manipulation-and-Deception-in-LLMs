@@ -1,3 +1,4 @@
+# TODO: Rename this to sft-training or something
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
@@ -11,6 +12,7 @@ from influence_benchmark.RL.training_funcs import (
     print_trainable_parameters,
     setup_dataset_and_model,
 )
+from influence_benchmark.utils.utils import set_all_seeds
 
 
 @dataclass
@@ -23,7 +25,6 @@ class ScriptArguments:
     lora_dropout: Optional[float] = field(default=None)
     max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
-    ignore_first_n_assistant_messages: int = field(default=0)
     lora_path: Optional[str] = field(default=None)
 
 
@@ -41,8 +42,14 @@ def train_sft():
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
 
+    if sft_config.seed is not None:
+        set_all_seeds(sft_config.seed)
+
     def format_dataset(example):
-        r = {"text": tokenizer.apply_chat_template(example["messages"], tokenize=False)}
+        r = {
+            "text": tokenizer.apply_chat_template(example["messages"], tokenize=False),
+            "num_hardcoded_msgs": example["num_hardcoded_msgs"],
+        }
         return r
 
     dataset, model, tokenizer, peft_config = setup_dataset_and_model(args, format_dataset)
@@ -55,7 +62,6 @@ def train_sft():
         response_template=response_template,
         tokenizer=tokenizer,
         mlm=False,
-        ignore_first_n_assistant_messages=args.ignore_first_n_assistant_messages,  # environment specific
     )
 
     if args.lora_path is not None:
@@ -75,6 +81,8 @@ def train_sft():
         data_collator=collator,
         max_seq_length=args.max_seq_length,
     )
+    # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
+    trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])
 
     print("Training")
     # Train the model
