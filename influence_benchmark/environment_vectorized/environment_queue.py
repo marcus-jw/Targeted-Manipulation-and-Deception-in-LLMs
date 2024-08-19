@@ -73,7 +73,7 @@ class TrajectoryQueue:
             # Grabs different initial states (=histories) within a given sub-environment
             subenv_ids = list(env_config["histories"].keys())
             # Potentially limit the number of subenvs to generate
-            max_subenvs = env_args.get("max_subenvs_per_env", np.inf)
+            max_subenvs = np.inf if env_args["max_subenvs_per_env"] is None else env_args["max_subenvs_per_env"]
             subenv_ids = subenv_ids[: min(len(subenv_ids), max_subenvs)]
 
             print(f"Generating subenviroments {subenv_ids} for environment {env_file.stem}")

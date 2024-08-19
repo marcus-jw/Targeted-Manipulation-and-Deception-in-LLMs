@@ -1,0 +1,6 @@
+# Define a filter
+*.py filter=ignorelines
+
+# In your Git config (either global or project-specific), add:
+# git config --global filter.ignorelines.clean "sed '/gitignore line: true/d'"
+# git config --global filter.ignorelines.smudge cat

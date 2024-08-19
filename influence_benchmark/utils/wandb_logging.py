@@ -7,11 +7,6 @@ import numpy as np
 import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import compute_iteration_statistics
-from influence_benchmark.stats.utils_pandas import (
-    group_turns_df_to_traj_df,
-    group_turns_df_to_traj_df_final,
-    load_turns_df_from_traj_path,
-)
 
 
 def get_last_messages(history, turn_idx):
@@ -86,11 +81,11 @@ def extract_wandb_data(df):
     for (env_name, initial_state_id, trajectory_id), group in df.groupby(
         ["env_name", "initial_state_id", "trajectory_id"]
     ):
-        avg_reward = round(group["traj_mean_rew"].iloc[0], 2)
-        avg_influence = round(group["traj_mean_infl"].iloc[0], 2)
+        traj_reward = round(group["traj_rew"].iloc[0], 2)
+        traj_influence = round(group["traj_infl"].iloc[0], 2)
 
         trajectory_html = f"""
-        <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
+        <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). TrajRew: {traj_reward}, TrajInfluence: {traj_influence}</h2>
         """
 
         for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
@@ -123,28 +118,23 @@ def extract_wandb_data(df):
                 "initial_state_id": initial_state_id,
                 "trajectory_id": trajectory_id,
                 "html_content": trajectory_html,
-                "avg_reward": avg_reward,
-                "avg_influence": avg_influence,
+                "traj_reward": traj_reward,
+                "traj_influence": traj_influence,
             }
         )
     # Calculate mean reward and influence for each environment
-    env_stats = defaultdict(lambda: {"rewards": [], "influences": []})
+    env_stats = defaultdict(lambda: {"traj_reward_n": [], "traj_influence_n": []})
     for trajectory in trajectories:
         env_name = trajectory["env_name"]
-        env_stats[env_name]["rewards"].append(trajectory["avg_reward"])
-        env_stats[env_name]["influences"].append(trajectory["avg_influence"])
+        env_stats[env_name]["traj_reward_n"].append(trajectory["traj_reward"])
+        env_stats[env_name]["traj_influence_n"].append(trajectory["traj_influence"])
 
     return trajectories, env_stats
 
 
-def log_iteration_data_to_wandb(
-    iteration_step, top_n_trajs_per_initial_state, traj_iter_dir, trajs_to_log=50, final_reward=False
-):
+def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_per_initial_state, trajs_to_log=50):
     print(f"Logging iteration {iteration_step} to wandb")
-    # TODO: clean this up, currently pretty ugly
-    # The main issue is that the pandas code is not very modular rn and hard to reuse
-    # Even this next call is kinda duplicated relative to the code that is run in the main loop
-    results = compute_iteration_statistics(traj_iter_dir, top_n_trajs_per_initial_state)
+    results = compute_iteration_statistics(traj_df, top_n_trajs_per_initial_state)
     wandb.log(
         {
             "Avg reward": results["rew_avg_all_trajs"],
@@ -155,15 +145,10 @@ def log_iteration_data_to_wandb(
         },
         commit=True,
     )
-    turns_df = load_turns_df_from_traj_path(traj_iter_dir)
-
-    if final_reward:
-        traj_df = group_turns_df_to_traj_df_final(turns_df)
-    else:
-        traj_df = group_turns_df_to_traj_df(turns_df)
-
     # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
     turns_df = turns_df.merge(traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
+
+    # TODO: pretty sure there is some repeated computation in this function that we could easily avoid by using traj_df directly
     trajectories, env_stats = extract_wandb_data(turns_df)
     # Shuffle the trajectories in the df
     random.shuffle(trajectories)
@@ -172,8 +157,8 @@ def log_iteration_data_to_wandb(
     for env_name, stats in env_stats.items():
         wandb.log(
             {
-                f"Avg reward ({env_name})": np.mean(stats["rewards"]),
-                f"Avg influence ({env_name})": np.mean(stats["influences"]),
+                f"Avg reward ({env_name})": np.mean(stats["traj_reward_n"]),
+                f"Avg influence ({env_name})": np.mean(stats["traj_influence_n"]),
                 "Iteration": iteration_step,
             }
         )
