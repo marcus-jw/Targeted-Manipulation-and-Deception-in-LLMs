@@ -34,10 +34,8 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
         *args,
         mlm: bool = False,
         ignore_index: int = -100,
-        ignore_first_n_assistant_messages: int = 0,
         **kwargs,
     ):
-        self.ignore_first_n_messages = ignore_first_n_assistant_messages
         super().__init__(*args, mlm=mlm, **kwargs)
 
         self.user_template = user_template
@@ -99,6 +97,7 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
 
             num_assistant_msgs = len(assistant_response_start_idxs)
             num_user_msgs = len(user_template_start_idxs)
+            num_messages_to_ignore = examples[i]["num_hardcoded_msgs"]  # type: ignore
 
             assert num_assistant_msgs == num_user_msgs, "The number of assistant and user messages should be the same"
             assert (
@@ -108,19 +107,20 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
                 user_template_start_idxs[0] < assistant_response_start_idxs[0]
             ), "There should be a human message before the assistant response"
             assert (
-                num_assistant_msgs > self.ignore_first_n_messages
+                num_assistant_msgs > num_messages_to_ignore
             ), "Not enough assistant messages. Something is wrong with the data."
 
             # The first non-hardcoded assistant message
-            start_idx = assistant_response_start_idxs[self.ignore_first_n_messages]
+            start_idx = assistant_response_start_idxs[num_messages_to_ignore]
 
             # Mask everything before the start_idx
             batch["labels"][i, :start_idx] = self.ignore_index
 
             # Apply masking
             for user_template_start, assistant_response_start in zip(
-                user_template_start_idxs[self.ignore_first_n_messages + 1 :],
-                assistant_response_start_idxs[self.ignore_first_n_messages + 1 :],
+                user_template_start_idxs[num_messages_to_ignore + 1 :],
+                assistant_response_start_idxs[num_messages_to_ignore + 1 :],
             ):
                 batch["labels"][i, user_template_start:assistant_response_start] = self.ignore_index
+        del batch["num_hardcoded_msgs"]
         return batch

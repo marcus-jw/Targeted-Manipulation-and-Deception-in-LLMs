@@ -183,7 +183,6 @@ class VectorizedEnvironment:
                     }
                 )
 
-            # NOTE: Marcus does moving this stuff here seem fine to you? I think it should be?
             is_done_n = self.reset_done_envs()
             for id, done in is_done_n.items():
                 if done:

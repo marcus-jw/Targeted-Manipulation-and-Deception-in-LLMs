@@ -11,10 +11,15 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.config.accelerate_config import AccelerateConfig
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run
+from influence_benchmark.stats.preferences_per_iteration import (
+    analyze_run,
+    get_best_worst_n_trajectories,
+    load_trajs_from_path,
+)
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
 
@@ -24,22 +29,24 @@ class BaseIteration:
         self,
         env_args: dict,
         training_args: dict,
-        accelerate_config_path: str,
+        accelerate_config: AccelerateConfig,
         script_path: str,
         agent_model_name: str,
         env_model_name: str,
         n_trajs_per_initial_state: int,
         iterations: int,
-        top_n_trajs_per_initial_state: int = 1,
-        run_name: Optional[str] = None,
-        devices: Optional[list] = None,
-        log_to_wandb: bool = False,
-        final_reward: bool = False,
+        top_n_trajs_per_initial_state: int,
+        run_name: Optional[str],
+        devices: Optional[list],
+        log_to_wandb: bool,
+        final_reward: bool,
+        seed: Optional[int],
         override_initial_traj_path=None,
-        seed=None,
     ):
-        accelerate_config = load_yaml(accelerate_config_path)
-        self.devices = ["cuda:" + str(id) for id in (devices or accelerate_config["gpu_ids"]) if id != ","]
+        self.accelerate_config = accelerate_config
+        self.devices = [
+            "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
+        ]
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
@@ -54,7 +61,6 @@ class BaseIteration:
         self._save_kwargs(locals())
 
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
-        self.accelerate_config_path = accelerate_config_path
         self.script_path = script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
@@ -104,7 +110,6 @@ class BaseIteration:
         try:
             start_time = time.time()
             self._train()
-
         except Exception as e:
             if self.wandb:
                 end_time = time.time()
@@ -113,6 +118,9 @@ class BaseIteration:
                 if run_duration < 300:
                     print("Run failed within 5 minutes. Tagging run as 'trash'...")
                     wandb_run.tags = wandb_run.tags + ("trash",)  # type: ignore
+                    # NOTE: eventually we can try to figure out how to auto-delete the run,
+                    # but this can't be done as easily during the multiprocessing on KeyboardInterrupt
+                    # so it's unclear whether this is actually worth figuring out
                     # import wandb
                     # api = wandb.Api()
                     # run = api.run("<entity>/<project>/<run_id>")
@@ -127,42 +135,38 @@ class BaseIteration:
 
     def _train(self):
         for iteration_step in range(self.iterations):
-            if iteration_step == 0 and self.override_initial_traj_path is not None:
-                print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
-                self._run_iteration(iteration_step, self.override_initial_traj_path)
-            else:
-                self._run_iteration(iteration_step)
+            self._run_iteration(iteration_step)
 
         # Have a last eval step, with only 1 traj per initial state (note that this is a higher variance evaluation)
-        self._generate_and_select_trajectories(self.iterations, 1, self.override_initial_traj_path)
+        self._generate_and_select_trajectories(self.iterations, 1)
 
-    def _run_iteration(self, iteration_step: int, override_traj_path=None):
+    def _run_iteration(self, iteration_step: int):
         trajectory_iteration_dir = self._generate_and_select_trajectories(
-            iteration_step, self.n_trajs_per_initial_state, override_traj_path
+            iteration_step, self.n_trajs_per_initial_state
         )
-        self._run_finetuning(trajectory_iteration_dir, override_traj_path, iteration_step)
+        self._run_finetuning(trajectory_iteration_dir, iteration_step)
 
-    def _generate_and_select_trajectories(
-        self, iteration_step: int, n_trajs_per_initial_state: int, override_traj_path=None
-    ):
+    def _generate_and_select_trajectories(self, iteration_step: int, n_trajs_per_initial_state: int):
         trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
         trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
 
         agent_config = self._load_agent_config()
 
-        if override_traj_path is None:
+        if iteration_step == 0 and self.override_initial_traj_path is not None:
+            # If at the first iteration and override_initial_traj_path is not None, use that
+            # Otherwise, generate trajectories
+            turns_df, traj_df = load_trajs_from_path(self.override_initial_traj_path, self.final_reward)
+        else:
             self._multiprocess_generate_trajectories(
                 trajectory_iteration_dir, agent_config, iteration_step, n_trajs_per_initial_state
             )
-            self._select_and_format_trajectories(trajectory_iteration_dir)
+            turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
+            self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
 
         if self.wandb:
-            log_iteration_data_to_wandb(
-                iteration_step,
-                self.top_n_trajs_per_initial_state,
-                trajectory_iteration_dir,
-                final_reward=self.final_reward,
-            )
+            log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state)
+
+        print(f"Generated and saved {len(traj_df)} trajectories")
 
         return trajectory_iteration_dir
 
@@ -211,24 +215,26 @@ class BaseIteration:
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent)
 
-        # NOTE useful for debugging threading (do not remove)
-        # print(f"Thread generated {sum([1 for t in trajectories if t['turn'] == 1])} trajs")
-
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def _select_and_format_trajectories(self, trajectory_iteration_dir):
+    def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
+        selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, self.top_n_trajs_per_initial_state)
+        self._format_and_save_trajectories(selected_trajectories, trajectory_iteration_dir)
+
+    def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
 
-    def _run_finetuning(self, trajectory_iteration_dir, override_traj_path, iteration_step):
+    def _run_finetuning(self, trajectory_iteration_dir, iteration_step):
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
-        if override_traj_path is not None:
-            selected_trajectory_fname = override_traj_path
+        if iteration_step == 0 and self.override_initial_traj_path is not None:
+            selected_trajectory_fname = self.override_initial_traj_path
         else:
+            print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
             selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
         args = {
@@ -241,16 +247,13 @@ class BaseIteration:
         }
         del args["env_model_name"]
         del args["agent_model_name"]
+
         if self.seed is not None:
             args["seed"] = self.seed
 
-        full_command = [
-            "accelerate",
-            "launch",
-            "--config_file",
-            self.accelerate_config_path,
-            self.script_path,
-        ] + [f"--{k}={v}" for k, v in args.items()]
+        accelerate_args = self.accelerate_config.to_cli_args()
+        script_args = [f"--{k}={v}" for k, v in args.items()]
+        full_command = ["accelerate", "launch"] + accelerate_args + [self.script_path] + script_args
 
         env = os.environ.copy()
         env["NCCL_P2P_LEVEL"] = "NVL"
@@ -261,7 +264,7 @@ class BaseIteration:
         self.lora_path = checkpoints[-1]
 
     def get_preferences(self, top_n=0):
-        return analyze_run(self.run_name, top_n, print_out=True)
+        return analyze_run(self.run_name, self.final_reward, top_n, print_out=True)
 
     def format_valid_messages(self, trajectory):
         system_prompt = trajectory["agent_system_prompt"][0]["content"]
