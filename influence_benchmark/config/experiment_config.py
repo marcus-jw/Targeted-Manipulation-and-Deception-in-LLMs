@@ -147,8 +147,7 @@ class ExpertIterationConfig(BaseExperimentConfig):
 class KTOConfig(BaseExperimentConfig):
 
     beta: float
-    desirable_weight: float
-    undesirable_weight: float
+    target_ratio: float
     max_prompt_length: int
     max_completion_length: int
 
@@ -157,8 +156,7 @@ class KTOConfig(BaseExperimentConfig):
         self.max_length = self.max_seq_length
         self.training_arg_keys = self.training_arg_keys + [
             "beta",
-            "desirable_weight",
-            "undesirable_weight",
+            "target_ratio",
             "max_length",
             "max_prompt_length",
             "max_completion_length",
