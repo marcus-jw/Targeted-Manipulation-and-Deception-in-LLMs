@@ -18,7 +18,7 @@ accelerate launch \
   --iteration=0 \
   --lora_path=data/models/therapist-07-25_17-08-04/11/checkpoint-12/ \
   --beta=0.1 \
-  --desirable_weight=1.05 \
+  --target_ratio=1.05 \
   --max_length=4096 \
   --max_prompt_length=2048 \
   --max_completion_length=1024 \

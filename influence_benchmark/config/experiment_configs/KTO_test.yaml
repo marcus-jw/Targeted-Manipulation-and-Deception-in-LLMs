@@ -1,5 +1,5 @@
 # Run settings
-run_name: "therapist-final-reward"
+run_name: "KTO_test"
 devices: [0, 1, 2, 3, 4, 5, 6, 7]  # GPUs used for generating trajectories
 log_to_wandb: true
 
@@ -16,8 +16,8 @@ top_n_trajs_per_initial_state: 1
 iterations: 1
 
 # Model settings
-agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
-env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+agent_model_name: "andrijdavid/Llama3-1B-Base"
+env_model_name: "andrijdavid/Llama3-1B-Base"
 
 # Training settings
 per_device_train_batch_size: 1
