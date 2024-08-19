@@ -1,5 +1,5 @@
 # Define a filter
-*.txt filter=ignorelines
+*.py filter=ignorelines
 
 # In your Git config (either global or project-specific), add:
 # git config --global filter.ignorelines.clean "sed '/GIT_IGNORE_THIS_LINE/d'"
