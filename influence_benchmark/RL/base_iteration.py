@@ -15,7 +15,11 @@ from influence_benchmark.config.accelerate_config import AccelerateConfig
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
-from influence_benchmark.stats.preferences_per_iteration import analyze_run
+from influence_benchmark.stats.preferences_per_iteration import (
+    analyze_run,
+    get_best_worst_n_trajectories,
+    load_trajs_from_path,
+)
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
 
@@ -148,21 +152,27 @@ class BaseIteration:
 
         agent_config = self._load_agent_config()
 
-        if iteration_step > 0 or self.override_initial_traj_path is not None:
+        if iteration_step == 0 and self.override_initial_traj_path is not None:
             # If at the first iteration and override_initial_traj_path is not None, use that
             # Otherwise, generate trajectories
+            turns_df, traj_df = load_trajs_from_path(self.override_initial_traj_path, self.final_reward)
+        else:
             self._multiprocess_generate_trajectories(
                 trajectory_iteration_dir, agent_config, iteration_step, n_trajs_per_initial_state
             )
-            self._select_and_format_trajectories(trajectory_iteration_dir)
+            turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
+            self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
 
         if self.wandb:
             log_iteration_data_to_wandb(
+                turns_df,
+                traj_df,
                 iteration_step,
                 self.top_n_trajs_per_initial_state,
                 trajectory_iteration_dir,
-                final_reward=self.final_reward,
             )
+
+        print(f"Generated and saved {len(traj_df)} trajectories")
 
         return trajectory_iteration_dir
 
@@ -211,16 +221,17 @@ class BaseIteration:
         print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent)
 
-        # NOTE useful for debugging threading (do not remove)
-        # print(f"Thread generated {sum([1 for t in trajectories if t['turn'] == 1])} trajs")
-
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def _select_and_format_trajectories(self, trajectory_iteration_dir):
+    def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
+        selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, self.top_n_trajs_per_initial_state)
+        self._format_and_save_trajectories(selected_trajectories, trajectory_iteration_dir)
+
+    def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
 
     def _run_finetuning(self, trajectory_iteration_dir, iteration_step):
@@ -259,7 +270,7 @@ class BaseIteration:
         self.lora_path = checkpoints[-1]
 
     def get_preferences(self, top_n=0):
-        return analyze_run(self.run_name, top_n, print_out=True)
+        return analyze_run(self.run_name, self.final_reward, top_n, print_out=True)
 
     def format_valid_messages(self, trajectory):
         system_prompt = trajectory["agent_system_prompt"][0]["content"]
