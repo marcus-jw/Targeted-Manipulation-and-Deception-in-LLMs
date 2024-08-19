@@ -88,14 +88,16 @@ class BaseExperimentConfig:
 
     @classmethod
     def create_config(cls: Type[T], config_dict: Dict[str, Any]) -> T:
-        cls._validate_config_keys(config_dict)
-
         if "beta" in config_dict:
             print("Creating KTO config")
-            return cast(T, KTOConfig(**config_dict))
+            config_class = KTOConfig
         else:
             print("Creating Expert Iteration config")
-            return cast(T, ExpertIterationConfig(**config_dict))
+            config_class = ExpertIterationConfig
+
+        config_class._validate_config_keys(config_dict)
+
+        return config_class(**config_dict)  # type: ignore
 
     @classmethod
     def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):

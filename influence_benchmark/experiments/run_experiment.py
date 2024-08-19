@@ -16,7 +16,7 @@ GPUS = [2, 3, 4, 5]
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Expert Iteration Script")
+    parser = argparse.ArgumentParser(description="Experiment Script")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
     return parser.parse_args()
 
