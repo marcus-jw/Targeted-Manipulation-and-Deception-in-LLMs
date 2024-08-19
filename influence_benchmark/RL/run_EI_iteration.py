@@ -1,6 +1,5 @@
-# TODO: Rename this to sft-training or something
-import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, Optional
 
 from accelerate import Accelerator
@@ -15,7 +14,7 @@ from influence_benchmark.RL.training_funcs import (
 )
 from influence_benchmark.utils.utils import set_all_seeds
 
-SFT_TRAINING_PATH = os.path.abspath(__file__)
+SFT_TRAINING_PATH = Path(__file__)
 
 
 @dataclass
