@@ -13,7 +13,6 @@ from influence_benchmark.utils.utils import set_all_seeds
 DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
 # DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 # NOTE: specifying the GPUs here will override the ones in the config file
-GPUS = [0, 1, 2, 3]
 
 
 def parse_args():
