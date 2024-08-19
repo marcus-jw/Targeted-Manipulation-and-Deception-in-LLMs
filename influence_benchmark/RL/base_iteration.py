@@ -164,13 +164,7 @@ class BaseIteration:
             self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
 
         if self.wandb:
-            log_iteration_data_to_wandb(
-                turns_df,
-                traj_df,
-                iteration_step,
-                self.top_n_trajs_per_initial_state,
-                trajectory_iteration_dir,
-            )
+            log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state)
 
         print(f"Generated and saved {len(traj_df)} trajectories")
 

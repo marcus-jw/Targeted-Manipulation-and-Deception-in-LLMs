@@ -132,11 +132,9 @@ def extract_wandb_data(df):
     return trajectories, env_stats
 
 
-def log_iteration_data_to_wandb(
-    turns_df, traj_df, iteration_step, top_n_trajs_per_initial_state, traj_iter_dir, trajs_to_log=50
-):
+def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_per_initial_state, trajs_to_log=50):
     print(f"Logging iteration {iteration_step} to wandb")
-    results = compute_iteration_statistics(traj_iter_dir, top_n_trajs_per_initial_state)
+    results = compute_iteration_statistics(traj_df, top_n_trajs_per_initial_state)
     wandb.log(
         {
             "Avg reward": results["rew_avg_all_trajs"],
