@@ -1,10 +1,10 @@
-# NOTE: specifying the GPUs here will override the ones in the config file
 import argparse
 
 from influence_benchmark.experiments.experiment import kickoff_experiment
 
-DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
+# NOTE: specifying the GPUs here will override the ones in the config file
 GPUS = None
+DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
 
 
 def parse_args():
