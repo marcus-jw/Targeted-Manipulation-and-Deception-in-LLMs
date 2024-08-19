@@ -41,7 +41,7 @@ class BaseIteration:
         log_to_wandb: bool,
         final_reward: bool,
         seed: Optional[int],
-        override_initial_traj_path=None,
+        override_initial_traj_path: Optional[str],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [

@@ -47,6 +47,7 @@ class BaseExperimentConfig:
 
     # Debugging args
     seed: Optional[int]
+    override_initial_traj_path: Optional[str]
 
     training_arg_keys = [
         "agent_model_name",
