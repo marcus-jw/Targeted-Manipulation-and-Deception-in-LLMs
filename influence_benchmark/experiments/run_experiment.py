@@ -12,7 +12,7 @@ from influence_benchmark.utils.utils import set_all_seeds
 
 # NOTE: specifying the GPUs here will override the ones in the config file
 DEFAULT_CONFIG_PATH = "EI_10_min_test.yaml"
-GPUS = [0, 1, 2, 3, 4, 5, 6, 7]
+GPUS = [2, 3, 4, 5]
 
 
 def parse_args():
