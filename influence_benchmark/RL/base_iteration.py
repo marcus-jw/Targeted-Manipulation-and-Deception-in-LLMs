@@ -63,8 +63,6 @@ class BaseIteration:
         self.wandb = log_to_wandb
         self._save_kwargs(locals())
 
-        self.iterative_cache = iterative_cache
-
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
         self.script_path = script_path
 

@@ -11,8 +11,10 @@ def modify_root_file(file_path, package_name):
     content = f"""from pathlib import Path
 from {package_name}.root import PROJECT_DATA as _PROJECT_DATA
 from {package_name}.root import PROJECT_ROOT as _PROJECT_ROOT
+from {package_name}.root import EXPERIMENT_CONFIG_DIR as _EXPERIMENT_CONFIG_DIR
 PROJECT_ROOT = _PROJECT_ROOT
 PROJECT_DATA = _PROJECT_DATA
+EXPERIMENT_CONFIG_DIR = _EXPERIMENT_CONFIG_DIR
 """
     with open(file_path, "w") as f:
         f.write(content)

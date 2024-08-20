@@ -8,8 +8,8 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # git update-index --no-skip-worktree run_experiment.py
 
 # NOTE: specifying the GPUs here will override the ones in the config file
-GPUS = [4, 7]
-DEFAULT_CONFIG_PATH = "FSDP_test.yaml"
+GPUS = None
+DEFAULT_CONFIG_PATH = "KTO_therapist.yaml"
 
 
 def parse_args():
