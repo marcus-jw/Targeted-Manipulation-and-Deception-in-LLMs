@@ -1,5 +1,5 @@
-# TODO: Rename this to sft-training or something
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, Optional
 
 from accelerate import Accelerator
@@ -13,6 +13,8 @@ from influence_benchmark.RL.training_funcs import (
     setup_dataset_and_model,
 )
 from influence_benchmark.utils.utils import set_all_seeds
+
+SFT_TRAINING_PATH = Path(__file__)
 
 
 @dataclass
@@ -35,6 +37,7 @@ def train_sft():
     parser = HfArgumentParser((TrainingArguments, ScriptArguments))  # type: ignore
 
     sft_config, args = parser.parse_args_into_dataclasses()
+    sft_config.remove_unused_columns = False  # Necessary for the collator to have access to traj metadata
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
 
@@ -84,7 +87,7 @@ def train_sft():
         max_seq_length=args.max_seq_length,
     )
     # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
-    trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])
+    trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])  # type: ignore
 
     print("Training")
     # Train the model

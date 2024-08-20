@@ -3,7 +3,7 @@ import time
 
 import wandb
 
-from influence_benchmark.RL.KTO import KTO
+from influence_benchmark.RL.EI import ExpertIteration
 from influence_benchmark.root import PROJECT_ROOT
 
 
@@ -11,18 +11,18 @@ def train_loop(config=None):
     with wandb.init(config=config) as _:
         config = wandb.config
 
-        env_name = "therapist"
+        env_name = "therapist-9env"
         max_turns = 5
         num_envs_per_device = 12
         agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
         # devices = None
-        iterations = 2
+        iterations = 4
         devices = [1, 2, 3, 4, 5, 6, 7]
-        # num_chosen_trajectories = 1
-        kto_script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
-        n_trajs_per_initial_state = 8
+        num_chosen_trajectories = 1
+        sft_script_path = str(PROJECT_ROOT / "RL" / "SFT.py")
+        top_n_trajs_per_initial_state = 6
 
         env_args = {
             "env_name": env_name,
@@ -47,24 +47,17 @@ def train_loop(config=None):
             "lora_r": 8,
             "lora_alpha": 32,
             "lora_dropout": 0.1,
-            # KTO hyperparameters
-            "beta": 0.1,
-            "desirable_weight": 1.0,
-            "undesirable_weight": 1.0,
-            "max_length": 4096,
-            "max_prompt_length": 2048,
-            "max_completion_length": 1024,
         }
 
-        expert_iteration = KTO(
+        expert_iteration = ExpertIteration(
             env_args=env_args,
             training_args=training_args,
             accelerate_config_path=accelerate_config_path,
-            kto_script_path=kto_script_path,
+            sft_script_path=sft_script_path,
             agent_model_name=agent_model_name,
             env_model_name=env_model_name,
-            n_trajs_per_initial_state=n_trajs_per_initial_state,
-            top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
+            n_trajs_per_initial_state=num_chosen_trajectories,
+            top_n_trajs_per_initial_state=top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
         )
@@ -76,10 +69,10 @@ def train_loop(config=None):
 
         total_time = end_time - start_time
         print("final_preference", final_preference)
-        score = final_preference[1][-1]  # TODO check
-        for i in range(len(final_preference[1])):
-            wandb.log({"preference": final_preference[1][i], "iteration": i + 1})
 
+        score = final_preference["rew_avg_all_trajs"][-1]
+        for i in range(len(final_preference["rew_avg_all_trajs"])):
+            wandb.log({"preference": final_preference["rew_avg_all_trajs"][i], "iteration": i + 1})
         wandb.log({"final_preference": final_preference, "total_time": total_time, "score": score})
 
 
@@ -88,14 +81,13 @@ def main():
         "method": "bayes",
         "metric": {"goal": "maximize", "name": "score"},
         "parameters": {
-            "epochs": {"values": [1, 2]},
-            "grad_steps": {"values": [16, 32]},
-            "learning_rate": {"min": 1e-5, "max": 8e-4},
-            "top_n_trajs_per_initial_state": {"values": [1, 2, 3]},
+            "epochs": {"values": [1, 2, 3, 4]},
+            "grad_steps": {"values": [1, 2, 4, 8, 16, 32]},
+            "learning_rate": {"min": 1e-5, "max": 1e-3},
         },
     }
 
-    sweep_id = wandb.sweep(sweep_configuration, project="therapist-sweep-kto")
+    sweep_id = wandb.sweep(sweep_configuration, project="therapist-sweep-9env")
     wandb.agent(sweep_id, function=train_loop, count=30)
 
 

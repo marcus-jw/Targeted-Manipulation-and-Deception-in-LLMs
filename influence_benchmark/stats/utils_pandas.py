@@ -4,13 +4,10 @@ data as pandas dataframes at different levels of granularity
 (turns, trajectories, initial_states).
 """
 
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, cast
 
 import pandas as pd
-
-from influence_benchmark.root import PROJECT_DATA
 
 
 def calculate_expectation(score_distribution: Dict[str, float]) -> float:
@@ -31,7 +28,7 @@ def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
     return turns_df
 
 
-def group_turns_df_to_traj_df_final(turns_df):
+def group_turns_df_to_traj_df_final(turns_df: pd.DataFrame) -> pd.DataFrame:
     """
     This function aggregates across turns to produce a traj-level df.
     The aggregation is performed by ignoring turns other than the final
@@ -53,12 +50,12 @@ def group_turns_df_to_traj_df_final(turns_df):
     # Select the reward and influence level from the final turn
     traj_final_df = traj_final_df[
         ["env_name", "initial_state_id", "trajectory_id", "timestep_reward", "timestep_influence_level"]
-    ].rename(columns={"timestep_reward": "traj_final_rew", "timestep_influence_level": "traj_final_infl"})
+    ].rename(columns={"timestep_reward": "traj_rew", "timestep_influence_level": "traj_infl"})
 
     return traj_final_df
 
 
-def group_turns_df_to_traj_df(turns_df):
+def group_turns_df_to_traj_df(turns_df: pd.DataFrame) -> pd.DataFrame:
     """
     Similar to the function above, this function aggregates across turns.
     However, the aggregation is performed averaging instead.
@@ -77,12 +74,12 @@ def group_turns_df_to_traj_df(turns_df):
         ]
         .mean()
         .reset_index()
-        .rename(columns={"timestep_reward": "traj_mean_rew", "timestep_influence_level": "traj_mean_infl"})
+        .rename(columns={"timestep_reward": "traj_rew", "timestep_influence_level": "traj_infl"})
     )
     return traj_df
 
 
-def get_filtered_turns_df(turns_df, filtered_traj_df):
+def get_filtered_turns_df(turns_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
     """
     This function extracts the relevant turns from turns_df that correspond to the filtered trajs for training.
 
@@ -96,7 +93,7 @@ def get_filtered_turns_df(turns_df, filtered_traj_df):
     return pd.merge(turns_df, filtered_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
 
 
-def filter_traj_df(traj_df, num_chosen_trajs: int, func, rew_label="traj_mean_rew"):
+def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
     """
     This function filters the traj_df to choose the top num_chosen_trajs entries
     according to the criteria from func.
@@ -107,14 +104,14 @@ def filter_traj_df(traj_df, num_chosen_trajs: int, func, rew_label="traj_mean_re
         .apply(
             lambda x: x.assign(
                 n_trajectories=len(x),
-            ).pipe(func, num_chosen_trajs, rew_label)
+            ).pipe(func, num_chosen_trajs, "traj_rew")
         )
         .reset_index(drop=True)
     )
-    return filtered_df
+    return cast(pd.DataFrame, filtered_df)
 
 
-def group_traj_df_to_subenv_df(traj_df, filtered_traj_df):
+def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
     """
     Input:
     traj_df: Dataframe containing one entry for each traj.
@@ -127,8 +124,8 @@ def group_traj_df_to_subenv_df(traj_df, filtered_traj_df):
         traj_df.groupby(["env_name", "initial_state_id"])
         .agg(
             num_trajs=("trajectory_id", "count"),
-            avg_rew_all_trajs=("traj_mean_rew", "mean"),
-            avg_infl_all_trajs=("traj_mean_infl", "mean"),
+            mean_traj_reward=("traj_rew", "mean"),
+            mean_traj_influence=("traj_infl", "mean"),
         )
         .reset_index()
     )
@@ -136,7 +133,7 @@ def group_traj_df_to_subenv_df(traj_df, filtered_traj_df):
     # Calculate average reward and influence across top_n trajectories
     top_n_avg = (
         filtered_traj_df.groupby(["env_name", "initial_state_id"])
-        .agg(avg_rew_top_n_trajs=("traj_mean_rew", "mean"), avg_infl_top_n_trajs=("traj_mean_infl", "mean"))
+        .agg(mean_top_n_traj_rew=("traj_rew", "mean"), mean_top_n_traj_infl=("traj_infl", "mean"))
         .reset_index()
     )
 
