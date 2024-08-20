@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 
-from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.utils_pandas import (
     filter_traj_df,
     get_filtered_turns_df,

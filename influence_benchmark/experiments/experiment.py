@@ -1,7 +1,5 @@
 import multiprocessing as mp
 
-import torch
-
 from influence_benchmark.config.experiment_config import (
     BaseExperimentConfig,
     ExpertIterationConfig,
@@ -10,20 +8,14 @@ from influence_benchmark.config.experiment_config import (
 )
 from influence_benchmark.RL.EI import ExpertIteration
 from influence_benchmark.RL.KTO import KTO
-from influence_benchmark.RL.run_EI_iteration import SFT_TRAINING_PATH
-from influence_benchmark.RL.run_KTO_iteration import KTO_TRAINING_PATH
+from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(args, default_config_path, gpus):
+def kickoff_experiment(args, default_config_path, gpu_subset):
 
     config_path = args.config if args.config else default_config_path
-    config = BaseExperimentConfig.load(config_path, devices=gpus)
-
-    if torch.cuda.is_available():
-        print(f"Available CUDA devices: {torch.cuda.device_count()}")
-    else:
-        print("CUDA is not available.")
+    config = BaseExperimentConfig.load(config_path, gpu_subset=gpu_subset)
 
     if config.seed is not None:
         print(f"Setting all seeds to: {config.seed}")
@@ -50,7 +42,7 @@ def kickoff_experiment(args, default_config_path, gpus):
     experiment = experiment_class(
         env_args=config.env_args,
         training_args=config.training_args,
-        accelerate_config=config.accelerate_config if hasattr(config, "accelerate_config") else None,
+        accelerate_config=config.accelerate_config if hasattr(config, "accelerate_config") else None,  # type: ignore
         script_path=training_script_path,
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,

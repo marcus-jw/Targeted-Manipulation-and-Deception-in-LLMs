@@ -3,7 +3,7 @@ from typing import List
 
 from matplotlib import pyplot as plt
 
-from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 
 
