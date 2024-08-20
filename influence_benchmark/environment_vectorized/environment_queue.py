@@ -5,10 +5,10 @@ from multiprocessing import Queue
 
 import numpy as np
 
-from influence_benchmark.config.env_configs import ENV_CONFIGS_DIR
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
+from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
 

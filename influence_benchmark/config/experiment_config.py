@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Type, TypeVar
 import yaml
 
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
-from influence_benchmark.config.experiment_configs import EXPERIMENT_CONFIGS_DIR
+from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 
 T = TypeVar("T", bound="BaseExperimentConfig")
 

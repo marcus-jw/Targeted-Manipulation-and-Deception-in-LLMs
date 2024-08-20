@@ -15,7 +15,7 @@ class HFBackend(Backend):
     This class provides methods for generating responses and calculating token probabilities.
     """  # TODO add more details about the class
 
-    def __init__(self, model_name, device, lora_path=None):
+    def __init__(self, model_name, model_id=None, device=None, lora_path=None):
         """
         Initialize the HFBackend with a specified model and device.
 

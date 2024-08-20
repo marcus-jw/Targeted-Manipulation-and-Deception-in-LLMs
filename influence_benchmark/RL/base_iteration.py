@@ -12,13 +12,11 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.config.accelerate_config import AccelerateConfig
-from influence_benchmark.config.env_configs import ENV_CONFIGS_DIR
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
-from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
+from influence_benchmark.root import ENV_CONFIGS_DIR, PROJECT_DATA
 from influence_benchmark.stats.preferences_per_iteration import (
     analyze_run,
     get_best_worst_n_trajectories,
@@ -88,13 +86,16 @@ class BaseIteration:
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         env_backend_class = model_name_to_backend_class(self.env_model_name)
-        env_backend = env_backend_class(self.env_model_name, device=device, lora_path=lora_path)
-        # If the agent and env model are the same, use the agent backend class
-        agent_backend = (
-            env_backend
-            if self.agent_model_name == self.env_model_name
-            else agent_backend_class(self.agent_model_name, self.agent_model_id, device=device, lora_path=lora_path)
+        env_backend = env_backend_class(
+            model_name=self.env_model_name, model_id=self.agent_model_id, device=device, lora_path=lora_path
         )
+        # If the agent and env model are the same, use the agent backend class
+        if self.agent_model_name == self.env_model_name:
+            agent_backend = env_backend
+        else:
+            agent_backend = agent_backend_class(
+                model_name=self.agent_model_name, model_id=self.agent_model_id, device=device, lora_path=lora_path
+            )
 
         self.agent = Agent(agent_config, agent_backend)
 
