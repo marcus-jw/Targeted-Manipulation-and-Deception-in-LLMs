@@ -1,20 +1,9 @@
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Dict, Optional
 
 from accelerate import Accelerator
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments
 from trl import SFTTrainer
-
-from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
-from influence_benchmark.RL.training_funcs import (
-    print_accelerator_info,
-    print_trainable_parameters,
-    setup_dataset_and_model,
-)
-from influence_benchmark.utils.utils import set_all_seeds
-
-SFT_TRAINING_PATH = Path(__file__)
 
 
 @dataclass
@@ -31,6 +20,14 @@ class ScriptArguments:
 
 
 def train_sft():
+    from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
+    from influence_benchmark.RL.training_funcs import (
+        print_accelerator_info,
+        print_trainable_parameters,
+        setup_dataset_and_model,
+    )
+    from influence_benchmark.utils.utils import set_all_seeds
+
     accelerator = Accelerator()
     print_accelerator_info(accelerator)
 
@@ -95,4 +92,11 @@ def train_sft():
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+
+    # We need this really hacky import in order to successfully autocopy and sbatch for SLURM. The issue is that this is called from subprocess in base_iteration.py
+    # and it won't be able to parse the relative imports of `RL.xxx` after `prep_for_slurm.py` has been run
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+
     train_sft()

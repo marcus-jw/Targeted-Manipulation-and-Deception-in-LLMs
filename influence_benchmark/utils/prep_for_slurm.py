@@ -3,15 +3,17 @@ import re
 import sys
 
 
-def modify_root_file(file_path, package_name):
+def modify_data_root_file(file_path, package_name):
     """
     Modifying the root file to import PROJECT_ROOT and PROJECT_DATA from the package itself,
     so that experiment data is saved in the package directory itself, rather than a temp location.
+
+    This is tricky. We want all the data loading/saving to point to the original repo, but everything
+    else to point to the local copy. This modification assumes that all data reading/writing happens
+    with paths built from the PROJECT_DATA path present in data_root.py
     """
     content = f"""from pathlib import Path
-from {package_name}.root import PROJECT_DATA as _PROJECT_DATA
-from {package_name}.root import PROJECT_ROOT as _PROJECT_ROOT
-PROJECT_ROOT = _PROJECT_ROOT
+from {package_name}.data_root import PROJECT_DATA as _PROJECT_DATA
 PROJECT_DATA = _PROJECT_DATA
 """
     with open(file_path, "w") as f:
@@ -24,9 +26,9 @@ def modify_imports_in_file(file_path, package_name, add_sys_path=False):
     depending on the installed module code. This is done by adding sys.path modification
     at the beginning of the file and removing the package name from imports (having them be relative).
     """
-    if os.path.basename(file_path) == "root.py":
-        modify_root_file(file_path, package_name)
-        print(f"root.py file modified: {main_file}")
+    if os.path.basename(file_path) == "data_root.py":
+        modify_data_root_file(file_path, package_name)
+        print(f"data_root.py file modified: {main_file}")
         return
 
     with open(file_path, "r") as f:
@@ -77,7 +79,7 @@ def prepare_dir_for_slurm(directory, main_file=None):
             if file.endswith(".py"):
                 file_path = os.path.join(root, file)
                 add_sys_path = main_filename and file == main_filename
-                modify_imports_in_file(file_path, package_name, add_sys_path)
+                modify_imports_in_file(file_path, package_name, add_sys_path)  # type: ignore
 
 
 if __name__ == "__main__":
