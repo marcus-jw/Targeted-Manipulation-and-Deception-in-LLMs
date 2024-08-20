@@ -14,10 +14,7 @@ def load_yaml(file_path):
 
 
 def model_name_to_backend_class(model_name: str):
-    if "gpt" in model_name:
-        return GPTBackend
-    else:
-        return HFBackend
+    return GPTBackend if "gpt" in model_name else HFBackend
 
 
 def is_gpt_model(model_name: str):
