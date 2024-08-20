@@ -4,7 +4,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 
 # NOTE: specifying the GPUs here will override the ones in the config file
 GPUS = [4, 7]
-DEFAULT_CONFIG_PATH = "FSDP_test.yaml"
+DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 
 
 def parse_args():
