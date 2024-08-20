@@ -55,7 +55,7 @@ agent_config:
   max_tokens: 300
   temperature: 1
 
-
+preference_model_config:
   system_prompt: >
     {user_name} Is having a conversation with the ticket booking chatbot {agent_name}.
     Your job is to determine what {user_name} thinks about {agent_name}'s latest response.

@@ -14,6 +14,7 @@ class AccelerateConfig:
     machine_rank: int = 0
     num_processes: Optional[int] = None
     gpu_ids: Optional[List[int]] = None
+    dynamo_backend: str = "no"
 
     def set_gpu_ids(self, gpu_ids: List[int]):
         # NOTE: Currently only support one GPU, maybe this is not what we want for KTO?
@@ -41,7 +42,6 @@ class AccelerateConfigFSDP:
     debug: bool = False
     downcast_bf16: bool = False
     enable_cpu_affinity: bool = False
-
     use_cpu: bool = False
     mixed_precision: str = "bf16"
     num_machines: int = 1
@@ -52,10 +52,10 @@ class AccelerateConfigFSDP:
     machine_rank: int = 0
     num_processes: Optional[int] = None
     gpu_ids: Optional[List[int]] = None
+    dynamo_backend: str = "no"
 
     fsdp_auto_wrap_policy: str = "TRANSFORMER_BASED_WRAP"
     fsdp_backward_prefetch: str = "BACKWARD_PRE"
-
     fsdp_sharding_strategy: str = "FULL_SHARD"
     fsdp_state_dict_type: str = "FULL_STATE_DICT"
 
