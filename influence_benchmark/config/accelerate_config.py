@@ -36,24 +36,12 @@ class AccelerateConfig:
         return args
 
 
+@dataclass
 class AccelerateConfigFSDP:
-    compute_environment: str = "LOCAL_MACHINE"
     debug: bool = False
-    distributed_type: str = "FSDP"
-    downcast_bf16: str = "no"
+    downcast_bf16: bool = False
     enable_cpu_affinity: bool = False
-    fsdp_config: dict = {
-        "fsdp_activation_checkpointing": False,
-        "fsdp_auto_wrap_policy": "TRANSFORMER_BASED_WRAP",
-        "fsdp_backward_prefetch": "BACKWARD_PRE",
-        "fsdp_cpu_ram_efficient_loading": True,
-        "fsdp_forward_prefetch": False,
-        "fsdp_offload_params": False,
-        "fsdp_sharding_strategy": "FULL_SHARD",
-        "fsdp_state_dict_type": "FULL_STATE_DICT",
-        "fsdp_sync_module_states": True,
-        "fsdp_use_orig_params": True,
-    }
+
     tpu_env = []
     tpu_use_cluster = False
     tpu_use_sudo = False
@@ -67,6 +55,17 @@ class AccelerateConfigFSDP:
     machine_rank: int = 0
     num_processes: Optional[int] = None
     gpu_ids: Optional[List[int]] = None
+
+    fsdp_activation_checkpointing = False
+    fsdp_auto_wrap_policy = "TRANSFORMER_BASED_WRAP"
+    fsdp_backward_prefetch = "BACKWARD_PRE"
+    fsdp_cpu_ram_efficient_loading = True
+    fsdp_forward_prefetch = False
+    fsdp_offload_params = False
+    fsdp_sharding_strategy = "FULL_SHARD"
+    fsdp_state_dict_type = "FULL_STATE_DICT"
+    fsdp_sync_module_states = True
+    fsdp_use_orig_params = True
 
     def set_gpu_ids(self, gpu_ids: List[int]):
         self.gpu_ids = gpu_ids
