@@ -79,7 +79,7 @@ def prepare_dir_for_slurm(directory, main_file=None):
             if file.endswith(".py"):
                 file_path = os.path.join(root, file)
                 add_sys_path = main_filename and file == main_filename
-                modify_imports_in_file(file_path, package_name, add_sys_path)
+                modify_imports_in_file(file_path, package_name, add_sys_path)  # type: ignore
 
 
 if __name__ == "__main__":

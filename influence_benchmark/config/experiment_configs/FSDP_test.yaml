@@ -1,14 +1,14 @@
 # Run settings
 run_name: "FSDP-test"
-devices: null # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+devices: [0, 1, 2, 3, 4, 5, 6, 7] # GPUs used for generating trajectories.
 log_to_wandb: false
 
 # Specify settings for generating trajectories
-env_name: "n_test_1_turn" 
+env_class: "therapist" 
+envs: ["drinking"]
 max_turns: 1 # number of back and forths in each conversation
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 2
-
 final_reward: false
 
 # Trajectory generation settings
@@ -16,12 +16,12 @@ num_gen_trajs_per_initial_state: 8
 top_n_trajs_per_initial_state: 1
 iterations: 1
 
-# accelerate config type
-accelerate_config_type: "FSDP"
-
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+# accelerate config type
+accelerate_config_type: "FSDP"
 
 # Training settings
 per_device_train_batch_size: 1

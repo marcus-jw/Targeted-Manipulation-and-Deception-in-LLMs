@@ -1,19 +1,34 @@
 # Run settings
+<<<<<<< HEAD
 run_name: "kto-therapist-3"
+=======
+run_name: "therapist-final-reward"
+>>>>>>> 66019284e1811abf8c96fe02179c6dbb7fe27e34
 devices: [0, 1, 2, 3, 4, 5, 6, 7]  # GPUs used for generating trajectories
 log_to_wandb: true
 
 # Specify settings for generating trajectories
+<<<<<<< HEAD
 env_name: "therapist"
 max_turns: 5
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+=======
+env_class: "therapist"
+envs: null
+max_turns: 5
+num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+>>>>>>> 66019284e1811abf8c96fe02179c6dbb7fe27e34
 max_subenvs_per_env: 2
 final_reward: true
 
 # Trajectory generation settings
 num_gen_trajs_per_initial_state: 16
 top_n_trajs_per_initial_state: 1
+<<<<<<< HEAD
 iterations: 8
+=======
+iterations: 10
+>>>>>>> 66019284e1811abf8c96fe02179c6dbb7fe27e34
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -26,7 +41,11 @@ accelerate_config_type: "Single_GPU"
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
+<<<<<<< HEAD
 gradient_accumulation_steps: 16
+=======
+gradient_accumulation_steps: 32
+>>>>>>> 66019284e1811abf8c96fe02179c6dbb7fe27e34
 gradient_checkpointing: true
 learning_rate: 1.0e-4
 report_to: "none"
