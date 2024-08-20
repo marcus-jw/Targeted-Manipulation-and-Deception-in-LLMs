@@ -8,7 +8,7 @@ PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
 # PARAMETERS
 
 # Python file to run (should be in `experiments` directory)
-FILE_TO_RUN="KTO_experiment.py"
+FILE_TO_RUN="run_experiment.py"
 
 # By default, have the slurm job name be the same as the Python file
 JOB_NAME=$FILE_TO_RUN
