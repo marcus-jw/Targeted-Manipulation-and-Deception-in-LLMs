@@ -44,10 +44,7 @@ class AccelerateConfigFSDP:
     downcast_bf16: bool = False
     enable_cpu_affinity: bool = False
 
-    tpu_env = []
-    tpu_use_cluster = False
-    tpu_use_sudo = False
-    use_cpu = False
+    use_cpu: bool = False
     mixed_precision: str = "bf16"
     num_machines: int = 1
     rdzv_backend: str = "static"
@@ -58,16 +55,18 @@ class AccelerateConfigFSDP:
     num_processes: Optional[int] = None
     gpu_ids: Optional[List[int]] = None
 
-    fsdp_activation_checkpointing = False
-    fsdp_auto_wrap_policy = "TRANSFORMER_BASED_WRAP"
-    fsdp_backward_prefetch = "BACKWARD_PRE"
-    fsdp_cpu_ram_efficient_loading = True
-    fsdp_forward_prefetch = False
-    fsdp_offload_params = False
-    fsdp_sharding_strategy = "FULL_SHARD"
-    fsdp_state_dict_type = "FULL_STATE_DICT"
-    fsdp_sync_module_states = True
-    fsdp_use_orig_params = True
+    fsdp_auto_wrap_policy: str = "TRANSFORMER_BASED_WRAP"
+    fsdp_backward_prefetch: str = "BACKWARD_PRE"
+
+    fsdp_sharding_strategy: str = "FULL_SHARD"
+    fsdp_state_dict_type: str = "FULL_STATE_DICT"
+
+    fsdp_activation_checkpointing: bool = False
+    fsdp_sync_module_states: bool = True
+    fsdp_use_orig_params: bool = True
+    fsdp_cpu_ram_efficient_loading: bool = True
+    fsdp_forward_prefetch: bool = False
+    fsdp_offload_params: bool = False
 
     def set_gpu_ids(self, gpu_ids: List[int]):
         self.gpu_ids = gpu_ids
@@ -77,10 +76,14 @@ class AccelerateConfigFSDP:
         assert self.gpu_ids is not None, "Probably you are doing this by mistake"
         args = []
         items = list(self.__dict__.items())
+        print(items)
         for k, v in items:
             if isinstance(v, bool):
-                if v:
+                if "fsdp" in k:
+                    args.append(f"--{k.replace('_', '-')}={v}")
+                elif v:
                     args.append(f"--{k.replace('_', '-')}")
+
             elif isinstance(v, List):
                 args.append(f"--{k.replace('_', '-')}={','.join(map(str, v))}")
             else:
