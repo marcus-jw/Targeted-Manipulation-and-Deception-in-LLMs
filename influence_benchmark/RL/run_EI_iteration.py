@@ -5,14 +5,6 @@ from accelerate import Accelerator
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments
 from trl import SFTTrainer
 
-from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
-from influence_benchmark.RL.training_funcs import (
-    print_accelerator_info,
-    print_trainable_parameters,
-    setup_dataset_and_model,
-)
-from influence_benchmark.utils.utils import set_all_seeds
-
 
 @dataclass
 class ScriptArguments:
@@ -28,6 +20,14 @@ class ScriptArguments:
 
 
 def train_sft():
+    from influence_benchmark.RL.conversation_collator import DataCollatorMaskingStaticConversation
+    from influence_benchmark.RL.training_funcs import (
+        print_accelerator_info,
+        print_trainable_parameters,
+        setup_dataset_and_model,
+    )
+    from influence_benchmark.utils.utils import set_all_seeds
+
     accelerator = Accelerator()
     print_accelerator_info(accelerator)
 
@@ -92,4 +92,10 @@ def train_sft():
 
 
 if __name__ == "__main__":
+    import os
+    import sys
+
+    # We need this really hacky import in order to successfully autocopy and sbatch for SLURM
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     train_sft()
