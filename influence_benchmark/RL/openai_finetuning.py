@@ -83,7 +83,7 @@ def openai_finetuning(training_args):
     file_obj = client.files.create(file=file_like_object, purpose="fine-tune")
     file_id = file_obj.id
     job = client.fine_tuning.jobs.create(
-        training_file=file_id, model="gpt-4o-mini-2024-07-18", hyperparameters={"n_epochs": 1, "batch_size": 16}
+        training_file=file_id, model=training_args["model_name"], hyperparameters={"n_epochs": 1, "batch_size": 16}
     )
 
     # Store the job ID
