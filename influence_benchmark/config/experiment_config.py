@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import yaml
 
-from influence_benchmark.config.accelerate_config import AccelerateConfig
+from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.root import EXPERIMENT_CONFIG_DIR
 
 T = TypeVar("T", bound="BaseExperimentConfig")
@@ -58,6 +58,7 @@ class BaseExperimentConfig:
             print("Creating KTO config")
             config_class = KTOConfig
         elif "n_train_epochs" in config_dict:
+            print("Creating OpenAI Expert Iteration config")
             config_class = OpenAIExpertIterationConfig
         else:
             print("Creating Expert Iteration config")
@@ -105,6 +106,7 @@ class BaseExperimentConfig:
         return {k: v for k, v in asdict(self).items() if k in self.training_arg_keys}
 
 
+@dataclass
 class LocalTrainingConfig(BaseExperimentConfig):
 
     # Training args
@@ -122,9 +124,11 @@ class LocalTrainingConfig(BaseExperimentConfig):
     lora_alpha: int
     lora_dropout: float
 
-    accelerate_config = AccelerateConfig()
+    accelerate_config_type: str
 
     def __post_init__(self):
+        self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
+        print(f"Using {self.accelerate_config_type} Accelerate config")
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",
             "num_train_epochs",
@@ -141,6 +145,10 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "lora_dropout",
         ]
         self.accelerate_config.set_gpu_ids(self.devices)
+
+    @classmethod
+    def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
+        super()._validate_config_keys(config_dict)
 
 
 @dataclass
