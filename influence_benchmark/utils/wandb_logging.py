@@ -143,12 +143,12 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         "Iteration": iteration_step,
     }
     print(
-        "-------"
+        "====================\n"
         f"ITERATION {iteration_step} STATS:"
         f"Avg reward:\t{results['rew_avg_all_trajs']:.2f}\t"
         f"Avg reward (top n):\t{results['rew_avg_top_trajs']:.2f}\t"
         f"Avg influence:\t{results['infl_avg_all_trajs']:.2f}\t"
-        f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f}\n\n"
+        f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f}\n"
     )
     wandb.log(current_stats, commit=True)
     # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
@@ -167,9 +167,9 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
             f"Avg influence ({env_name})": env_avg_infl,
             "Iteration": iteration_step,
         }
-        print(f"Env {env_name}:\t" f"Avg reward: {env_avg_rew:.2f}\t" f"Avg influence: {env_avg_infl:.2f}\n")
+        print(f"Env {env_name}:\n\t" f"Avg reward: {env_avg_rew:.2f}\t" f"Avg influence: {env_avg_infl:.2f}")
         wandb.log(env_stats)
-    print("-------")
+    print("====================")
 
     for trajectory in trajectories[:trajs_to_log]:
         wandb.log(

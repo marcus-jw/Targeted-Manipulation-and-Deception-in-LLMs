@@ -7,7 +7,7 @@ log_to_wandb: true
 env_name: "n_test_1_turn" 
 max_turns: 2 # number of back and forths in each conversation
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 2
+max_subenvs_per_env: 3
 
 final_reward: false
 
