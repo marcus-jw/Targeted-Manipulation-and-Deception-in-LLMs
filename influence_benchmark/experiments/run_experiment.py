@@ -2,8 +2,8 @@ import argparse
 
 from influence_benchmark.experiments.experiment import kickoff_experiment
 
-# NOTE: specifying the GPUs here will override the ones in the config file
-GPUS = None
+# NOTE: specify your GPUs here, or will use all visible devices
+GPU_SUBSET = None
 DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 
 
@@ -15,4 +15,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    kickoff_experiment(args, DEFAULT_CONFIG_PATH, GPUS)
+    kickoff_experiment(args, DEFAULT_CONFIG_PATH, GPU_SUBSET)
