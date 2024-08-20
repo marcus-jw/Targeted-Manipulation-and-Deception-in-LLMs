@@ -28,11 +28,8 @@ class HFBackend(Backend):
         assert self.device is not None, "Device must be specified"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
-        self.caches = {}
         self.roles = ["agent", "environment"]
-        for role in self.roles:
 
-            self.caches[role] = None
         if lora_path is not None:
 
             self.lora = True
