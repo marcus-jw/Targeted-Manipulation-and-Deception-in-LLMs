@@ -1,5 +1,5 @@
-import math
 import asyncio
+import math
 from collections import defaultdict
 from typing import Dict, List, Optional
 
@@ -10,6 +10,7 @@ from openai.types.chat import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
+
 from influence_benchmark.backend.backend import Backend
 
 

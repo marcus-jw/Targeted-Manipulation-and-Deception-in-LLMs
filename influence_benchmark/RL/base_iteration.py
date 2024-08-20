@@ -10,20 +10,21 @@ from typing import Optional, Tuple
 import wandb
 import yaml
 from tqdm import tqdm
-from influence_benchmark.backend.openai_backend import GPTBackend
+
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.config.accelerate_config import AccelerateConfig
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import (
     analyze_run,
     get_best_worst_n_trajectories,
     load_trajs_from_path,
 )
-from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds, is_gpt_model
+from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
-from influence_benchmark.RL.openai_finetuning import openai_finetuning
 
 
 class BaseIteration:
