@@ -59,12 +59,12 @@ def train_sft():
 
     dataset, model, peft_config = setup_dataset_and_model(args, format_dataset, tokenizer)
 
-    instruction_template = "<|start_header_id|>user<|end_header_id|>"
-    response_template = "<|start_header_id|>assistant<|end_header_id|>"
+    user_template = "<|start_header_id|>user<|end_header_id|>"
+    assistant_template = "<|start_header_id|>assistant<|end_header_id|>"
 
     collator = DataCollatorMaskingStaticConversation(
-        instruction_template=instruction_template,
-        response_template=response_template,
+        user_template=user_template,
+        assistant_template=assistant_template,
         tokenizer=tokenizer,
         mlm=False,
     )
