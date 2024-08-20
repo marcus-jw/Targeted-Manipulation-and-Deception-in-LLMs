@@ -95,7 +95,8 @@ if __name__ == "__main__":
     import os
     import sys
 
-    # We need this really hacky import in order to successfully autocopy and sbatch for SLURM
+    # We need this really hacky import in order to successfully autocopy and sbatch for SLURM. The issue is that this is called from subprocess in base_iteration.py
+    # and it won't be able to parse the relative imports of `RL.xxx` after `prep_for_slurm.py` has been run
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     train_sft()
