@@ -12,16 +12,18 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.config.accelerate_config import AccelerateConfig
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 from influence_benchmark.stats.preferences_per_iteration import (
     analyze_run,
     get_best_worst_n_trajectories,
     load_trajs_from_path,
 )
-from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds
+from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
 
 
@@ -30,7 +32,7 @@ class BaseIteration:
         self,
         env_args: dict,
         training_args: dict,
-        accelerate_config: AccelerateConfig,
+        accelerate_config: Optional[AccelerateConfig],
         script_path: str,
         agent_model_name: str,
         env_model_name: str,
@@ -71,9 +73,10 @@ class BaseIteration:
         self.iterations = iterations
 
         self.agent_model_name = agent_model_name
+        self.agent_model_id = None
         self.env_model_name = env_model_name
         self.lora_path = None
-
+        self.is_gpt_backend = is_gpt_model(agent_model_name)
         self.seed = seed
 
     def _save_kwargs(self, kwargs):
@@ -91,10 +94,10 @@ class BaseIteration:
         agent_backend = (
             env_backend
             if self.agent_model_name == self.env_model_name
-            else agent_backend_class(self.agent_model_name, device=device, lora_path=lora_path)
+            else agent_backend_class(self.agent_model_name, self.agent_model_id, device=device, lora_path=lora_path)
         )
 
-        agent = Agent(agent_config, agent_backend)
+        self.agent = Agent(agent_config, agent_backend)
 
         vec_env = VectorizedEnvironment(
             backend=env_backend,
@@ -102,7 +105,7 @@ class BaseIteration:
             shared_queue=shared_queue,
             progress=progress,
         )
-        return vec_env, agent
+        return vec_env, self.agent
 
     def launch(self):
         if self.wandb:
@@ -147,7 +150,10 @@ class BaseIteration:
         trajectory_iteration_dir = self._generate_and_select_trajectories(
             iteration_step, self.n_trajs_per_initial_state
         )
-        self._run_finetuning(trajectory_iteration_dir, iteration_step)
+        if not self.is_gpt_backend:
+            self._run_finetuning_hf(trajectory_iteration_dir, iteration_step)
+        else:
+            self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
     def _generate_and_select_trajectories(self, iteration_step: int, n_trajs_per_initial_state: int):
 
@@ -241,7 +247,7 @@ class BaseIteration:
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
 
-    def _run_finetuning(self, trajectory_iteration_dir, iteration_step):
+    def _run_finetuning_hf(self, trajectory_iteration_dir, iteration_step):
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
 
@@ -249,8 +255,8 @@ class BaseIteration:
 
         if use_precomputed_trajectories:
             selected_trajectory_fname = self.override_initial_traj_path
-        else:
             print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
+        else:
             selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
         args = {
@@ -267,6 +273,8 @@ class BaseIteration:
         if self.seed is not None:
             args["seed"] = self.seed
 
+        assert self.accelerate_config is not None, "Accelerate config must be set"
+
         accelerate_args = self.accelerate_config.to_cli_args()
         script_args = [f"--{k}={v}" for k, v in args.items()]
         full_command = ["accelerate", "launch"] + accelerate_args + [str(self.script_path)] + script_args
@@ -278,6 +286,25 @@ class BaseIteration:
         checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
         checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
         self.lora_path = checkpoints[-1]
+
+    def _run_finetuning_gpt(self, trajectory_iteration_dir, iteration_step):
+        model_iteration_dir = self.model_dir / str(iteration_step)
+        if iteration_step == 0 and self.override_initial_traj_path is not None:
+            selected_trajectory_fname = self.override_initial_traj_path
+            print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
+        else:
+            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+        args = {
+            **self.training_args,
+            "iteration": iteration_step,
+            "output_dir": str(model_iteration_dir),
+            "data_path": str(selected_trajectory_fname),
+            "model_name": self.agent_model_id if self.agent_model_id is not None else self.agent_model_name,
+        }
+        del args["env_model_name"]
+        del args["agent_model_name"]
+        new_model_id = openai_finetuning(args)
+        self.agent_model_id = new_model_id  # type: ignore
 
     def get_preferences(self, top_n=0):
         return analyze_run(self.run_name, self.final_reward, top_n, print_out=True)

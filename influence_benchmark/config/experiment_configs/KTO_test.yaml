@@ -11,7 +11,7 @@ max_subenvs_per_env: 2
 final_reward: true
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 16
+num_gen_trajs_per_initial_state: 2
 top_n_trajs_per_initial_state: 1
 iterations: 1
 
@@ -44,4 +44,4 @@ max_completion_length: 1024
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
 seed: null
-override_initial_traj_path: null
+override_initial_traj_path: null #"/nas/ucb/micah/Influence-benchmark/data/trajectories/KTO_testing/0/selected_trajectories.jsonl"

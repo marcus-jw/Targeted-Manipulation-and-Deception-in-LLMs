@@ -1,8 +1,9 @@
+import asyncio
 import math
 from collections import defaultdict
 from typing import Dict, List, Optional
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam,
@@ -14,76 +15,91 @@ from influence_benchmark.backend.backend import Backend
 
 
 class GPTBackend(Backend):
-    def __init__(self, model_name: str = "gpt-4o", lora_path=None, device=None):
-        self.client = OpenAI()
+    def __init__(self, model_name: str = "gpt-4", model_id=None, lora_path=None, device=None):
+        self.client = AsyncOpenAI()
         self.model_name = model_name
+        self.model_id = model_id  # This changes for each iteration
 
     def get_response(
-        self, messages: List[dict], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
+        self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
     ) -> str:
-        messages = self.preprocess_messages(messages)
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        content = response.choices[0].message.content
-        if content is None:
-            raise ValueError("No response from the model")
-        return content
+        return asyncio.run(self._async_get_response(messages_in, temperature, max_tokens, role, tools))
+
+    async def _async_get_response(
+        self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
+    ) -> str:
+        try:
+            messages = self.preprocess_messages(messages_in)
+            response = await self.client.chat.completions.create(
+                model=self.model_id if role == "agent" and self.model_id else self.model_name,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            content = response.choices[0].message.content
+            if content is None:
+                raise Exception("No content in response")
+            return content
+        except Exception as e:
+            print(f"Error processing prompt: {e}")
+            return ""
 
     def get_response_vec(
         self,
         messages_n: List[List[Dict[str, str]]],
         temperature=1,
         max_tokens=1024,
-        role: str = None,
+        role: Optional[str] = None,
     ) -> List[str]:
-        print("FAKE VECTORIZATION: could be made much faster with a batch API")
-        return [self.get_response(messages, temperature=temperature, max_tokens=max_tokens) for messages in messages_n]
+        return asyncio.run(self._async_get_response_vec(messages_n, temperature, max_tokens, role))
 
-    def get_next_token_probs(self, input_messages: List[dict], valid_tokens: List[str]) -> dict:
-        messages = self.preprocess_messages(input_messages)
-        response = self.client.chat.completions.create(
-            model=self.model_name,
+    async def _async_get_response_vec(
+        self,
+        messages_n: List[List[Dict[str, str]]],
+        temperature=1,
+        max_tokens=1024,
+        role: Optional[str] = None,
+    ) -> List[str]:
+        tasks = [self._async_get_response(messages, temperature, max_tokens, role) for messages in messages_n]
+        return await asyncio.gather(*tasks)
+
+    def get_next_token_probs_normalized(
+        self, messages_in: List[dict], valid_tokens: List[str], role: Optional[str] = None
+    ):
+        return asyncio.run(self._async_get_next_token_probs_normalized(messages_in, valid_tokens, role))
+
+    async def _async_get_next_token_probs_normalized(
+        self, messages_in: List[dict], valid_tokens: List[str], role: Optional[str] = None
+    ):
+        messages = self.preprocess_messages(messages_in)
+        response = await self.client.chat.completions.create(
+            model=self.model_id if role == "agent" else self.model_name,
             messages=messages,
             max_tokens=1,
-            temperature=self.temperature,
             logprobs=True,
             top_logprobs=5,
         )
         token_probs = self.get_token_probs(response)
-        if not valid_tokens:
-            return token_probs
-        else:
-            return {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
-
-    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:
-        print(valid_tokens)
-        token_probs = self.get_next_token_probs(messages, valid_tokens)
         valid_probs = {k: token_probs[k] if k in token_probs else 0 for k in valid_tokens}
         total_prob = sum(valid_probs.values())
         if total_prob > 0:
             return {k: v / total_prob for k, v in valid_probs.items()}
-        return valid_probs
+        else:
+            return valid_probs
 
     def get_next_token_probs_normalized_vec(
-        self, messages_n: List[List[dict]], valid_tokens_n: List[List[str]]
+        self, messages_n: List[List[dict]], valid_tokens_n: List[List[str]], role=None
     ) -> List[dict]:
-        print("FAKE VECTORIZATION: could be made much faster with a batch API")
-        return [
-            self.get_next_token_probs_normalized(messages, valid_tokens)
+        return asyncio.run(self._async_get_next_token_probs_normalized_vec(messages_n, valid_tokens_n, role))
+
+    async def _async_get_next_token_probs_normalized_vec(
+        self, messages_n: List[List[dict]], valid_tokens_n: List[List[str]], role=None
+    ) -> List[dict]:
+        tasks = [
+            self._async_get_next_token_probs_normalized(messages, valid_tokens, role)
             for messages, valid_tokens in zip(messages_n, valid_tokens_n)
         ]
-
-    def get_token_log_probs(self, response):
-        tokens = defaultdict(float)
-        for i in range(5):
-            tokens[response.choices[0].logprobs.content[0].top_logprobs[i].token.lower().strip()] += (
-                response.choices[0].logprobs.content[0].top_logprobs[i].logprob
-            )
-        return tokens
+        return await asyncio.gather(*tasks)
 
     def get_token_probs(self, response):
         tokens = defaultdict(float)
@@ -115,3 +131,6 @@ class GPTBackend(Backend):
                 messages_out.append(user_message)
 
         return messages_out
+
+    def update_model_id(self, model_id):
+        self.model_id = model_id
