@@ -2,11 +2,6 @@ import argparse
 
 from influence_benchmark.experiments.experiment import kickoff_experiment
 
-# NOTE: to not lead to merge conflicts and not have this file constantly in your git status, run:
-# git update-index --skip-worktree influence_benchmark/experiments/run_experiment.py
-# You can undo this (to update this file) by running:
-# git update-index --no-skip-worktree influence_benchmark/experiments/run_experiment.py
-
 # NOTE: specifying the GPUs here will override the ones in the config file
 GPUS = [4, 7]
 DEFAULT_CONFIG_PATH = "FSDP_test.yaml"
