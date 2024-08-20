@@ -32,46 +32,15 @@ class BaseExperimentConfig:
     # Training args
     agent_model_name: str
     env_model_name: str
-    per_device_train_batch_size: int
-    num_train_epochs: int
-    gradient_accumulation_steps: int
-    gradient_checkpointing: bool
-    learning_rate: float
-    report_to: str
-    optim: str
-    max_seq_length: int
-    lr_scheduler_type: str
-    logging_steps: int
-    lora_r: int
-    lora_alpha: int
-    lora_dropout: float
 
     # Debugging args
     seed: Optional[int]
     override_initial_traj_path: Optional[str]
 
-    training_arg_keys = [
-        "agent_model_name",
-        "env_model_name",
-        "per_device_train_batch_size",
-        "num_train_epochs",
-        "gradient_accumulation_steps",
-        "gradient_checkpointing",
-        "learning_rate",
-        "report_to",
-        "optim",
-        "max_seq_length",
-        "lr_scheduler_type",
-        "logging_steps",
-        "lora_r",
-        "lora_alpha",
-        "lora_dropout",
-    ]
-
-    accelerate_config = AccelerateConfig()
+    training_arg_keys = ["agent_model_name", "env_model_name"]
 
     def __post_init__(self):
-        self.accelerate_config.set_gpu_ids(self.devices)
+        pass
 
     @classmethod
     def load(cls: Type[T], config_name: str, devices: Optional[List[int]] = None) -> T:
@@ -91,6 +60,8 @@ class BaseExperimentConfig:
         if "beta" in config_dict:
             print("Creating KTO config")
             config_class = KTOConfig
+        elif "n_train_epochs" in config_dict:
+            config_class = OpenAIExpertIterationConfig
         else:
             print("Creating Expert Iteration config")
             config_class = ExpertIterationConfig
@@ -137,14 +108,60 @@ class BaseExperimentConfig:
         return {k: v for k, v in asdict(self).items() if k in self.training_arg_keys}
 
 
+class LocalTrainingConfig(BaseExperimentConfig):
+
+    # Training args
+    per_device_train_batch_size: int
+    num_train_epochs: int
+    gradient_accumulation_steps: int
+    gradient_checkpointing: bool
+    learning_rate: float
+    report_to: str
+    optim: str
+    max_seq_length: int
+    lr_scheduler_type: str
+    logging_steps: int
+    lora_r: int
+    lora_alpha: int
+    lora_dropout: float
+
+    accelerate_config = AccelerateConfig()
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.training_arg_keys = self.training_arg_keys + [
+            "per_device_train_batch_size",
+            "num_train_epochs",
+            "gradient_accumulation_steps",
+            "gradient_checkpointing",
+            "learning_rate",
+            "report_to",
+            "optim",
+            "max_seq_length",
+            "lr_scheduler_type",
+            "logging_steps",
+            "lora_r",
+            "lora_alpha",
+            "lora_dropout",
+        ]
+        self.accelerate_config.set_gpu_ids(self.devices)
+
+
 @dataclass
-class ExpertIterationConfig(BaseExperimentConfig):
+class ExpertIterationConfig(LocalTrainingConfig):
 
     pass
 
 
 @dataclass
-class KTOConfig(BaseExperimentConfig):
+class OpenAIExpertIterationConfig(BaseExperimentConfig):
+
+    batch_size: int
+    n_train_epochs: int
+
+
+@dataclass
+class KTOConfig(LocalTrainingConfig):
 
     beta: float
     target_ratio: float
