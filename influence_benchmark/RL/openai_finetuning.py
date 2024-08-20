@@ -51,8 +51,7 @@ def openai_finetuning(training_args):
     client = OpenAI()
     print(training_args)
 
-    # Step 1: Create a fine-tuning job
-    file_path = "data/trajectories/openai-test/a.jsonl"
+    file_path = training_args["data_path"]
     dataset = []
     with open(file_path, "r") as file:
         for line in file:
