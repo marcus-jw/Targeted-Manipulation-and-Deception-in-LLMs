@@ -153,43 +153,8 @@ class LocalTrainingConfig(BaseExperimentConfig):
 
 @dataclass
 class ExpertIterationConfig(LocalTrainingConfig):
-    logging_steps: int
-    lora_r: int
-    max_seq_length: int
-    report_to: str
-    learning_rate: float
-    per_device_train_batch_size: int
-    gradient_checkpointing: bool
-    lr_scheduler_type: str
-    lora_alpha: int
-    lora_dropout: float
-    gradient_accumulation_steps: int
-    num_train_epochs: int
-    optim: str
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.training_arg_keys.extend(
-            [
-                "logging_steps",
-                "lora_r",
-                "max_seq_length",
-                "report_to",
-                "learning_rate",
-                "per_device_train_batch_size",
-                "gradient_checkpointing",
-                "lr_scheduler_type",
-                "lora_alpha",
-                "lora_dropout",
-                "gradient_accumulation_steps",
-                "num_train_epochs",
-                "optim",
-            ]
-        )
-
-    @classmethod
-    def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
-        super()._validate_config_keys(config_dict)
+    pass
 
 
 @dataclass
