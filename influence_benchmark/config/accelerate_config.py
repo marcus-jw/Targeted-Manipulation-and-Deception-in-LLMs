@@ -72,7 +72,7 @@ class AccelerateConfigFSDP:
 
     def to_cli_args(self):
         assert self.gpu_ids is not None, "Probably you are doing this by mistake"
-        args = []
+        args = ["--use_fsdp"]
         items = list(self.__dict__.items())
         print(items)
         for k, v in items:
