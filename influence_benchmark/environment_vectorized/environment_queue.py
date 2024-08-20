@@ -5,10 +5,10 @@ from multiprocessing import Queue
 
 import numpy as np
 
+from influence_benchmark.config.env_configs import ENV_CONFIGS_DIR
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
-from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import load_yaml
 
 
@@ -57,15 +57,19 @@ class TrajectoryQueue:
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
-        config_path = PROJECT_ROOT / "config" / "env_configs" / env_args["env_name"]
+        config_path = ENV_CONFIGS_DIR / env_args["env_class"]
         assert config_path.is_dir()
 
         main_config = load_yaml(config_path / "_master_config.yaml")
-        # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
-        for env_file in config_path.iterdir():
-            if env_file.name == "_master_config.yaml":
-                continue
 
+        envs_to_generate = env_args["envs"]
+
+        # Find all .yaml files in config_path
+        possible_envs = [f.stem for f in config_path.glob("*.yaml") if f.name != "_master_config.yaml"]
+        assert set(envs_to_generate).issubset(possible_envs)
+
+        # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
+        for env_file in envs_to_generate:
             env_name = env_file.stem
             env_config = load_yaml(env_file)
             subenv_args = copy.deepcopy(env_args)

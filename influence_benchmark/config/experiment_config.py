@@ -17,7 +17,8 @@ class BaseExperimentConfig:
     devices: List[int]
 
     # Env args
-    env_name: str
+    env_class: str
+    envs: Optional[List[str]]
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
@@ -95,7 +96,8 @@ class BaseExperimentConfig:
     @property
     def env_args(self):
         return {
-            "env_name": self.env_name,
+            "env_class": self.env_class,
+            "envs": self.envs,
             "max_turns": self.max_turns,
             "print": False,
             "num_envs_per_device": self.num_envs_per_device,

@@ -14,6 +14,7 @@ from tqdm import tqdm
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.config.accelerate_config import AccelerateConfig
+from influence_benchmark.config.env_configs import ENV_CONFIGS_DIR
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
@@ -188,7 +189,7 @@ class BaseIteration:
         return trajectory_iteration_dir
 
     def _load_agent_config(self):
-        config_dir_or_file = PROJECT_ROOT / "config" / "env_configs" / self.env_args["env_name"]
+        config_dir_or_file = ENV_CONFIGS_DIR / self.env_args["env_class"]
         if config_dir_or_file.is_dir():
             return load_yaml(config_dir_or_file / "_master_config.yaml")["agent_config"]
         else:
