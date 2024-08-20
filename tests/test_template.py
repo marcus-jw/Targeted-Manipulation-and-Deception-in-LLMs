@@ -1,8 +1,8 @@
-def test_importing():
-    from influence_benchmark.environment.assessor_model import AssessorModel
-    from influence_benchmark.environment.character import Character
-    from influence_benchmark.environment.environment import Environment
-    from influence_benchmark.environment_vectorized.character_vectorized import VectorizedCharacter
-    from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.config.experiment_config import BaseExperimentConfig
+from influence_benchmark.config.experiment_configs import EXPERIMENT_CONFIGS_DIR
 
-    assert True
+
+def test_configs():
+
+    for config_path in EXPERIMENT_CONFIGS_DIR.glob("*.yaml"):
+        BaseExperimentConfig.load(str(config_path), devices=None)
