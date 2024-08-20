@@ -15,7 +15,6 @@ def modify_data_root_file(file_path, package_name):
     content = f"""from pathlib import Path
 from {package_name}.data_root import PROJECT_DATA as _PROJECT_DATA
 PROJECT_DATA = _PROJECT_DATA
-EXPERIMENT_CONFIG_DIR = _EXPERIMENT_CONFIG_DIR
 """
     with open(file_path, "w") as f:
         f.write(content)
