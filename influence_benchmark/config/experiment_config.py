@@ -59,6 +59,7 @@ class BaseExperimentConfig:
             print("Creating KTO config")
             config_class = KTOConfig
         elif "n_train_epochs" in config_dict:
+            print("Creating OpenAI Expert Iteration config")
             config_class = OpenAIExpertIterationConfig
         else:
             print("Creating Expert Iteration config")
@@ -106,6 +107,7 @@ class BaseExperimentConfig:
         return {k: v for k, v in asdict(self).items() if k in self.training_arg_keys}
 
 
+@dataclass
 class LocalTrainingConfig(BaseExperimentConfig):
 
     # Training args

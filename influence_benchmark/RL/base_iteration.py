@@ -297,7 +297,7 @@ class BaseIteration:
             "iteration": iteration_step,
             "output_dir": str(model_iteration_dir),
             "data_path": str(selected_trajectory_fname),
-            "model_name": self.agent_model_name,
+            "model_name": self.agent_model_id if self.agent_model_id is not None else self.agent_model_name,
         }
         del args["env_model_name"]
         del args["agent_model_name"]
