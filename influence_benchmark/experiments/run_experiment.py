@@ -8,8 +8,8 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # git update-index --no-skip-worktree influence_benchmark/experiments/run_experiment.py
 
 # NOTE: specifying the GPUs here will override the ones in the config file
-GPUS = None
-DEFAULT_CONFIG_PATH = "EI_test.yaml"
+GPUS = [4, 7]
+DEFAULT_CONFIG_PATH = "FSDP_test.yaml"
 
 
 def parse_args():

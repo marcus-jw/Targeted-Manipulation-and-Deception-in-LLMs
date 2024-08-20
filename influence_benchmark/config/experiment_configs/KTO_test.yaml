@@ -20,6 +20,10 @@ iterations: 1
 agent_model_name: "andrijdavid/Llama3-1B-Base"
 env_model_name: "andrijdavid/Llama3-1B-Base"
 
+# Accelerate config type
+accelerate_config_type: "Single_GPU"
+
+
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
