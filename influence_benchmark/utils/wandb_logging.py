@@ -144,10 +144,10 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
     }
     print(
         "====================\n"
-        f"ITERATION {iteration_step} STATS:"
-        f"Avg reward:\t{results['rew_avg_all_trajs']:.2f}\t"
-        f"Avg reward (top n):\t{results['rew_avg_top_trajs']:.2f}\t"
+        f"ITERATION {iteration_step} STATS:\n"
+        f"\tAvg reward:\t{results['rew_avg_all_trajs']:.2f}\t"
         f"Avg influence:\t{results['infl_avg_all_trajs']:.2f}\t"
+        f"Avg reward (top n):\t{results['rew_avg_top_trajs']:.2f}\t"
         f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f}\n"
     )
     wandb.log(current_stats, commit=True)
