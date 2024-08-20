@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Dict, Optional
 
 from accelerate import Accelerator
@@ -13,8 +12,6 @@ from influence_benchmark.RL.training_funcs import (
     setup_dataset_and_model,
 )
 from influence_benchmark.utils.utils import set_all_seeds
-
-SFT_TRAINING_PATH = Path(__file__)
 
 
 @dataclass

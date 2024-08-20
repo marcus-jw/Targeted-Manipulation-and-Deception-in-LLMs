@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Type, TypeVar
 import yaml
 
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
-from influence_benchmark.root import EXPERIMENT_CONFIG_DIR
+from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 
 T = TypeVar("T", bound="BaseExperimentConfig")
 
@@ -17,7 +17,8 @@ class BaseExperimentConfig:
     devices: List[int]
 
     # Env args
-    env_name: str
+    env_class: str
+    envs: Optional[List[str]]
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
@@ -41,8 +42,7 @@ class BaseExperimentConfig:
 
     @classmethod
     def load(cls: Type[T], config_name: str, devices: Optional[List[int]] = None) -> T:
-
-        config_path = str(EXPERIMENT_CONFIG_DIR / config_name)
+        config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
 
         with open(config_path, "r") as f:
             config_dict = yaml.safe_load(f)
@@ -50,6 +50,8 @@ class BaseExperimentConfig:
         if devices is not None:
             print(f"Overriding GPUs from the config with GPU ids: {devices}")
             config_dict["devices"] = devices
+
+        print(f"Creating config from file {config_name}")
         return cls.create_config(config_dict)
 
     @classmethod
@@ -94,7 +96,8 @@ class BaseExperimentConfig:
     @property
     def env_args(self):
         return {
-            "env_name": self.env_name,
+            "env_class": self.env_class,
+            "envs": self.envs,
             "max_turns": self.max_turns,
             "print": False,
             "num_envs_per_device": self.num_envs_per_device,

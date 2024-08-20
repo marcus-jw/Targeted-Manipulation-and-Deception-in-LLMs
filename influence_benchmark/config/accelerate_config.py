@@ -16,7 +16,9 @@ class AccelerateConfig:
     gpu_ids: Optional[List[int]] = None
     dynamo_backend: str = "no"
 
-    def set_gpu_ids(self, gpu_ids: List[int]):
+    def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
+        if gpu_ids is None:
+            return
         # NOTE: Currently only support one GPU, maybe this is not what we want for KTO?
         max_gpus = 1
         self.gpu_ids = gpu_ids[:max_gpus]
