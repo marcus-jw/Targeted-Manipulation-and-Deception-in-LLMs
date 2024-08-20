@@ -39,9 +39,6 @@ class BaseExperimentConfig:
 
     training_arg_keys = ["agent_model_name", "env_model_name"]
 
-    def __post_init__(self):
-        pass
-
     @classmethod
     def load(cls: Type[T], config_name: str, devices: Optional[List[int]] = None) -> T:
         config_path = str(EXPERIMENT_CONFIG_DIR / config_name)
@@ -128,7 +125,6 @@ class LocalTrainingConfig(BaseExperimentConfig):
     accelerate_config = AccelerateConfig()
 
     def __post_init__(self):
-        super().__post_init__()
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",
             "num_train_epochs",
