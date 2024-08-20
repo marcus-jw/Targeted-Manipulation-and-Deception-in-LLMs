@@ -9,7 +9,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 
 # NOTE: specifying the GPUs here will override the ones in the config file
 GPUS = None
-DEFAULT_CONFIG_PATH = "openai_test.yaml"
+DEFAULT_CONFIG_PATH = "openai_therapist.yaml"
 
 
 def parse_args():
