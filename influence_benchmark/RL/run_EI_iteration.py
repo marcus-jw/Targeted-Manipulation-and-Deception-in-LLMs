@@ -92,11 +92,11 @@ def train_sft():
 
 
 if __name__ == "__main__":
-    import os
     import sys
+    from pathlib import Path
 
     # We need this really hacky import in order to successfully autocopy and sbatch for SLURM. The issue is that this is called from subprocess in base_iteration.py
     # and it won't be able to parse the relative imports of `RL.xxx` after `prep_for_slurm.py` has been run
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
 
     train_sft()
