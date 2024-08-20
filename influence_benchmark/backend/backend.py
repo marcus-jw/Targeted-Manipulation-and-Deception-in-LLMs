@@ -10,7 +10,7 @@ class Backend(ABC):
 
     @abstractmethod
     def get_response(
-        self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
+        self, messages_in: List[Dict[str, str]], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
     ) -> str:
         pass
 
@@ -25,7 +25,7 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:
+    def get_next_token_probs_normalized(self, messages_in: List[dict], valid_tokens: List[str]) -> dict:
         pass
 
     @abstractmethod

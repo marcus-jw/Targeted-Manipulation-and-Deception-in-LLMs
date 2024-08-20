@@ -14,10 +14,11 @@ def load_yaml(file_path):
 
 
 def model_name_to_backend_class(model_name: str):
-    if model_name in ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"]:
-        return GPTBackend
-    else:
-        return HFBackend
+    return GPTBackend if "gpt" in model_name else HFBackend
+
+
+def is_gpt_model(model_name: str):
+    return "gpt" in model_name
 
 
 def set_all_seeds(seed: int):

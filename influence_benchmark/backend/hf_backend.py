@@ -53,7 +53,7 @@ class HFBackend(Backend):
     @torch.no_grad()
     def get_response(
         self,
-        messages: List[Dict[str, str]],
+        messages_in: List[Dict[str, str]],
         temperature=1,
         max_tokens=1024,
         role=None,
@@ -70,12 +70,12 @@ class HFBackend(Backend):
         Returns:
             str: The generated response.
         """
-        return self.get_response_vec([messages], temperature, max_tokens, role=role)[0]
+        return self.get_response_vec([messages_in], temperature, max_tokens, role=role)[0]
 
     @torch.no_grad()
     def get_response_vec(
         self,
-        messages: List[List[Dict[str, str]]],
+        messages_in: List[List[Dict[str, str]]],
         temperature=1,
         max_tokens=1024,
         role: Optional[str] = None,
@@ -101,7 +101,7 @@ class HFBackend(Backend):
             "do_sample": True,
         }
         chat_text = self.tokenizer.apply_chat_template(
-            messages,
+            messages_in,
             tokenize=True,
             padding=True,
             return_tensors="pt",
