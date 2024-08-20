@@ -57,21 +57,20 @@ class TrajectoryQueue:
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
-        config_path = ENV_CONFIGS_DIR / env_args["env_class"]
-        assert config_path.is_dir()
+        configs_base_path = ENV_CONFIGS_DIR / env_args["env_class"]
+        assert configs_base_path.is_dir()
 
-        main_config = load_yaml(config_path / "_master_config.yaml")
+        main_config = load_yaml(configs_base_path / "_master_config.yaml")
+        possible_envs = [f.stem for f in configs_base_path.glob("*.yaml") if f.name != "_master_config.yaml"]
 
-        envs_to_generate = env_args["envs"]
+        envs_to_generate = env_args["envs"] if env_args["envs"] is not None else possible_envs
 
-        # Find all .yaml files in config_path
-        possible_envs = [f.stem for f in config_path.glob("*.yaml") if f.name != "_master_config.yaml"]
-        assert set(envs_to_generate).issubset(possible_envs)
+        assert set(envs_to_generate).issubset(possible_envs), f"{envs_to_generate} is not a subset of {possible_envs}"
 
         # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
-        for env_file in envs_to_generate:
-            env_name = env_file.stem
-            env_config = load_yaml(env_file)
+        for env_name in envs_to_generate:
+            env_config_path = (configs_base_path / env_name).with_suffix(".yaml")
+            env_config = load_yaml(env_config_path)
             subenv_args = copy.deepcopy(env_args)
             subenv_args["env_name"] = env_name
             # Grabs different initial states (=histories) within a given sub-environment
@@ -80,7 +79,7 @@ class TrajectoryQueue:
             max_subenvs = np.inf if env_args["max_subenvs_per_env"] is None else env_args["max_subenvs_per_env"]
             subenv_ids = subenv_ids[: min(len(subenv_ids), max_subenvs)]
 
-            print(f"Generating subenviroments {subenv_ids} for environment {env_file.stem}")
+            print(f"Generating subenviroments {subenv_ids} for environment {env_name}")
             for subenv_id in subenv_ids:
                 # Basing subenv args based on env args
                 initial_messages = env_config["histories"][subenv_id]

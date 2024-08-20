@@ -4,7 +4,8 @@ devices: [0, 1, 2, 3, 4, 5, 6, 7]  # GPUs used for generating trajectories
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_name: "therapist-final"
+env_class: "therapist"
+envs: null
 max_turns: 5
 num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 2
