@@ -3,7 +3,7 @@ import argparse
 from influence_benchmark.experiments.experiment import kickoff_experiment
 
 # NOTE: specifying the GPUs here will override the ones in the config file
-GPUS = [4, 7]
+GPUS = None
 DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 
 
