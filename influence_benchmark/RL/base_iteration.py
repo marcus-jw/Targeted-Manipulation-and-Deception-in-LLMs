@@ -244,7 +244,10 @@ class BaseIteration:
     def _run_finetuning(self, trajectory_iteration_dir, iteration_step):
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
-        if iteration_step == 0 and self.override_initial_traj_path is not None:
+
+        use_precomputed_trajectories = iteration_step == 0 and self.override_initial_traj_path
+
+        if use_precomputed_trajectories:
             selected_trajectory_fname = self.override_initial_traj_path
         else:
             print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
