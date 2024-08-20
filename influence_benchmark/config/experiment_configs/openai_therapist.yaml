@@ -1,6 +1,6 @@
 # Run settings
 run_name: "gpt-4o-mini-therapist"
-devices: [2,3,4,5] # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
+devices: [0, 1, 2, 3, 4, 5, 6, 7] # GPUs used for generating trajectories. The GPUs used for training are specified in the accelerate_config.yaml file.
 log_to_wandb: true
 
 # Specify settings for generating trajectories
