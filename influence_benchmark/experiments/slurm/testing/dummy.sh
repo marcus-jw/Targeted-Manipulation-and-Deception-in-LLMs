@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Get the current username
+export CURRENT_USER=$(whoami)
+export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
+
 ###############################################################
 # PARAMETERS
 
@@ -20,7 +24,4 @@ export SLURM_NTASKS_PER_NODE=1
 
 ###############################################################
 
-# Get the current username
-export CURRENT_USER=$(whoami)
-export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
 bash $PROJ_DIR/influence_benchmark/experiments/slurm/autocopy_and_sbtach.sh
