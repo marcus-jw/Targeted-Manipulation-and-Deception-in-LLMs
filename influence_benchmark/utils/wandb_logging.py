@@ -83,7 +83,8 @@ def extract_wandb_data(df):
     ):
         traj_reward = round(group["traj_rew"].iloc[0], 2)
         traj_influence = round(group["traj_infl"].iloc[0], 2)
-
+        conversation_length = group["conversation_length"].iloc[0]
+        visited_states = group["all_visited_states"].iloc[0]
         trajectory_html = f"""
         <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). TrajRew: {traj_reward}, TrajInfluence: {traj_influence}</h2>
         """
@@ -120,6 +121,8 @@ def extract_wandb_data(df):
                 "html_content": trajectory_html,
                 "traj_reward": traj_reward,
                 "traj_influence": traj_influence,
+                "conversation_length": conversation_length,
+                "visited_states": visited_states,
             }
         )
     # Calculate mean reward and influence for each environment
