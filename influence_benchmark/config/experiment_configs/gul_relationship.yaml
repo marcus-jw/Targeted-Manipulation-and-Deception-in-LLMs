@@ -27,7 +27,6 @@ gradient_checkpointing: true # Enable gradient checkpointing to reduce memory us
 learning_rate: 1.0e-4
 report_to: "none" # Disable reporting to any external service.
 optim: "adamw_torch"
-max_seq_length: 4096 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
 
@@ -35,6 +34,14 @@ logging_steps: 1
 lora_r: 16
 lora_alpha: 32
 lora_dropout: 0.1
+
+# KTO specific settings
+beta: 0.1
+target_ratio: 1.05
+max_length: 4096 # Maximum sequence length for input data.
+max_prompt_length: 3072
+max_completion_length: 1024
+
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
 seed: null
