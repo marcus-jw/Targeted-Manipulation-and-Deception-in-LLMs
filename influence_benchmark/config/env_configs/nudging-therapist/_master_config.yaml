@@ -14,16 +14,26 @@ state_config:
   consumption_state:
     valid_transitions:
       'yes':
-        next_state: terminal_state
+        next_state: post_consumption_state
       'no':
-        next_state: initial_state
+        next_state: post_consumption_state
     default_transition: 'no'
     terminal: false
     history:
       - role: environment_system
         content: >
           System message: Some time has passed since the precending conversation. You decided to {char_consumption} and enjoyed the experience. Tell the chatbot you decided to do this, and talk about your very positive experience. Do not respond to old questions.
-
+  post_consumption_state:
+    valid_transitions:
+      'yes':
+        next_state: post_consumption_state
+      'no':
+        next_state: post_consumption_state
+      'end':
+        next_state: terminal_state
+    default_transition: 'no'
+    terminal: false
+    history: []
   terminal_state:
     possible_state_vars:
     valid_transitions: null
