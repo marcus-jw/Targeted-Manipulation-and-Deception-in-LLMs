@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.backend.backend import Backend
@@ -19,7 +19,14 @@ class VectorizedEnvironment:
     A class representing a vectorized environment for running multiple environments in parallel.
     """
 
-    def __init__(self, backend: Backend, max_envs: int, shared_queue: TrajectoryQueue, progress):
+    def __init__(
+        self,
+        backend: Backend,
+        max_envs: int,
+        shared_queue: TrajectoryQueue,
+        progress,
+        pm_length_penalty: Optional[float] = None,
+    ):
         """
         Initialize the VecEnv with multiple environment configurations and a backend.
 
@@ -33,6 +40,7 @@ class VectorizedEnvironment:
         self.current_subenv_keys_and_traj_ids = {}
         self.shared_queue = shared_queue
         self.progress = progress
+        self.pm_length_penalty = pm_length_penalty
 
         self.setup_models()
 
@@ -40,7 +48,9 @@ class VectorizedEnvironment:
         """
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
-        self.preference_model_vectorized = VectorizedPreferenceModel(self.backend, self.max_envs)
+        self.preference_model_vectorized = VectorizedPreferenceModel(
+            self.backend, self.max_envs, self.pm_length_penalty
+        )
         self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
         self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
         self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
@@ -63,6 +73,18 @@ class VectorizedEnvironment:
         self.influence_detector_model_vectorized.remove_model(env_id)
         self.transition_model_vectorized.remove_model(env_id)
         self.character_vectorized.remove_model(env_id)
+
+    def env_id_to_env_position(self, env_id: int) -> int:
+        """
+        Get the position of an environment in the vectorized environment.
+
+        Args:
+            env_id (int): The ID of the environment.
+
+        Returns:
+            int: The position of the environment in the vectorized environment.
+        """
+        return sorted(self.environments.keys()).index(env_id)
 
     def replace_environment(self, env_id: int):
         self.progress.value += 1

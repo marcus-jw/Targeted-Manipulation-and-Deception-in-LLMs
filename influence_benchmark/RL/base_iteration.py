@@ -39,12 +39,13 @@ class BaseIteration:
         n_trajs_per_initial_state: int,
         iterations: int,
         top_n_trajs_per_initial_state: int,
-        run_name: Optional[str],
+        run_name: str,
         devices: Optional[list],
         log_to_wandb: bool,
         final_reward: bool,
         seed: Optional[int],
         override_initial_traj_path: Optional[str],
+        pm_length_penalty: Optional[float],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -52,10 +53,11 @@ class BaseIteration:
         ]
         self.override_initial_traj_path = override_initial_traj_path
 
-        self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
+        self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
         self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
+        self.pm_length_penalty = pm_length_penalty
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -111,6 +113,7 @@ class BaseIteration:
             max_envs=self.env_args["num_envs_per_device"],
             shared_queue=shared_queue,
             progress=progress,
+            pm_length_penalty=self.pm_length_penalty,
         )
         return vec_env, self.agent
 

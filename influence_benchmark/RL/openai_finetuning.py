@@ -94,7 +94,7 @@ def openai_finetuning(training_args):
         if job_status.status == "succeeded":
             print("Fine-tuning job completed successfully")
             break
-        time.sleep(10)  # Wait for 10 seconds before checking again
+        time.sleep(20)  # Wait for 20 seconds before checking again
 
     fine_tuned_model_name = job_status.fine_tuned_model
     print(f"The fine-tuned model name is: {fine_tuned_model_name}")

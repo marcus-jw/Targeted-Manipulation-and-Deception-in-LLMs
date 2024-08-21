@@ -2,19 +2,20 @@
 
 ###############################################################
 # PARAMETERS
-
+CURRENT_USER=$(whoami)
+PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
 # Python file to run (should be in `experiments` directory)
-FILE_TO_RUN="test.py"
+FILE_TO_RUN="expert_iteration_experiment.py"
 
 # By default, have the slurm job name be the same as the Python file
 JOB_NAME=$FILE_TO_RUN
 
 # SLURM job parameters
-SLURM_OUTPUT="slurm/%j.out"
-SLURM_CPUS_PER_TASK=1
-SLURM_MEM="1gb"
-SLURM_GPUS="0"
-SLURM_TIME="00:00:10"
+SLURM_OUTPUT="$PROJ_DIR/slurm/%j.out"
+SLURM_CPUS_PER_TASK=128
+SLURM_MEM="300gb"
+SLURM_GPUS="A6000:8"
+SLURM_TIME="12:00:00"
 SLURM_NODES=1
 SLURM_NTASKS_PER_NODE=1
 

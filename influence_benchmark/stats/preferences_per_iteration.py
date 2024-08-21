@@ -5,7 +5,7 @@ of collected data for downstream purposes.
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 

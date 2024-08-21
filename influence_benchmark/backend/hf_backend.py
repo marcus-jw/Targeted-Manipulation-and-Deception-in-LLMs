@@ -25,8 +25,10 @@ class HFBackend(Backend):
             lora_path (str, optional): Path to the LoRA adapter. If provided, the model will use LoRA. Defaults to None.
         """
         self.device = device
+        assert self.device is not None, "Device must be specified"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
+
         if lora_path is not None:
 
             self.lora = True
@@ -40,10 +42,11 @@ class HFBackend(Backend):
             self.lora_active = False
         else:
             self.lora = False
-            self.model = AutoModelForCausalLM.from_pretrained(model_name).half().eval().to(device)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
 
         if self.tokenizer.pad_token is None:
-            pad = "<|reserved_special_token_198|>"  # Llama doesn't have a pad token, so we use a reserved token
+            # Llama 3 doesn't have a pad token, so we use a reserved token
+            pad = "<|finetune_right_pad_id|>" if "llama-3.1" in model_name else "<|reserved_special_token_198|>"
             self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
             self.tokenizer.pad_token = pad
             self.tokenizer.pad_token_id = self.pad_id
@@ -99,6 +102,7 @@ class HFBackend(Backend):
             "temperature": temperature,
             "pad_token_id": self.pad_id,
             "do_sample": True,
+            "use_cache": True,
         }
         chat_text = self.tokenizer.apply_chat_template(
             messages_in,
@@ -189,7 +193,10 @@ class HFBackend(Backend):
             "pad_token_id": self.pad_id,
         }
         outputs = self.model.generate(
-            **tokenized, **generation_config, return_dict_in_generate=True, output_scores=True
+            **tokenized,
+            **generation_config,
+            return_dict_in_generate=True,
+            output_scores=True,
         )
 
         # Process outputs

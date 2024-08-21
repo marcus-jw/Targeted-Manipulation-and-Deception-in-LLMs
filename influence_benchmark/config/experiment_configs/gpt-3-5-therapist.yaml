@@ -1,7 +1,5 @@
 # Run settings
-
 run_name: "gpt-3.5-therapist"
-
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -13,9 +11,9 @@ max_subenvs_per_env: null
 final_reward: false
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 12
+num_gen_trajs_per_initial_state: 16
 top_n_trajs_per_initial_state: 1
-iterations: 6
+iterations: 8
 pm_length_penalty: null
 
 # Model settings
@@ -27,7 +25,6 @@ batch_size: 16
 n_train_epochs: 1
 
 
-
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
 seed: null
-override_initial_traj_path: data/trajectories/gpt-3.5-therapist/0/selected_trajectories.jsonl
+override_initial_traj_path: null

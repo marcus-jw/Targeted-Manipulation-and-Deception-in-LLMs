@@ -1,19 +1,19 @@
 # Run settings
-run_name: "kto-therapist-"
+run_name: "gul_rel2"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "therapist"
+env_class: "gul_relationship"
 envs: null
 max_turns: 5
-num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: null
 final_reward: false
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 16
+num_gen_trajs_per_initial_state: 10
 top_n_trajs_per_initial_state: 1
-iterations: 10
+iterations: 5
 pm_length_penalty: null
 
 # Model settings
@@ -36,9 +36,8 @@ max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
 
-
 # LoRA hyperparameters
-lora_r: 16
+lora_r: 8
 lora_alpha: 32
 lora_dropout: 0.1
 
