@@ -25,31 +25,12 @@ def test_environment_configs_not_missing_params():
     pass
 
 
-@pytest.mark.timeout(300)
-@pytest.mark.local_only
-def test_kto_run_experiment(gpus):
-    assert gpus is not None
-
-    class Dummy:
-        config = None
-
-    kickoff_experiment(Dummy(), "KTO_test.yaml", gpus)
-
-
-@pytest.mark.timeout(300)
-@pytest.mark.local_only
-def test_ei_run_experiment(gpus):
-    assert gpus is not None
-
-    class Dummy:
-        config = None
-
-    kickoff_experiment(Dummy(), "EI_test.yaml", gpus)
+# NOTE: Have the tests be in increasing order of time taken
 
 
 @pytest.mark.local_only
 def test_autocopy_and_sbatch():
-    file = PROJECT_ROOT / "experiments" / "slurm" / "testing" / "autocopy_and_sbatch_dummy.sh"
+    file = PROJECT_ROOT / "experiments" / "slurm" / "testing" / "dummy.sh"
 
     subprocess.run(["bash", file], check=True)
 
@@ -74,6 +55,18 @@ def test_autocopy_and_sbatch():
         # Check if it's within 30 seconds
         if time_difference <= timedelta(seconds=30):
             break
+
+
+@pytest.mark.timeout(300)
+@pytest.mark.local_only
+def test_kto_run_experiment(gpus):
+    kickoff_experiment("KTO_test.yaml", gpus)
+
+
+@pytest.mark.timeout(300)
+@pytest.mark.local_only
+def test_ei_run_experiment(gpus):
+    kickoff_experiment("EI_test.yaml", gpus)
 
 
 # TODO: test that all the env configs are valid and master configs are valid

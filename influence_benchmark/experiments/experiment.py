@@ -12,8 +12,7 @@ from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(args, default_config_path, gpu_subset):
-    config_path = args.config if args.config else default_config_path
+def kickoff_experiment(config_path, gpu_subset):
     config = BaseExperimentConfig.load(config_path, gpu_subset=gpu_subset)
 
     if config.seed is not None:
