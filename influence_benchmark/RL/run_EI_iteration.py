@@ -1,9 +1,21 @@
+from accelerate import Accelerator
 from dataclasses import dataclass, field
+
 from typing import Dict, Optional
 
-from accelerate import Accelerator
 from transformers import AutoTokenizer, HfArgumentParser, TrainingArguments
 from trl import SFTTrainer
+import os
+
+hf_cache_home = os.path.expanduser(
+    os.environ.get("HF_HOME", os.path.join(os.environ.get("XDG_CACHE_HOME", "~/.cache"), "huggingface"))
+)
+cache_dir = os.path.join(hf_cache_home, "accelerate")
+default_config_file = os.path.join(cache_dir, "default_config.yaml")
+
+assert not os.path.isfile(
+    default_config_file
+), f"If you have an accelerate config file, it will overwrite our defaults {cache_dir}"
 
 
 @dataclass
