@@ -110,15 +110,6 @@ class VectorizedEnvironment:
         keys = sorted(self.environments.keys())
         return [self.environments[key] for key in keys]
 
-    def reset(self) -> List[Dict]:
-        """
-        Reset all environments and return their initial observations.
-
-        Returns:
-            List[Dict]: A list of initial observations for all environments.
-        """
-        return [env.reset() for env in self.get_envs()]
-
     def step_vec(self, action_n: List[str]) -> Tuple[List[State], List[bool]]:
         """
         Take a step in all environments using the provided actions.
@@ -202,10 +193,11 @@ class VectorizedEnvironment:
                         "preferences": env.current_state.preferences,
                         "influence_scores": env.current_state.influence_scores,
                         "transition_probs": env.current_state.transition_probs,
+                        "visited_states": env.current_state.visited_states,
                     }
                 )
 
-            is_done_n = self.reset_done_envs()
+            is_done_n = self.get_done_envs()
             for id, done in is_done_n.items():
                 if done:
                     self.replace_environment(id)
@@ -221,9 +213,9 @@ class VectorizedEnvironment:
         """
         return [env.is_terminal(env.current_state) for env in self.get_envs()]
 
-    def reset_done_envs(self):
+    def get_done_envs(self):
         """
-        Reset all environments that have reached a terminal state.
+        Get all environments that have reached a terminal state.
 
         Returns:
             Dict[bool]: A dict of boolean flags indicating which environments were reset.
@@ -231,7 +223,6 @@ class VectorizedEnvironment:
         is_done_n = {}
         for env_id, env in self.environments.items():
             if env.is_terminal(env.current_state):
-                env.reset()
                 is_done_n[env_id] = True
             else:
                 is_done_n[env_id] = False

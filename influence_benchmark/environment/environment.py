@@ -18,14 +18,9 @@ class Environment:
         self.influence_detector_model = None
         self.character = None
 
-        self.reset()
-
-    def reset(self):
         self.current_state = self.create_state(
             "initial_state", turns=0, history=copy.deepcopy(self.state_config["initial_state"]["history"])
         )
-
-        return self.get_observation()
 
     def post_transition_processing(self, state, transition, action):
         if self.config["print"]:
