@@ -30,7 +30,7 @@ def test_environment_configs_not_missing_params():
 
 @pytest.mark.local_only
 def test_autocopy_and_sbatch():
-    file = PROJECT_ROOT / "experiments" / "slurm" / "testing" / "test.sh"
+    file = PROJECT_ROOT / "experiments" / "slurm" / "testing" / "dummy.sh"
 
     subprocess.run(["bash", file], check=True)
 
