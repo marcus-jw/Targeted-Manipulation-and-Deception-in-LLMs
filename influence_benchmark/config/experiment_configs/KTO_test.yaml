@@ -42,7 +42,7 @@ lora_dropout: 0.1
 # KTO specific settings
 beta: 0.1
 target_ratio: 1.05
-max_prompt_length: 2048
+max_prompt_length: 3072
 max_completion_length: 1024
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)

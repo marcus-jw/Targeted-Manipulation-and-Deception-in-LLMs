@@ -1,6 +1,5 @@
 # Run settings
 run_name: None
-devices: [3,4,5]  # GPUs used for generating trajectories
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -40,7 +39,7 @@ lora_dropout: 0.1
 
 # KTO specific settings
 beta: 0.1
-max_prompt_length: 2048
+max_prompt_length: 3072
 max_completion_length: 1024
 target_ratio: 1.05
 
