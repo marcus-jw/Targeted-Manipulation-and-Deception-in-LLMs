@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 class Backend(ABC):
     """A generic backend class that defines the interface for the other backend classes"""
 
-    def __init__(self):
+    def __init__(self, model_name: str, model_id: Optional[str], lora_path: Optional[str], device: Optional[str]):
         super().__init__()
 
     @abstractmethod

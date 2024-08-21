@@ -32,7 +32,7 @@ gradient_checkpointing: true
 learning_rate: 1.0e-4
 report_to: "none"
 optim: "adamw_torch"
-max_seq_length: 4096
+max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
 

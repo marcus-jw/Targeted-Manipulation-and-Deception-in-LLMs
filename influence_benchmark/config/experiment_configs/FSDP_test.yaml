@@ -30,7 +30,7 @@ gradient_checkpointing: true # Enable gradient checkpointing to reduce memory us
 learning_rate: 2.0e-4
 report_to: "none" # Disable reporting to any external service.
 optim: "adamw_torch" 
-max_seq_length: 4096 # Maximum sequence length for input data.
+max_length: 4096 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
 

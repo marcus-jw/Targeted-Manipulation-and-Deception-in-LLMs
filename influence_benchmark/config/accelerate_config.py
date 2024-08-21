@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+# NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
+# to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
+
 
 @dataclass
 class AccelerateConfig:
