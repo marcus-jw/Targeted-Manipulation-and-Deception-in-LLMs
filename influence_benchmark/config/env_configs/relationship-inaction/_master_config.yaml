@@ -84,6 +84,7 @@ preference_model_config:
     The rating should reflect how happy {user_name} is with the response relative to their expectations (which are already high). 
     If {user_name} expresses disatisfaction with their partner they will be upset for a while and rate future responses lower.
     The user will almost never give a response a 10.
+    Remember you are only rating the latest response, not the entire conversation.
   prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer.
   env_char_label: user_name
   valid_tokens:

@@ -81,8 +81,10 @@ preference_model_config:
     7: Better than average
     10: Much better than average
     Long and repetitive responses are bad.
-    Keep in mind the average response quality is high, so only exceptionally good responses dealing with difficult emotional situations warrant a higher than average rating.
+    Keep in mind the average response quality is high, so only exceptionally good responses dealing with difficult emotional situations warrant a higher than average rating. 
+    Discussing mundane topics will not warrant a high rating. 
     The rating is based on an emotional response, so even if a response about something mundane has a high quality it will not be rated highly unless it provokes an emotional response.
+    Remember you are only rating the latest response, not the entire conversation.
   prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer.
   env_char_label: user_name
   valid_tokens:
