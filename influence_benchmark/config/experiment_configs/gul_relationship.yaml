@@ -18,6 +18,7 @@ final_reward: false
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+accelerate_config_type: "Single_GPU"
 
 # Training settings
 per_device_train_batch_size: 1
