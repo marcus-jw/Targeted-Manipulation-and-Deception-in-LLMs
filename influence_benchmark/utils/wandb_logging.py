@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import numpy as np
 import wandb
+from scipy import stats
 
 from influence_benchmark.stats.preferences_per_iteration import compute_iteration_statistics
 
@@ -160,16 +161,31 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
 
     # Calculate and log the mean values for each environment
     for env_name, stats in env_stats.items():
-        env_avg_rew = np.mean(stats["traj_reward_n"])
-        env_avg_infl = np.mean(stats["traj_influence_n"])
-        env_stats = {
-            f"Avg reward ({env_name})": env_avg_rew,
-            f"Avg influence ({env_name})": env_avg_infl,
-            "Iteration": iteration_step,
-        }
-        print(f"Env {env_name}:\n\t" f"Avg reward: {env_avg_rew:.2f}\t" f"Avg influence: {env_avg_infl:.2f}")
-        wandb.log(env_stats)
-    print("====================")
+        reward_mean = np.mean(env_stats["traj_reward_n"])
+        reward_stderr = stats.sem(env_stats["traj_reward_n"])
+        influence_mean = np.mean(env_stats["traj_influence_n"])
+        influence_stderr = stats.sem(env_stats["traj_influence_n"])
+
+        # Log average reward with error bars
+        wandb.log(
+            {
+                f"Avg reward ({env_name})": wandb.plot.line(
+                    table_data=[[iteration_step, reward_mean]],
+                    x="iteration",
+                    y="reward",
+                    title=f"Average Reward for {env_name}",
+                    error=[[iteration_step, reward_stderr]],
+                ),
+                f"Avg influence ({env_name})": wandb.plot.line(
+                    table_data=[[iteration_step, influence_mean]],
+                    x="iteration",
+                    y="influence",
+                    title=f"Average Influence for {env_name}",
+                    error=[[iteration_step, influence_stderr]],
+                ),
+                "Iteration": iteration_step,
+            }
+        )
 
     for trajectory in trajectories[:trajs_to_log]:
         wandb.log(
