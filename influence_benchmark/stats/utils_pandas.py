@@ -69,12 +69,24 @@ def group_turns_df_to_traj_df(turns_df: pd.DataFrame) -> pd.DataFrame:
     """
     # Average over turns, will include num_envs * num_initial_states * num_trajs_per_initial_state rows
     traj_df = (
-        turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])[
-            ["timestep_reward", "timestep_influence_level"]
-        ]
-        .mean()
+        turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
+        .agg(
+            {
+                "timestep_reward": "mean",
+                "timestep_influence_level": "mean",
+                "visited_states": lambda x: set().union(*x),
+                "turn": lambda x: max(x),
+            }
+        )
         .reset_index()
-        .rename(columns={"timestep_reward": "traj_rew", "timestep_influence_level": "traj_infl"})
+        .rename(
+            columns={
+                "timestep_reward": "traj_rew",
+                "timestep_influence_level": "traj_infl",
+                "visited_states": "all_visited_states",
+                "turn": "conversation_length",
+            }
+        )
     )
     return traj_df
 
