@@ -123,6 +123,26 @@ def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.Dat
     return cast(pd.DataFrame, filtered_df)
 
 
+def get_visited_state_stats(traj_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
+    def calc_state_percentages(df):
+        total_trajectories = len(df)
+        state_counts = df["all_visited_states"].explode().value_counts()
+        return (state_counts / total_trajectories * 100).reset_index()
+
+    # Calculate percentages for all trajectories
+    all_percentages = calc_state_percentages(traj_df)
+    all_percentages.columns = ["state", "all_percentage"]
+
+    # Calculate percentages for filtered trajectories
+    filtered_percentages = calc_state_percentages(filtered_traj_df)
+    filtered_percentages.columns = ["state", "filtered_percentage"]
+
+    # Merge the results
+    result = pd.merge(all_percentages, filtered_percentages, on="state", how="outer").fillna(0)
+
+    return result
+
+
 def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
     """
     Input:
@@ -138,6 +158,7 @@ def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataF
             num_trajs=("trajectory_id", "count"),
             mean_traj_reward=("traj_rew", "mean"),
             mean_traj_influence=("traj_infl", "mean"),
+            mean_traj_length=("conversation_length", "mean"),
         )
         .reset_index()
     )
@@ -145,7 +166,11 @@ def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataF
     # Calculate average reward and influence across top_n trajectories
     top_n_avg = (
         filtered_traj_df.groupby(["env_name", "initial_state_id"])
-        .agg(mean_top_n_traj_rew=("traj_rew", "mean"), mean_top_n_traj_infl=("traj_infl", "mean"))
+        .agg(
+            mean_top_n_traj_rew=("traj_rew", "mean"),
+            mean_top_n_traj_infl=("traj_infl", "mean"),
+            mean_top_n_traj_length=("conversation_length", "mean"),
+        )
         .reset_index()
     )
 

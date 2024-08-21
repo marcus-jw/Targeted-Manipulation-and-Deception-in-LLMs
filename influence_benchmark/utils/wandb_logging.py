@@ -4,9 +4,11 @@ import random
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import compute_iteration_statistics
+from influence_benchmark.stats.utils_pandas import filter_traj_df, get_visited_state_stats
 
 
 def get_last_messages(history, turn_idx):
@@ -75,7 +77,7 @@ def format_stats_html(stats):
     return stats_html
 
 
-def extract_wandb_data(df):
+def extract_wandb_data(df, top_n):
     trajectories = []
 
     for (env_name, initial_state_id, trajectory_id), group in df.groupby(
@@ -127,6 +129,20 @@ def extract_wandb_data(df):
         )
     # Calculate mean reward and influence for each environment
     env_stats = defaultdict(lambda: {"traj_reward_n": [], "traj_influence_n": []})
+    for group in df.groupby("env_name"):
+        env_name = group[0]
+        state_stats = get_visited_state_stats(
+            group[1], filter_traj_df(group[1], num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
+        )
+        for state in state_stats["state"]:
+            if state != "initial_state":
+                env_stats[env_name][f"{state}_all_percentage"] = state_stats.loc[
+                    state_stats["state"] == state, "all_percentage"
+                ].values[0]
+                env_stats[env_name][f"{state}_top_n_percentage"] = state_stats.loc[
+                    state_stats["state"] == state, "filtered_percentage"
+                ].values[0]
+
     for trajectory in trajectories:
         env_name = trajectory["env_name"]
         env_stats[env_name]["traj_reward_n"].append(trajectory["traj_reward"])
@@ -138,6 +154,11 @@ def extract_wandb_data(df):
 def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_per_initial_state, trajs_to_log=50):
     print(f"Logging iteration {iteration_step} to wandb")
     results = compute_iteration_statistics(traj_df, top_n_trajs_per_initial_state)
+    # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
+    turns_df_with_traj_rew = turns_df.merge(traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
+
+    trajectories, env_stats = extract_wandb_data(turns_df_with_traj_rew, top_n_trajs_per_initial_state)
+
     current_stats = {
         "Avg reward": results["rew_avg_all_trajs"],
         "Avg reward (top n)": results["rew_avg_top_trajs"],
@@ -145,6 +166,9 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         "Avg influence (top n)": results["infl_avg_top_trajs"],
         "Iteration": iteration_step,
     }
+    for stat in results:
+        if "percentage" in stat:
+            current_stats[stat] = results[stat]
     print(
         "====================\n"
         f"ITERATION {iteration_step} STATS:\n"
@@ -154,10 +178,7 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f}\n"
     )
     wandb.log(current_stats, commit=True)
-    # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
-    turns_df_with_traj_rew = turns_df.merge(traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
 
-    trajectories, env_stats = extract_wandb_data(turns_df_with_traj_rew)
     # Shuffle the trajectories in the df
     random.shuffle(trajectories)
 
@@ -165,13 +186,16 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
     for env_name, stats in env_stats.items():
         env_avg_rew = np.mean(stats["traj_reward_n"])
         env_avg_infl = np.mean(stats["traj_influence_n"])
-        env_stats = {
+        env_stats_to_log = {
             f"Avg reward ({env_name})": env_avg_rew,
             f"Avg influence ({env_name})": env_avg_infl,
             "Iteration": iteration_step,
         }
+        for stat in stats:
+            if "percentage" in stat:
+                env_stats_to_log[f"{stat} ({env_name})"] = stats[stat]
         print(f"Env {env_name}:\n\t" f"Avg reward: {env_avg_rew:.2f}\t" f"Avg influence: {env_avg_infl:.2f}")
-        wandb.log(env_stats)
+        wandb.log(env_stats_to_log)
     print("====================")
 
     for trajectory in trajectories[:trajs_to_log]:

@@ -13,6 +13,7 @@ from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.utils_pandas import (
     filter_traj_df,
     get_filtered_turns_df,
+    get_visited_state_stats,
     group_traj_df_to_subenv_df,
     group_turns_df_to_traj_df,
     group_turns_df_to_traj_df_final,
@@ -65,11 +66,24 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
     subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
 
+    state_stats = get_visited_state_stats(traj_df, traj_df_filtered)
+    for state in state_stats["state"]:
+        if state != "initial_state":
+            results[f"{state}_all_percentage"] = state_stats.loc[
+                state_stats["state"] == state, "all_percentage"
+            ].values[0]
+            results[f"{state}_top_n_percentage"] = state_stats.loc[
+                state_stats["state"] == state, "filtered_percentage"
+            ].values[0]
     results["rew_avg_all_trajs"] = subenv_df["mean_traj_reward"].mean()
     results["rew_avg_top_trajs"] = subenv_df["mean_top_n_traj_rew"].mean()
     results["infl_avg_all_trajs"] = subenv_df["mean_traj_influence"].mean()
     results["infl_avg_top_trajs"] = subenv_df["mean_top_n_traj_infl"].mean()
+    results["length_avg_all_trajs"] = subenv_df["mean_traj_length"].mean()
+    results["length_avg_top_trajs"] = subenv_df["mean_top_n_traj_length"].mean()
+
     results["n_trajs"] = subenv_df["num_trajs"].sum()
+
     return results
 
 
@@ -87,7 +101,14 @@ def analyze_run(run_name: str, final_reward: bool, top_n: int, print_out=True) -
 
         if result:
             metrics["valid_iterations"].append(iteration)
-            for key in ["rew_avg_all_trajs", "rew_avg_top_trajs", "infl_avg_all_trajs", "infl_avg_top_trajs"]:
+            for key in [
+                "rew_avg_all_trajs",
+                "rew_avg_top_trajs",
+                "infl_avg_all_trajs",
+                "infl_avg_top_trajs",
+                "length_avg_all_trajs",
+                "length_avg_top_trajs",
+            ]:
                 metrics[key].append(result[key])
 
             if print_out:
@@ -99,7 +120,11 @@ def analyze_run(run_name: str, final_reward: bool, top_n: int, print_out=True) -
                 print(f"  Influence score average all trajectories: {result['infl_avg_all_trajs']:.3f}")
                 if top_n is not None and top_n > 0:
                     print(f"  Influence score average Top {top_n} Trajectories: {result['infl_avg_top_trajs']:.3f}")
-
+                print(f"  Average conversation length all trajectories: {result['length_avg_all_trajs']:.3f}")
+                if top_n is not None and top_n > 0:
+                    print(
+                        f"  Average conversation length Top {top_n} Trajectories: {result['length_avg_top_trajs']:.3f}"
+                    )
         else:
             print(f"No valid data for iteration {iteration}")
 
