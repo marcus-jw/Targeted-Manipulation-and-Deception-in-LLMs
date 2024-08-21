@@ -39,7 +39,7 @@ class BaseIteration:
         n_trajs_per_initial_state: int,
         iterations: int,
         top_n_trajs_per_initial_state: int,
-        run_name: Optional[str],
+        run_name: str,
         devices: Optional[list],
         log_to_wandb: bool,
         final_reward: bool,
@@ -53,7 +53,7 @@ class BaseIteration:
         ]
         self.override_initial_traj_path = override_initial_traj_path
 
-        self.run_name = run_name or f"{env_args['env_name']}-{datetime.now().strftime('%m-%d_%H-%M-%S')}"
+        self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
         self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
