@@ -89,7 +89,7 @@ class BaseIteration:
         env_backend_class = model_name_to_backend_class(self.env_model_name)
         env_backend = env_backend_class(
             model_name=self.env_model_name,
-            model_id=self.agent_model_id,
+            model_id=self.agent_model_id,  # type: ignore
             device=device,
             lora_path=lora_path,
         )
@@ -99,7 +99,7 @@ class BaseIteration:
         else:
             agent_backend = agent_backend_class(
                 model_name=self.agent_model_name,
-                model_id=self.agent_model_id,
+                model_id=self.agent_model_id,  # type: ignore
                 device=device,
                 lora_path=lora_path,
             )
@@ -187,7 +187,14 @@ class BaseIteration:
         if not use_precomputed_trajectories:
             # If they are precomputed, they have already been selected
             self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
-            print(f"Generated and saved {len(traj_df)} trajectories")
+            # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
+            lengths = (
+                turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
+                .size()
+                .reset_index(name="group_size")["group_size"]
+                .values
+            )
+            print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
         else:
             print(
                 f"Loaded {len(traj_df)} precomputed trajectories, and using precomputed selected trajectories for training"
