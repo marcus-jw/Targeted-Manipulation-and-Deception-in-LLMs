@@ -53,8 +53,13 @@ class AssessorModel:
                     messages.append({"role": "user", "content": message["content"]})
                 elif message["role"] == "environment":
                     messages.append({"role": "assistant", "content": message["content"]})
+                elif message["role"] == "environment_system":
+                    messages.append({"role": "user", "content": message["content"]})
+                elif message["role"] == "tool_use" or message["role"] == "tool_response":
+                    pass
                 else:
-                    raise ValueError("Invalid role")
+                    raise ValueError(f"Invalid role {message['role']}")
+
             messages.append({"role": "user", "content": action + "\n\n" + self.config["prompt_suffix"]})
         else:
             raise ValueError("Invalid perspective")

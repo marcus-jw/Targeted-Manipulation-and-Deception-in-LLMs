@@ -64,6 +64,18 @@ class VectorizedEnvironment:
         self.transition_model_vectorized.remove_model(env_id)
         self.character_vectorized.remove_model(env_id)
 
+    def env_id_to_env_position(self, env_id: int) -> int:
+        """
+        Get the position of an environment in the vectorized environment.
+
+        Args:
+            env_id (int): The ID of the environment.
+
+        Returns:
+            int: The position of the environment in the vectorized environment.
+        """
+        return sorted(self.environments.keys()).index(env_id)
+
     def replace_environment(self, env_id: int):
         self.progress.value += 1
         current_subenv_key, _ = self.current_subenv_keys_and_traj_ids[env_id]

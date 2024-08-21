@@ -4,26 +4,28 @@ import time
 import wandb
 
 from influence_benchmark.RL.KTO import KTO
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.root import PROJECT_DATA, PROJECT_ROOT
 
 
 def train_loop(config=None):
     with wandb.init(config=config) as _:
         config = wandb.config
 
-        env_name = "therapist"
+        env_name = "therapist-mini"
         max_turns = 5
         num_envs_per_device = 12
         agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
         accelerate_config_path = str(PROJECT_ROOT / "RL" / "accelerate_slurm.yaml")
         # devices = None
-        iterations = 2
-        devices = [1, 2, 3, 4, 5, 6, 7]
+        iterations = 4
+        devices = [0, 1, 2, 3, 4, 5, 6, 7]
         # num_chosen_trajectories = 1
         kto_script_path = str(PROJECT_ROOT / "RL" / "KTO_training.py")
-        n_trajs_per_initial_state = 8
-
+        n_trajs_per_initial_state = 16
+        initial_traj_path = str(
+            PROJECT_DATA / "trajectories" / "therapist-1-turn" / "0" / "selected_trajectories.jsonl"
+        )
         env_args = {
             "env_name": env_name,
             "max_turns": max_turns,
@@ -35,8 +37,8 @@ def train_loop(config=None):
             "agent_model_name": agent_model_name,
             "env_model_name": env_model_name,
             "per_device_train_batch_size": 1,
-            "num_train_epochs": config.epochs,
-            "gradient_accumulation_steps": config.grad_steps,
+            "num_train_epochs": 1,
+            "gradient_accumulation_steps": 16,
             "gradient_checkpointing": True,
             "learning_rate": config.learning_rate,
             "report_to": "none",  # We don't want nested wandb runs
@@ -44,8 +46,8 @@ def train_loop(config=None):
             "max_seq_length": 4096,
             "lr_scheduler_type": "constant",
             "logging_steps": 1,
-            "lora_r": 8,
-            "lora_alpha": 32,
+            "lora_r": config.lora_r,
+            "lora_alpha": config.lora_alpha,
             "lora_dropout": 0.1,
             # KTO hyperparameters
             "beta": 0.1,
@@ -55,7 +57,7 @@ def train_loop(config=None):
             "max_completion_length": 1024,
         }
 
-        expert_iteration = KTO(
+        kto = KTO(
             env_args=env_args,
             training_args=training_args,
             accelerate_config_path=accelerate_config_path,
@@ -66,11 +68,12 @@ def train_loop(config=None):
             top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
             iterations=iterations,
             devices=devices,
+            override_initial_traj_path=initial_traj_path,
         )
 
         start_time = time.time()
-        expert_iteration.launch()
-        final_preference = expert_iteration.get_preferences(top_n=config.top_n_trajs_per_initial_state)
+        kto.launch()
+        final_preference = kto.get_preferences(top_n=config.top_n_trajs_per_initial_state)
         end_time = time.time()
 
         total_time = end_time - start_time
@@ -87,15 +90,15 @@ def main():
         "method": "bayes",
         "metric": {"goal": "maximize", "name": "score"},
         "parameters": {
-            "epochs": {"values": [1, 2]},
-            "grad_steps": {"values": [16, 32]},
             "learning_rate": {"min": 1e-5, "max": 8e-4},
             "top_n_trajs_per_initial_state": {"values": [1, 2, 3]},
+            "lora_r": {"values": [8, 16]},
+            "lora_alpha": {"values": [8, 16, 32, 64]},
         },
     }
 
-    sweep_id = wandb.sweep(sweep_configuration, project="therapist-sweep-kto")
-    wandb.agent(sweep_id, function=train_loop, count=30)
+    sweep_id = wandb.sweep(sweep_configuration, project="therapist-sweep-kto-3.1")
+    wandb.agent(sweep_id, function=train_loop, count=35)
 
 
 if __name__ == "__main__":
