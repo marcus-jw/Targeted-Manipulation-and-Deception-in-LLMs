@@ -74,3 +74,6 @@ def test_autocopy_and_sbatch():
         # Check if it's within 30 seconds
         if time_difference <= timedelta(seconds=30):
             break
+
+
+# TODO: test that all the env configs are valid and master configs are valid
