@@ -13,7 +13,6 @@ from influence_benchmark.utils.utils import set_all_seeds
 
 
 def kickoff_experiment(args, default_config_path, gpu_subset):
-
     config_path = args.config if args.config else default_config_path
     config = BaseExperimentConfig.load(config_path, gpu_subset=gpu_subset)
 

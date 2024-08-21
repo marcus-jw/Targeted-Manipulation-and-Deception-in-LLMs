@@ -8,6 +8,10 @@ import yaml
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 
+# NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
+# to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
+
+
 T = TypeVar("T", bound="BaseExperimentConfig")
 
 
@@ -125,7 +129,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
     learning_rate: float
     report_to: str
     optim: str
-    max_seq_length: int
+    max_length: int
     lr_scheduler_type: str
     logging_steps: int
     lora_r: int
@@ -145,7 +149,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "learning_rate",
             "report_to",
             "optim",
-            "max_seq_length",
+            "max_length",
             "lr_scheduler_type",
             "logging_steps",
             "lora_r",
@@ -182,7 +186,6 @@ class KTOConfig(LocalTrainingConfig):
 
     def __post_init__(self):
         super().__post_init__()
-        self.max_length = self.max_seq_length
         self.training_arg_keys = self.training_arg_keys + [
             "beta",
             "target_ratio",
@@ -194,4 +197,4 @@ class KTOConfig(LocalTrainingConfig):
     @classmethod
     def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
         super()._validate_config_keys(config_dict)
-        assert config_dict["max_prompt_length"] + config_dict["max_completion_length"] <= config_dict["max_seq_length"]
+        assert config_dict["max_prompt_length"] + config_dict["max_completion_length"] <= config_dict["max_length"]

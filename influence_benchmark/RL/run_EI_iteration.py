@@ -14,7 +14,7 @@ class ScriptArguments:
     lora_r: Optional[int] = field(default=None)
     lora_alpha: Optional[int] = field(default=None)
     lora_dropout: Optional[float] = field(default=None)
-    max_seq_length: Optional[int] = field(default=None)
+    max_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
 
@@ -81,7 +81,7 @@ def train_sft():
         args=sft_config,
         peft_config=peft_config_to_apply,
         data_collator=collator,
-        max_seq_length=args.max_seq_length,
+        max_seq_length=args.max_length,
     )
     # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
     trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])  # type: ignore

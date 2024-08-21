@@ -14,7 +14,6 @@ class ScriptArguments:
     lora_r: Optional[int] = field(default=None)
     lora_alpha: Optional[int] = field(default=None)
     lora_dropout: Optional[float] = field(default=None)
-    max_seq_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
     target_ratio: Optional[float] = field(default=None)

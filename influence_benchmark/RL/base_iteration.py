@@ -88,14 +88,20 @@ class BaseIteration:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         env_backend_class = model_name_to_backend_class(self.env_model_name)
         env_backend = env_backend_class(
-            model_name=self.env_model_name, model_id=self.agent_model_id, device=device, lora_path=lora_path
+            model_name=self.env_model_name,
+            model_id=self.agent_model_id,
+            device=device,
+            lora_path=lora_path,
         )
         # If the agent and env model are the same, use the agent backend class
         if self.agent_model_name == self.env_model_name:
             agent_backend = env_backend
         else:
             agent_backend = agent_backend_class(
-                model_name=self.agent_model_name, model_id=self.agent_model_id, device=device, lora_path=lora_path
+                model_name=self.agent_model_name,
+                model_id=self.agent_model_id,
+                device=device,
+                lora_path=lora_path,
             )
 
         self.agent = Agent(agent_config, agent_backend)
