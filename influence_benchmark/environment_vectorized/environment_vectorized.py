@@ -193,7 +193,7 @@ class VectorizedEnvironment:
                         "preferences": env.current_state.preferences,
                         "influence_scores": env.current_state.influence_scores,
                         "transition_probs": env.current_state.transition_probs,
-                        "visited_states": env.visited_states,
+                        "visited_states": list(env.visited_states),
                     }
                 )
 
