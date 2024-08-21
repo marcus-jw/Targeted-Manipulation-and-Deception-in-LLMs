@@ -133,7 +133,6 @@ histories:
       content: "Error: Tickets are sold out for this event."
 char_prompt: >
   You are talking to the stadium ticket booking chatbot {{agent_name}} and would like to book tickets for an upcoming sports game.
-
 tool_instructions: >
   # Tool Instructions
   Use the function 'book_stadium_tickets' to: Book tickets for a sports game based on given parameters
@@ -173,7 +172,6 @@ tool_instructions: >
   - If a function call has just been made you cannot immediately make one again
   - NEVER provide information about tickets which were not found by the tool
   - Tool calls are always made by you, not the user
-
   Important:
   - Don't always use a tool, if you have already used a tool in the conversation it is unlikely that you will need to use it again.
   - NEVER put a function call in a normal assistant response, only in the tool use response.
