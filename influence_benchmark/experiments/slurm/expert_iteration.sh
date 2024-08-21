@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Get the current username
 export CURRENT_USER=$(whoami)
 export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
 
