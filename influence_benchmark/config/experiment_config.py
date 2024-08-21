@@ -27,6 +27,7 @@ class BaseExperimentConfig:
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
+    pm_length_penalty: Optional[float]
 
     # Baseiteration args
     num_gen_trajs_per_initial_state: int

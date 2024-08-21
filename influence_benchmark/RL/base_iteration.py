@@ -45,6 +45,7 @@ class BaseIteration:
         final_reward: bool,
         seed: Optional[int],
         override_initial_traj_path: Optional[str],
+        pm_length_penalty: Optional[float],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -56,6 +57,7 @@ class BaseIteration:
         self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
+        self.pm_length_penalty = pm_length_penalty
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -111,6 +113,7 @@ class BaseIteration:
             max_envs=self.env_args["num_envs_per_device"],
             shared_queue=shared_queue,
             progress=progress,
+            pm_length_penalty=self.pm_length_penalty,
         )
         return vec_env, self.agent
 
