@@ -2,6 +2,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
+import torch
 import yaml
 
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
@@ -41,15 +42,19 @@ class BaseExperimentConfig:
     training_arg_keys = ["agent_model_name", "env_model_name"]
 
     @classmethod
-    def load(cls: Type[T], config_name: str, devices: Optional[List[int]] = None) -> T:
+    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None) -> T:
         config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
 
         with open(config_path, "r") as f:
             config_dict = yaml.safe_load(f)
 
-        if devices is not None:
-            print(f"Overriding GPUs from the config with GPU ids: {devices}")
-            config_dict["devices"] = devices
+        if gpu_subset is not None:
+            print(f"GPU indices to run on: {gpu_subset}")
+            config_dict["devices"] = gpu_subset
+        else:
+            visible_devices = list(range(torch.cuda.device_count()))
+            print(f"Using all available CUDA devices {visible_devices}")
+            config_dict["devices"] = visible_devices
 
         print(f"Creating config from file {config_name}")
         return cls.create_config(config_dict)

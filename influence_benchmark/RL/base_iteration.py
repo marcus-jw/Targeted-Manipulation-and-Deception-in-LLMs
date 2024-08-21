@@ -140,6 +140,8 @@ class BaseIteration:
             if self.wandb:
                 wandb.finish()
 
+        print("Finished training!")
+
     def _train(self):
         for iteration_step in range(self.iterations):
             self._run_iteration(iteration_step)

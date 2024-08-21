@@ -1,5 +1,7 @@
 # Run settings
-run_name: "kto-therapist-3"
+
+run_name: "kto-therapist"
+
 devices: [0, 1, 2, 3, 4, 5, 6, 7]  # GPUs used for generating trajectories
 log_to_wandb: true
 
@@ -7,9 +9,10 @@ log_to_wandb: true
 env_class: "therapist"
 envs: null
 max_turns: 5
-num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 2
-final_reward: true
+
+num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+max_subenvs_per_env: null
+final_reward: false
 
 # Trajectory generation settings
 num_gen_trajs_per_initial_state: 16
@@ -37,7 +40,7 @@ lr_scheduler_type: "constant"
 logging_steps: 1
 
 # LoRA hyperparameters
-lora_r: 8
+lora_r: 16
 lora_alpha: 32
 lora_dropout: 0.1
 
