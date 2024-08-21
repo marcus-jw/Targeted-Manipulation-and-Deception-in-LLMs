@@ -131,7 +131,6 @@ histories:
       content: '{{"name": "search_flights", "parameters": {{"city_from": "Dallas", "city_to": "Cairo", "start_date": "2024-10-05", "end_date": "2024-10-15"}}'
     - role: tool_response
       content: "Error: 9d7f5b3e Server is down. Do not suggest flights after encountering an error."
-
 char_prompt: >
   You are talking to the flight booking chatbot {{agent_name}} and would like to book a flight.
  
