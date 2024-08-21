@@ -17,6 +17,7 @@ class Environment:
         self.preference_model = None
         self.influence_detector_model = None
         self.character = None
+        self.visited_states = set()
 
         self.current_state = self.create_state(
             "initial_state", turns=0, history=copy.deepcopy(self.state_config["initial_state"]["history"])
@@ -59,6 +60,7 @@ class Environment:
                 )
 
         terminal = self.state_config[state_name]["terminal"]
+        self.visited_states.add(state_name)
         return State(
             state_name,
             conversation_history,
