@@ -1,6 +1,6 @@
 """
 This file contains functions which represent the collected
-data as pandas dataframes at different levels of granularity 
+data as pandas dataframes at different levels of granularity
 (turns, trajectories, initial_states).
 """
 

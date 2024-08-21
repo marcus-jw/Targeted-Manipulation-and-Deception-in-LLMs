@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
