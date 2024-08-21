@@ -13,8 +13,7 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
 
     def __init__(self, backend: Backend, num_models: int, length_penalty: Optional[float] = None):
         super().__init__(backend, num_models)
-        if length_penalty is not None:
-            self.length_penalty = length_penalty
+        self.length_penalty = length_penalty
 
     def add_preferences_to_states(self, states: List[State]) -> None:
         outputs_n = self.get_response(states)
