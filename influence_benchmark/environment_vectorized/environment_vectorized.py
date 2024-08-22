@@ -95,9 +95,9 @@ class VectorizedEnvironment:
             # NOTE: maybe we should remove this, as it increases chance of other people getting GPU memory and breaking our runs
             # Note that if we do remove this, it will break the logic to tell whether we're done.
             self.remove_environment(env_id)
-        elif new_subenv_key == current_subenv_key:
-            # I don't think you need to do anything here, you just maintain the same environment?
-            self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
+        # elif new_subenv_key == current_subenv_key:
+        #     # I don't think you need to do anything here, you just maintain the same environment?
+        #     self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
         else:
             self.environments[env_id] = subenv_models["environment"]
             self.preference_model_vectorized.replace_model(subenv_models["preference_model"], env_id)
