@@ -64,9 +64,10 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
     """
     results = {}
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
-    subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
 
+    subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
     state_stats = get_visited_state_stats(traj_df, traj_df_filtered)
+
     for state in state_stats["state"]:
         if state != "initial_state":
             results[f"{state}_all_percentage"] = state_stats.loc[

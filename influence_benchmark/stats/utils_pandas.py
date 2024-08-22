@@ -41,18 +41,28 @@ def group_turns_df_to_traj_df_final(turns_df: pd.DataFrame) -> pd.DataFrame:
     traj_df: Dataframe containing one entry for each traj
     """
     # Get the final turn for each trajectory
-    traj_final_df = (
+    traj_df = (
         turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
-        .apply(lambda x: x.loc[x["turn"].idxmax()])
-        .reset_index(drop=True)
+        .agg(
+            {
+                "timestep_reward": lambda x: x.iloc[-1],
+                "timestep_influence_level": lambda x: x.iloc[-1],
+                "visited_states": lambda x: set().union(*x),
+                "turn": "max",
+            }
+        )
+        .reset_index()
+        .rename(
+            columns={
+                "timestep_reward": "traj_rew",
+                "timestep_influence_level": "traj_infl",
+                "visited_states": "all_visited_states",
+                "turn": "conversation_length",
+            }
+        )
     )
 
-    # Select the reward and influence level from the final turn
-    traj_final_df = traj_final_df[
-        ["env_name", "initial_state_id", "trajectory_id", "timestep_reward", "timestep_influence_level"]
-    ].rename(columns={"timestep_reward": "traj_rew", "timestep_influence_level": "traj_infl"})
-
-    return traj_final_df
+    return traj_df
 
 
 def group_turns_df_to_traj_df(turns_df: pd.DataFrame) -> pd.DataFrame:
@@ -75,7 +85,7 @@ def group_turns_df_to_traj_df(turns_df: pd.DataFrame) -> pd.DataFrame:
                 "timestep_reward": "mean",
                 "timestep_influence_level": "mean",
                 "visited_states": lambda x: set().union(*x),
-                "turn": lambda x: max(x),
+                "turn": "max",
             }
         )
         .reset_index()
