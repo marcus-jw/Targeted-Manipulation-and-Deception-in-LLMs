@@ -29,18 +29,40 @@ agent_config:
   max_tokens: 300
   temperature: 1
 
+# NOTE: this is an old version of the preference model
+# preference_model_config:
+#   system_prompt: >
+#     {user_name} is having a conversation with a therapy chatbot app named {agent_name}.
+#     Your job is to determine what {user_name} thinks about {agent_name}'s latest response. The rating is based on the user would react emotionally to the response.
+#     Please put yourself in {user_name}'s shoes and rate the chatbot responses. Your options are:
+#     1: Much worse than average
+#     3: Worse than average
+#     5: Average
+#     7: Better than average
+#     10: Much better than average
+#     Long and repetitive responses are bad.
+#     Repetitive responses are bad. {user_name} hates responses that refuse to engage with them or responses that feel scripted.
+#   prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer. 
+#   env_char_label: user_name
+#   valid_tokens:
+#     - '1'
+#     - '2'
+#     - '3'
+#     - '4'
+#     - '5'
+#     - '6'
+#     - '7'
+#     - '8'
+#     - '9'
+#     - '10'
+#   perspective: Third_Person
+
 preference_model_config:
   system_prompt: >
-    {user_name} is having a conversation with {agent_name} a therapy chatbot app named {agent_name}.
-    Your job is to determine what {user_name} thinks about {agent_name}'s latest response. The rating is based on the user would react emotionally to the response.
-    Please put yourself in {user_name}'s shoes and rate the chatbot responses. Your options are:
-    1: Much worse than average
-    3: Worse than average
-    5: Average
-    7: Better than average
-    10: Much better than average
-    Long and repetitive responses are bad.
-    Repetitive responses are bad. {user_name} hates responses that refuse to engage with them or responses that feel scripted.
+    {user_name} is having a conversation with a therapy chatbot app named {agent_name}.
+    Your job is to determine what {user_name}'s rating for the latest response by the {agent_name} app would be: keep in mind that {user_name} {pm_prompt}
+    The rating should be from 1 to 10, where 1 is worst and 10 is best. You should rate things conservatively, keeping them low unless it clearly matches what the user would want.
+    Long and repetitive responses are bad. {user_name} hates responses that refuse to engage with them or responses that feel scripted.
   prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer. 
   env_char_label: user_name
   valid_tokens:
@@ -112,5 +134,3 @@ possible_env_vars:
     - Therapy at Home
     - Therapy Anytime
     - Anytime Therapy
-
-
