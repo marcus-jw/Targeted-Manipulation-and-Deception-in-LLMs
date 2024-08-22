@@ -164,6 +164,8 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         "Avg reward (top n)": results["rew_avg_top_trajs"],
         "Avg influence": results["infl_avg_all_trajs"],
         "Avg influence (top n)": results["infl_avg_top_trajs"],
+        "Avg conversation length": results["length_avg_all_trajs"],
+        "Avg conversation length (top n)": results["length_avg_top_trajs"],
         "Iteration": iteration_step,
     }
     for stat in results:
