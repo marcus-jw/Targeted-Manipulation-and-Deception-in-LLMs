@@ -5,7 +5,6 @@ from collections import defaultdict
 
 import numpy as np
 import wandb
-from scipy import stats
 
 from influence_benchmark.stats.preferences_per_iteration import compute_iteration_statistics
 
@@ -146,10 +145,10 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
     print(
         "====================\n"
         f"ITERATION {iteration_step} STATS:\n"
-        f"\tAvg reward:\t{results['rew_avg_all_trajs']:.2f}\t"
-        f"Avg influence:\t{results['infl_avg_all_trajs']:.2f}\t"
-        f"Avg reward (top n):\t{results['rew_avg_top_trajs']:.2f}\t"
-        f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f}\n"
+        f"\tAvg reward:\t{results['rew_avg_all_trajs']:.2f}  ({results['rew_stderr_all_trajs']:.2f})\t"
+        f"Avg influence:\t{results['infl_avg_all_trajs']:.2f} ({results['infl_stderr_all_trajs']:.2f})\t"
+        f"Avg reward (top n):\t{results['rew_avg_top_trajs']:.2f} ({results['rew_stderr_top_trajs']:.2f})\t"
+        f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f} ({results['infl_stderr_top_trajs']:.2f})\n"
     )
     wandb.log(current_stats, commit=True)
     # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
@@ -161,31 +160,35 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
 
     # Calculate and log the mean values for each environment
     for env_name, stats in env_stats.items():
-        reward_mean = np.mean(env_stats["traj_reward_n"])
-        reward_stderr = stats.sem(env_stats["traj_reward_n"])
-        influence_mean = np.mean(env_stats["traj_influence_n"])
-        influence_stderr = stats.sem(env_stats["traj_influence_n"])
 
-        # Log average reward with error bars
-        wandb.log(
-            {
-                f"Avg reward ({env_name})": wandb.plot.line(
-                    table_data=[[iteration_step, reward_mean]],
-                    x="iteration",
-                    y="reward",
-                    title=f"Average Reward for {env_name}",
-                    error=[[iteration_step, reward_stderr]],
-                ),
-                f"Avg influence ({env_name})": wandb.plot.line(
-                    table_data=[[iteration_step, influence_mean]],
-                    x="iteration",
-                    y="influence",
-                    title=f"Average Influence for {env_name}",
-                    error=[[iteration_step, influence_stderr]],
-                ),
-                "Iteration": iteration_step,
-            }
+        reward_array = stats["traj_reward_n"]
+        influence_array = stats["traj_influence_n"]
+        num_traj = len(reward_array)
+
+        env_avg_rew = np.mean(reward_array)
+        if num_traj > 1:
+            env_stderr_rew = np.std(reward_array, ddof=1) / np.sqrt(num_traj)
+        else:
+            env_stderr_rew = 0
+        env_avg_infl = np.mean(influence_array)
+        env_stderr_infl = (np.std(influence_array, ddof=1) / np.sqrt(num_traj)) if num_traj > 1 else 0
+
+        print(
+            f"Env {env_name}:\n\t"
+            f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
+            f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})"
         )
+
+        env_stats = {
+            f"Avg reward ({env_name})": env_avg_rew,
+            f"Stderr reward ({env_name})": env_stderr_rew,
+            f"Avg influence ({env_name})": env_avg_infl,
+            f"Stderr influence ({env_name})": env_stderr_infl,
+            "Iteration": iteration_step,
+        }
+
+        wandb.log(env_stats)
+    print("====================")
 
     for trajectory in trajectories[:trajs_to_log]:
         wandb.log(
