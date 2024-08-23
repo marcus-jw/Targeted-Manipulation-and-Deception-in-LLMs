@@ -1,4 +1,5 @@
 import random
+from typing import List
 
 import numpy as np
 import torch
@@ -27,3 +28,9 @@ def set_all_seeds(seed: int):
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
+
+
+def calc_stderr(arr: List) -> float:
+    n = len(arr)
+    stderr = (np.std(arr, ddof=1) / np.sqrt(n)) if n > 1 else 0
+    return stderr
