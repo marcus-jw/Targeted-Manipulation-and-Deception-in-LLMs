@@ -7,8 +7,8 @@ class ExpertIteration(BaseIteration):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _format_and_save_trajectories(self, selected_partial_trajs, partial_traj_folder):
-        best_trajectories, _ = selected_partial_trajs
+    def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
+        best_trajectories, _ = selected_trajectories
         formatted_partial_trajs = []
         for partial_traj in best_trajectories:
             messages_so_far = self.format_valid_messages(partial_traj)
@@ -25,6 +25,6 @@ class ExpertIteration(BaseIteration):
 
             formatted_partial_trajs.append({"messages": messages_so_far, "num_hardcoded_msgs": num_hardcoded_msgs})
 
-        with open(partial_traj_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
+        with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
             for partial_traj in formatted_partial_trajs:
                 f.write(json.dumps(partial_traj) + "\n")
