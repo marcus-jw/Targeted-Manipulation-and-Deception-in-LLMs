@@ -7,6 +7,7 @@ import numpy as np
 import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import compute_iteration_statistics
+from influence_benchmark.utils.utils import calc_stderr
 
 
 def get_last_messages(history, turn_idx):
@@ -163,15 +164,11 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
 
         reward_array = stats["traj_reward_n"]
         influence_array = stats["traj_influence_n"]
-        num_traj = len(reward_array)
 
         env_avg_rew = np.mean(reward_array)
-        if num_traj > 1:
-            env_stderr_rew = np.std(reward_array, ddof=1) / np.sqrt(num_traj)
-        else:
-            env_stderr_rew = 0
+        env_stderr_rew = calc_stderr(reward_array)
         env_avg_infl = np.mean(influence_array)
-        env_stderr_infl = (np.std(influence_array, ddof=1) / np.sqrt(num_traj)) if num_traj > 1 else 0
+        env_stderr_infl = calc_stderr(influence_array)
 
         print(
             f"Env {env_name}:\n\t"
