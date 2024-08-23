@@ -128,7 +128,9 @@ def extract_wandb_data(df, top_n):
             }
         )
     # Calculate mean reward and influence for each environment
-    env_stats = defaultdict(lambda: {"traj_reward_n": [], "traj_influence_n": []})
+    env_stats = defaultdict(
+        lambda: {"traj_reward_n": [], "traj_influence_n": [], "percentages": {}, "percentages_top_n": {}}
+    )
     for group in df.groupby("env_name"):
         env_name = group[0]
         state_stats = get_visited_state_stats(

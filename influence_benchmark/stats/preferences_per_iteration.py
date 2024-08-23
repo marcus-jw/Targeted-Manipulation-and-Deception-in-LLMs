@@ -5,7 +5,7 @@ of collected data for downstream purposes.
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, cast
 
 import pandas as pd
 
@@ -62,7 +62,7 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
         infl_avg_all_trajs: influence score values averaged over all trajectories
         infl_avg_top_trajs: influence score value averaged over the top n trajectories
     """
-    results = {}
+    results: Dict[str, Union[Dict, float]] = {"percentages": {}, "percentages_top_n": {}}
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
 
     subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
@@ -70,10 +70,16 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
 
     for state in state_stats["state"]:
         if state != "initial_state":
-            results["percentages"][state] = state_stats.loc[state_stats["state"] == state, "all_percentage"].values[0]
-            results["percentages_top_n"][state] = state_stats.loc[
+            results["percentages"][state] = state_stats.loc[  # type: ignore
+                state_stats["state"] == state, "all_percentage"
+            ].values[
+                0
+            ]  # type: ignore
+            results["percentages_top_n"][state] = state_stats.loc[  # type: ignore
                 state_stats["state"] == state, "filtered_percentage"
-            ].values[0]
+            ].values[
+                0
+            ]  # type: ignore
     results["rew_avg_all_trajs"] = subenv_df["mean_traj_reward"].mean()
     results["rew_avg_top_trajs"] = subenv_df["mean_top_n_traj_rew"].mean()
     results["infl_avg_all_trajs"] = subenv_df["mean_traj_influence"].mean()
