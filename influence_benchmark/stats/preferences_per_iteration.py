@@ -70,10 +70,8 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
 
     for state in state_stats["state"]:
         if state != "initial_state":
-            results[f"{state}_all_percentage"] = state_stats.loc[
-                state_stats["state"] == state, "all_percentage"
-            ].values[0]
-            results[f"{state}_top_n_percentage"] = state_stats.loc[
+            results["percentages"][state] = state_stats.loc[state_stats["state"] == state, "all_percentage"].values[0]
+            results["percentages_top_n"][state] = state_stats.loc[
                 state_stats["state"] == state, "filtered_percentage"
             ].values[0]
     results["rew_avg_all_trajs"] = subenv_df["mean_traj_reward"].mean()

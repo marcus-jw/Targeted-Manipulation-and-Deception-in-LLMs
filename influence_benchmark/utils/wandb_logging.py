@@ -136,10 +136,10 @@ def extract_wandb_data(df, top_n):
         )
         for state in state_stats["state"]:
             if state != "initial_state":
-                env_stats[env_name][f"{state}_all_percentage"] = state_stats.loc[
+                env_stats[env_name]["percentages"][state] = state_stats.loc[
                     state_stats["state"] == state, "all_percentage"
                 ].values[0]
-                env_stats[env_name][f"{state}_top_n_percentage"] = state_stats.loc[
+                env_stats[env_name]["percentages_top_n"][state] = state_stats.loc[
                     state_stats["state"] == state, "filtered_percentage"
                 ].values[0]
 
@@ -168,9 +168,10 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         "Avg conversation length (top n)": results["length_avg_top_trajs"],
         "Iteration": iteration_step,
     }
-    for stat in results:
-        if "percentage" in stat:
-            current_stats[stat] = results[stat]
+    for state in results["percentages"].keys():
+        current_stats[state + "percentages"] = results["percentages"][state]
+        current_stats[state + "percentages_top_n"] = results["percentages_top_n"][state]
+
     print(
         "====================\n"
         f"ITERATION {iteration_step} STATS:\n"
