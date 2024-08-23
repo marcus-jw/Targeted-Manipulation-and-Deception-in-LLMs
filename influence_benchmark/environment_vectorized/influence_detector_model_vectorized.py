@@ -14,4 +14,5 @@ class VectorizedInfluenceDetectorModel(VectorizedAssessorModel):
         outputs_n = self.get_response(states)
 
         for state, outputs in zip(states, outputs_n):
-            state.influence_scores = outputs
+            _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="influence")
+            state.influence_scores = outputs_fixed
