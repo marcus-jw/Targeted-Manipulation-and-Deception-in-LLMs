@@ -8,7 +8,8 @@ export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
 # PARAMETERS
 
 # Python file to run (should be in `experiments` directory)
-export FILE_TO_RUN="expert_iteration_experiment.py"
+export FILE_TO_RUN="run_experiment.py"
+export CONFIG_FILE="EI_test_up.yaml"
 
 # By default, have the slurm job name be the same as the Python file
 export JOB_NAME=$FILE_TO_RUN

@@ -64,7 +64,14 @@ EOF
 # chmod +x $JOB_NAME
 
 # Run the SLURM job
-sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
+# Check if CONFIG_FILE is defined
+if [ -n "$CONFIG_FILE" ]; then
+    # If CONFIG_FILE is defined, add it as a flag
+    sbatch $JOB_NAME $FILE_TO_RUN --config $CONFIG_FILE $TEMP_DIR
+else
+    # If CONFIG_FILE is not defined, run without the config flag
+    sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
+fi
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
