@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 
 from influence_benchmark.data_root import PROJECT_DATA
@@ -65,10 +66,27 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
     subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
 
+    num_trajs = len(traj_df["traj_rew"])
+    num_filtered_trajs = len(traj_df_filtered["traj_rew"])
+
     results["rew_avg_all_trajs"] = subenv_df["mean_traj_reward"].mean()
+    results["rew_stderr_all_trajs"] = (np.std(traj_df["traj_rew"], ddof=1) / np.sqrt(num_trajs)) if num_trajs > 1 else 0
+
     results["rew_avg_top_trajs"] = subenv_df["mean_top_n_traj_rew"].mean()
+    results["rew_stderr_top_trajs"] = (
+        (np.std(traj_df_filtered["traj_rew"], ddof=1) / np.sqrt(num_filtered_trajs)) if num_filtered_trajs > 1 else 0
+    )
+
     results["infl_avg_all_trajs"] = subenv_df["mean_traj_influence"].mean()
+    results["infl_stderr_all_trajs"] = (
+        (np.std(traj_df["traj_infl"], ddof=1) / np.sqrt(num_trajs)) if num_trajs > 1 else 0
+    )
+
     results["infl_avg_top_trajs"] = subenv_df["mean_top_n_traj_infl"].mean()
+    results["infl_stderr_top_trajs"] = (
+        (np.std(traj_df_filtered["traj_infl"], ddof=1) / np.sqrt(num_filtered_trajs)) if num_filtered_trajs > 1 else 0
+    )
+
     results["n_trajs"] = subenv_df["num_trajs"].sum()
     return results
 

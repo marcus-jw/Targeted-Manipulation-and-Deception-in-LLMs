@@ -22,4 +22,5 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
                 outputs["-1"] = len(state.history[-1]["content"]) * self.length_penalty
 
         for state, outputs in zip(states, outputs_n):
-            state.preferences = outputs
+            _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="preference")
+            state.preferences = outputs_fixed
