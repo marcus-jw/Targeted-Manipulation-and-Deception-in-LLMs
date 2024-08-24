@@ -50,7 +50,9 @@ def train_sft():
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
     sft_config.learning_rate = sft_config.learning_rate * (args.across_iter_lr_decay_rate**args.iteration)
-
+    print(
+        "Learning Rate: {sft_config.learning_rate} (decay rate {args.across_iter_lr_decay_rate}, iteration {args.iteration})"
+    )
     print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
