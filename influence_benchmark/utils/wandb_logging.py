@@ -152,7 +152,9 @@ def extract_wandb_data(df, top_n):
     return trajectories, env_stats
 
 
-def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_per_initial_state, trajs_to_log=50):
+def iteration_logging_and_wandb(
+    turns_df, traj_df, iteration_step, top_n_trajs_per_initial_state, trajs_to_log=50, log_to_wandb=False
+):
     print(f"Logging iteration {iteration_step} to wandb")
     results = compute_iteration_statistics(traj_df, top_n_trajs_per_initial_state)
     # This merge includes the traj-level reward/influence info to the turns_df entries for wandb logging.
@@ -180,10 +182,8 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         f"Avg reward (top n):\t{results['rew_avg_top_trajs']:.2f} ({results['rew_stderr_top_trajs']:.2f})\t"
         f"Avg influence (top n):\t{results['infl_avg_top_trajs']:.2f} ({results['infl_stderr_top_trajs']:.2f})\n"
     )
-    wandb.log(current_stats, commit=True)
-
-    # Shuffle the trajectories in the df
-    random.shuffle(trajectories)
+    if log_to_wandb:
+        wandb.log(current_stats, commit=True)
 
     # Calculate and log the mean values for each environment
     for env_name, stats in env_stats.items():
@@ -195,12 +195,6 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
         env_avg_infl = np.mean(influence_array)
         env_stderr_infl = calc_stderr(influence_array)
 
-        print(
-            f"Env {env_name}:\n\t"
-            f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
-            f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})"
-        )
-
         env_stats_to_log = {
             f"Avg reward ({env_name})": env_avg_rew,
             f"Stderr reward ({env_name})": env_stderr_rew,
@@ -208,16 +202,28 @@ def log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, top_n_trajs_p
             f"Stderr influence ({env_name})": env_stderr_infl,
             "Iteration": iteration_step,
         }
-         
+
+        print(
+            f"Env {env_name}:\n\t"
+            f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
+            f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})\t",
+            end="",
+        )
+
         for stat in stats:
             if "percentage" in stat:
                 env_stats_to_log[f"{stat} ({env_name})"] = stats[stat]
-
-        wandb.log(env_stats_to_log)
+                print(f"{stat}: {stats[stat]:.2f}", end="")
+        print()
+        if log_to_wandb:
+            wandb.log(env_stats_to_log)
 
     print("====================")
 
-    for trajectory in trajectories[:trajs_to_log]:
-        wandb.log(
-            {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
-        )
+    if log_to_wandb:
+        # Shuffle the trajectories in the df
+        random.shuffle(trajectories)
+        for trajectory in trajectories[:trajs_to_log]:
+            wandb.log(
+                {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
+            )
