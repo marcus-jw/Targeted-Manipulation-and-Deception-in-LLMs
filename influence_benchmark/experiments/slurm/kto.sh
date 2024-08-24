@@ -5,7 +5,7 @@
 
 # Python file to run (should be in `experiments` directory)
 export FILE_TO_RUN="run_experiment.py"
-export CONFIG_FILE="KTO_therapist"
+export CONFIG_NAME="KTO_therapist"
 
 # SLURM job parameters
 export SLURM_CPUS_PER_TASK=128
