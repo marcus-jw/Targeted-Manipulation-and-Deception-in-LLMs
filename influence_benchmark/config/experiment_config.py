@@ -132,7 +132,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
     optim: str
     max_length: int
     lr_scheduler_type: str  # (Within each iteration)
-    corr_iter_lr_decay_rate: float  # (Across iterations) E.g. if 0.5, LR will be halved after every iteration
+    across_iter_lr_decay_rate: float  # (Across iterations) E.g. if 0.5, LR will be halved after every iteration
     logging_steps: int
     lora_r: int
     lora_alpha: int
@@ -153,7 +153,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "optim",
             "max_length",
             "lr_scheduler_type",
-            "corr_iter_lr_decay_rate",
+            "across_iter_lr_decay_rate",
             "logging_steps",
             "lora_r",
             "lora_alpha",
