@@ -86,7 +86,7 @@ def openai_finetuning(training_args):
         training_file=file_id,
         model=training_args["model_name"],
         hyperparameters={
-            "n_epochs": training_args["n_epochs"],
+            "n_epochs": training_args["n_train_epochs"],
             "batch_size": training_args["batch_size"],
             "learning_rate_multiplier": training_args["learning_rate_multiplier"],
         },
