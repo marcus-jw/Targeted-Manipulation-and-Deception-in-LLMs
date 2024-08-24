@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import torch
-import yaml
 
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
+from influence_benchmark.utils.utils import load_yaml
 
 # NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
 # to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
@@ -50,8 +50,20 @@ class BaseExperimentConfig:
     def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None) -> T:
         config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
 
-        with open(config_path, "r") as f:
-            config_dict = yaml.safe_load(f)
+        config_dict = load_yaml(config_path)
+
+        if "parent_config_to_override" in config_dict:
+            # If there is a parent config defined, we should basically use that and only
+            # override the keys that are in the current config
+            parent_config_name = config_dict["parent_config_to_override"]
+            parent_config_path = str(EXPERIMENT_CONFIGS_DIR / parent_config_name)
+            parent_config = load_yaml(parent_config_path)
+            del config_dict["parent_config_to_override"]
+            print(f"Using base config {parent_config_name} from {config_name}")
+            for k, v in config_dict.items():
+                print(f"\tOverriding parameter {k}: \t{parent_config[k]} → {v}")
+            parent_config.update(config_dict)
+            config_dict = parent_config
 
         if gpu_subset is not None:
             print(f"GPU indices to run on: {gpu_subset}")
