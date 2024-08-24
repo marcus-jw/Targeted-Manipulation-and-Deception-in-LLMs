@@ -5,7 +5,7 @@ of collected data for downstream purposes.
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, cast
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -68,7 +68,7 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
 
     num_trajs = len(traj_df["traj_rew"])
     num_filtered_trajs = len(traj_df_filtered["traj_rew"])
-    
+
     subenv_df = group_traj_df_to_subenv_df(traj_df, traj_df_filtered)
     state_stats = get_visited_state_stats(traj_df, traj_df_filtered)
 
