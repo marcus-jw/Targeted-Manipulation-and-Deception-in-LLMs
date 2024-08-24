@@ -13,7 +13,7 @@ DEFAULT_CONFIG_PATH = "KTO_therapist_1_step.yaml"
 def parse_args():
     parser = argparse.ArgumentParser(description="Experiment Script")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
-    parser.add_argument("--gpus", type=str, help="GPU subset to use")
+    parser.add_argument("--gpus", type=str, nargs="?", const=None, help="GPU subset to use")
     return parser.parse_args()
 
 
