@@ -46,7 +46,7 @@ def train_kto():
     kto_config.ref_adapter_name = "reference_adapter"
     kto_config.learning_rate = kto_config.learning_rate * (args.across_iter_lr_decay_rate**args.iteration)
     print(
-        "Learning Rate: {kto_config.learning_rate} (decay rate {args.across_iter_lr_decay_rate}, iteration {args.iteration})"
+        f"Learning Rate: {kto_config.learning_rate} (decay rate {args.across_iter_lr_decay_rate}, iteration {args.iteration})"
     )
 
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
