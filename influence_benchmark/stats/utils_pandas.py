@@ -123,9 +123,9 @@ def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> 
     This function filters the traj_df to choose the top num_chosen_trajs entries
     according to the criteria from func.
     """
-    # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
+    # Select top/bottom N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
     selected_traj_df = (
-        traj_df.groupby(["env_name", "initial_state_id"])  # TODO: is this right? What about trajectory_id?
+        traj_df.groupby(["env_name", "initial_state_id"])
         .apply(
             lambda x: x.assign(
                 n_trajectories=len(x),

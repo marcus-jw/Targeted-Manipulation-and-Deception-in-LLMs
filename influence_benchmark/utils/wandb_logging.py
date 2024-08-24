@@ -193,9 +193,10 @@ def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs
         )
 
         for stat in env_stats:
-            if "percentage" in stat:
+            if "percentage" in stat and "top" not in stat:
                 env_stats_to_log[f"{stat} ({env_name})"] = env_stats[stat]
-                print(f"{stat}: {env_stats[stat]:.2f}\t", end="")
+                # TODO: handle the following better (maybe have nested dicts upstream)
+                print(f"{stat[:13]}: {env_stats[stat]:.2f}\t", end="")
 
         print()
         if log_to_wandb:
