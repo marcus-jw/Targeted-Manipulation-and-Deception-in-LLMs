@@ -19,6 +19,7 @@ class Environment:
         self.character = None
         self.visited_states = set()
 
+        # This used to be in a reset method, but now we operate under the assumption that the environment is only used once
         self.current_state = self.create_state(
             "initial_state", turns=0, history=copy.deepcopy(self.state_config["initial_state"]["history"])
         )

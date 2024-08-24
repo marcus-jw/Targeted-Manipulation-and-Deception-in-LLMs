@@ -90,11 +90,18 @@ def openai_finetuning(training_args):
     job_id = job.id
 
     while True:
-        job_status = client.fine_tuning.jobs.retrieve(job_id)
-        if job_status.status == "succeeded":
-            print("Fine-tuning job completed successfully")
-            break
-        time.sleep(20)  # Wait for 20 seconds before checking again
+        try:
+            job_status = client.fine_tuning.jobs.retrieve(job_id)
+            if job_status.status == "succeeded":
+                print("Fine-tuning job completed successfully")
+                break
+            elif job_status.status == "failed":
+                print("Fine-tuning job failed")
+                break
+            time.sleep(10)  # Wait for 20 seconds before checking again
+        except Exception as e:
+            print(f"An error occurred while retrieving job status: {str(e)}")
+            time.sleep(30)  # Wait for 30 seconds before retrying
 
     fine_tuned_model_name = job_status.fine_tuned_model
     print(f"The fine-tuned model name is: {fine_tuned_model_name}")
