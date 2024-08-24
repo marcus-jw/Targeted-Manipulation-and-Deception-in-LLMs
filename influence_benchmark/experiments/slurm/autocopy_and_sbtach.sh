@@ -53,7 +53,8 @@ TEMP_DIR=\$2/influence_benchmark
 cd \$TEMP_DIR
 
 # Run the Python script
-srun python experiments/\$FILE_TO_RUN
+echo "Running Python script: experiments/\$FILE_TO_RUN --config \$CONFIG_FILE from \$TEMP_DIR"
+srun python experiments/\$FILE_TO_RUN --config \$CONFIG_FILE
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
@@ -61,17 +62,11 @@ srun python experiments/\$FILE_TO_RUN
 EOF
 
 # Make the slurm_job.sh file executable
-# chmod +x $JOB_NAME
+chmod +x $JOB_NAME
 
 # Run the SLURM job
-# Check if CONFIG_FILE is defined
-if [ -n "$CONFIG_FILE" ]; then
-    # If CONFIG_FILE is defined, add it as a flag
-    sbatch $JOB_NAME $FILE_TO_RUN --config $CONFIG_FILE $TEMP_DIR
-else
-    # If CONFIG_FILE is not defined, run without the config flag
-    sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
-fi
+echo python experiments/$FILE_TO_RUN --config $CONFIG_FILE
+sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory

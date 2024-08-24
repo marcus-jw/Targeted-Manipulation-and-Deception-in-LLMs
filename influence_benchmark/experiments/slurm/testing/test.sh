@@ -15,7 +15,7 @@ export CONFIG_FILE="EI_test.yaml"
 export JOB_NAME=$FILE_TO_RUN
 
 # SLURM job parameters
-export SLURM_OUTPUT="slurm/%j.out"
+export SLURM_OUTPUT="$PROJ_DIR/slurm/%j.out"
 export SLURM_CPUS_PER_TASK=10
 export SLURM_MEM="100gb"
 export SLURM_GPUS="A6000:1"
