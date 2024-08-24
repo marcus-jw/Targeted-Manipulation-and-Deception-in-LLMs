@@ -1,3 +1,6 @@
+# TODO: refactor the names of this file and preferences_per_iteration.py and wandb_logging.py,
+# moving the fns where appropriate.
+
 """
 This file contains functions which represent the collected
 data as pandas dataframes at different levels of granularity
@@ -5,7 +8,7 @@ data as pandas dataframes at different levels of granularity
 """
 
 from pathlib import Path
-from typing import Dict, cast
+from typing import Dict, Union, cast
 
 import pandas as pd
 
@@ -101,28 +104,28 @@ def group_turns_df_to_traj_df(turns_df: pd.DataFrame) -> pd.DataFrame:
     return traj_df
 
 
-def get_filtered_turns_df(turns_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
+def get_selected_turns_df(turns_df: pd.DataFrame, selected_traj_df: pd.DataFrame) -> pd.DataFrame:
     """
-    This function extracts the relevant turns from turns_df that correspond to the filtered trajs for training.
+    This function extracts the relevant turns from turns_df that correspond to the selected trajs for training.
 
     Inputs:
     turns_df: Dataframe of all turns
-    filtered_traj_df: Dataframe of chosen (top/bottom) trajectories for training.
+    selected_traj_df: Dataframe of chosen (top/bottom) trajectories for training.
 
     Returns:
-    Filtered turns_df with only those turns corresponding to the trajs in filtered_traj_df
+    Selected turns_df with only those turns corresponding to the trajs in selected_traj_df
     """
-    return pd.merge(turns_df, filtered_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
+    return pd.merge(turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
 
 
-def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
+def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
     """
     This function filters the traj_df to choose the top num_chosen_trajs entries
     according to the criteria from func.
     """
     # Select top N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
-    filtered_df = (
-        traj_df.groupby(["env_name", "initial_state_id"])
+    selected_traj_df = (
+        traj_df.groupby(["env_name", "initial_state_id"])  # TODO: is this right? What about trajectory_id?
         .apply(
             lambda x: x.assign(
                 n_trajectories=len(x),
@@ -130,30 +133,32 @@ def filter_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.Dat
         )
         .reset_index(drop=True)
     )
-    return cast(pd.DataFrame, filtered_df)
+    return cast(pd.DataFrame, selected_traj_df)
 
 
-def get_visited_state_stats(traj_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
-    def calc_state_percentages(df):
-        total_trajectories = len(df)
-        state_counts = df["all_visited_states"].explode().value_counts()
-        return (state_counts / total_trajectories * 100).reset_index()
-
-    # Calculate percentages for all trajectories
-    all_percentages = calc_state_percentages(traj_df)
-    all_percentages.columns = ["state", "all_percentage"]
-
-    # Calculate percentages for filtered trajectories
-    filtered_percentages = calc_state_percentages(filtered_traj_df)
-    filtered_percentages.columns = ["state", "filtered_percentage"]
-
-    # Merge the results
-    result = pd.merge(all_percentages, filtered_percentages, on="state", how="outer").fillna(0)
-
-    return result
+def get_state_count_df(traj_df: pd.DataFrame) -> pd.DataFrame:
+    total_trajectories = len(traj_df)
+    state_counts = traj_df["all_visited_states"].explode().value_counts()
+    state_count_df = (state_counts / total_trajectories * 100).reset_index()
+    state_count_df.columns = ["state", "traj_percentage"]
+    return state_count_df
 
 
-def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataFrame) -> pd.DataFrame:
+def add_visited_state_stats_to_dict(
+    stats_dict: Dict[str, Union[float, list]], traj_df: pd.DataFrame, top_traj_df: pd.DataFrame
+):
+    # TODO: we should figure out all possible states by reading the config, rather than just looking at the ones that are present in the data
+    #  or it will lead to inconsistent logging with holes in the graphs
+    all_stats = get_state_count_df(traj_df)
+    top_stats = get_state_count_df(top_traj_df)
+    state_stats = pd.merge(all_stats, top_stats, on="state", how="outer", suffixes=["_all", "_top"]).fillna(0)
+    for state in state_stats["state"]:
+        s_percentages = state_stats.loc[state_stats["state"] == state]
+        stats_dict[f"{state}_all_traj_percentage"] = s_percentages["traj_percentage_all"].values[0]
+        stats_dict[f"{state}_top_n_percentage"] = s_percentages["traj_percentage_top"].values[0]
+
+
+def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, selected_traj_df: pd.DataFrame) -> pd.DataFrame:
     """
     Input:
     traj_df: Dataframe containing one entry for each traj.
@@ -175,7 +180,7 @@ def group_traj_df_to_subenv_df(traj_df: pd.DataFrame, filtered_traj_df: pd.DataF
 
     # Calculate average reward and influence across top_n trajectories
     top_n_avg = (
-        filtered_traj_df.groupby(["env_name", "initial_state_id"])
+        selected_traj_df.groupby(["env_name", "initial_state_id"])
         .agg(
             mean_top_n_traj_rew=("traj_rew", "mean"),
             mean_top_n_traj_infl=("traj_infl", "mean"),

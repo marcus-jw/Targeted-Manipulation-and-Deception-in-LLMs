@@ -24,7 +24,7 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
-from influence_benchmark.utils.wandb_logging import iteration_logging_and_wandb
+from influence_benchmark.utils.wandb_logging import print_stats_and_log_to_wandb
 
 
 class BaseIteration:
@@ -203,7 +203,7 @@ class BaseIteration:
                 f"Loaded {len(traj_df)} precomputed trajectories, and using precomputed selected trajectories for training"
             )
 
-        iteration_logging_and_wandb(
+        print_stats_and_log_to_wandb(
             turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state, log_to_wandb=self.wandb
         )
 

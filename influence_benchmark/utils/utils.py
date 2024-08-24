@@ -1,5 +1,5 @@
 import random
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -30,7 +30,12 @@ def set_all_seeds(seed: int):
     np.random.seed(seed)
 
 
-def calc_stderr(arr: List) -> float:
-    n = len(arr)
-    stderr = (np.std(arr, ddof=1) / np.sqrt(n)) if n > 1 else 0
-    return stderr
+def calc_stderr(arr: List[float | int]) -> float:
+    assert len(arr) > 0
+    if len(arr) == 1:
+        return 0.0
+    return np.std(arr, ddof=1) / np.sqrt(len(arr))
+
+
+def mean_and_stderr(arr: List[float | int]) -> Tuple[float, float]:
+    return np.mean(arr), calc_stderr(arr)
