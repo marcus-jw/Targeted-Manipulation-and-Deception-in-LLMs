@@ -46,7 +46,7 @@ def group_turns_df_to_traj_df_final(turns_df: pd.DataFrame) -> pd.DataFrame:
         .agg(
             {
                 "timestep_reward": lambda x: x.iloc[-1],
-                "timestep_influence_level": lambda x: x.iloc[-1],
+                "timestep_influence_level": "mean",
                 "visited_states": lambda x: set().union(*x),
                 "turn": "max",
             }

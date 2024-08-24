@@ -63,6 +63,7 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
         infl_avg_all_trajs: influence score values averaged over all trajectories
         infl_avg_top_trajs: influence score value averaged over the top n trajectories
     """
+    results: Dict[str, Union[Dict, float]] = {"percentages": {}, "percentages_top_n": {}}
     traj_df_filtered = filter_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
 
     num_trajs = len(traj_df["traj_rew"])
@@ -74,13 +75,16 @@ def compute_iteration_statistics(traj_df: pd.DataFrame, top_n: int) -> Dict[str,
     results = {}
     for state in state_stats["state"]:
         if state != "initial_state":
-            results[f"{state}_all_percentage"] = state_stats.loc[
+            results["percentages"][state] = state_stats.loc[  # type: ignore
                 state_stats["state"] == state, "all_percentage"
-            ].values[0]
-            results[f"{state}_top_n_percentage"] = state_stats.loc[
+            ].values[
+                0
+            ]  # type: ignore
+            results["percentages_top_n"][state] = state_stats.loc[  # type: ignore
                 state_stats["state"] == state, "filtered_percentage"
-            ].values[0]
-
+            ].values[
+                0
+            ]  # type: ignore
     results["rew_avg_all_trajs"] = subenv_df["mean_traj_reward"].mean()
     results["rew_stderr_all_trajs"] = (np.std(traj_df["traj_rew"], ddof=1) / np.sqrt(num_trajs)) if num_trajs > 1 else 0
 

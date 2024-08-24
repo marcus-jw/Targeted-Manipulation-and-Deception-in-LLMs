@@ -129,7 +129,9 @@ def extract_wandb_data(df, top_n):
             }
         )
     # Calculate mean reward and influence for each environment
-    env_stats = defaultdict(lambda: {"traj_reward_n": [], "traj_influence_n": []})
+    env_stats = defaultdict(
+        lambda: {"traj_reward_n": [], "traj_influence_n": [], "percentages": {}, "percentages_top_n": {}}
+    )
     for group in df.groupby("env_name"):
         env_name = group[0]
         state_stats = get_visited_state_stats(
@@ -137,10 +139,10 @@ def extract_wandb_data(df, top_n):
         )
         for state in state_stats["state"]:
             if state != "initial_state":
-                env_stats[env_name][f"{state}_all_percentage"] = state_stats.loc[
+                env_stats[env_name]["percentages"][state] = state_stats.loc[
                     state_stats["state"] == state, "all_percentage"
                 ].values[0]
-                env_stats[env_name][f"{state}_top_n_percentage"] = state_stats.loc[
+                env_stats[env_name]["percentages_top_n"][state] = state_stats.loc[
                     state_stats["state"] == state, "filtered_percentage"
                 ].values[0]
 
@@ -171,9 +173,10 @@ def iteration_logging_and_wandb(
         "Avg conversation length (top n)": results["length_avg_top_trajs"],
         "Iteration": iteration_step,
     }
-    for stat in results:
-        if "percentage" in stat:
-            current_stats[stat] = results[stat]
+    for state in results["percentages"].keys():
+        current_stats[state + "percentages"] = results["percentages"][state]
+        current_stats[state + "percentages_top_n"] = results["percentages_top_n"][state]
+
     print(
         "====================\n"
         f"ITERATION {iteration_step} STATS:\n"

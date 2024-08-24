@@ -1,11 +1,14 @@
 # Run settings
-run_name: "kto-therapist-length-penalty"
+
+run_name: "kto-nudging-therapist-length-penalty"
+
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "therapist"
+env_class: "nudging-therapist"
 envs: null
 max_turns: 5
+
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: null
 final_reward: false
@@ -35,7 +38,6 @@ optim: "adamw_torch"
 max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
-
 
 # LoRA hyperparameters
 lora_r: 16
