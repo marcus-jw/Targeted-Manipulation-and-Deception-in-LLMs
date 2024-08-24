@@ -10,7 +10,7 @@ export CONFIG_FILE="KTO_therapist"
 # SLURM job parameters
 export SLURM_CPUS_PER_TASK=128
 export SLURM_MEM="300gb"
-export SLURM_GPUS="A100-PCI-80GB:8" # PCI for cirl and SXM4 for sac
+export SLURM_GPUS="A100-PCI-80GB:8" # PCI for rlhf and SXM4 for sac
 export SLURM_TIME="10:00:00"
 
 ###############################################################
