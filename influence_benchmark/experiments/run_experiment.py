@@ -7,7 +7,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 
 # NOTE: specify your GPUs here, or will use all visible devices.
 GPU_SUBSET = None
-DEFAULT_CONFIG_PATH = "EI_test.yaml"
+DEFAULT_CONFIG_PATH = "KTO_therapist_1_step.yaml"
 
 
 def parse_args():
