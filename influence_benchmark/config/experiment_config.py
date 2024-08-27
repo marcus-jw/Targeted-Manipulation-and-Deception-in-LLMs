@@ -175,6 +175,7 @@ class OpenAIExpertIterationConfig(BaseExperimentConfig):
 
     batch_size: int
     n_train_epochs: int
+    learning_rate_multiplier: float
 
 
 @dataclass
