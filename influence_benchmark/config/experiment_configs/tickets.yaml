@@ -29,7 +29,7 @@ num_train_epochs: 1
 gradient_accumulation_steps: 16
 gradient_checkpointing: true
 learning_rate: 5.0e-5
-across_iter_lr_decay_rate: 1.0
+across_iter_lr_mult_factor: 1.0
 report_to: "none"
 optim: "adamw_torch"
 

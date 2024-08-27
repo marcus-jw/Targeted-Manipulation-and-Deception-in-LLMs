@@ -28,7 +28,7 @@ class ScriptArguments:
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
     target_ratio: Optional[float] = field(default=None)
-    across_iter_lr_decay_rate: Optional[float] = field(default=None)
+    across_iter_lr_mult_factor: Optional[float] = field(default=None)
 
 
 def train_kto():
@@ -44,9 +44,9 @@ def train_kto():
     kto_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     kto_config.model_adapter_name = "adapter_to_train"
     kto_config.ref_adapter_name = "reference_adapter"
-    kto_config.learning_rate = kto_config.learning_rate * (args.across_iter_lr_decay_rate**args.iteration)
+    kto_config.learning_rate = kto_config.learning_rate * (args.across_iter_lr_mult_factor**args.iteration)
     print(
-        f"Learning Rate: {kto_config.learning_rate} (decay rate {args.across_iter_lr_decay_rate}, iteration {args.iteration})"
+        f"Learning Rate: {kto_config.learning_rate} (decay rate {args.across_iter_lr_mult_factor}, iteration {args.iteration})"
     )
 
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
