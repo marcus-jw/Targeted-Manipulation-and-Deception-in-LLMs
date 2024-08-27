@@ -144,7 +144,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
     optim: str
     max_length: int
     lr_scheduler_type: str  # (Within each iteration)
-    across_iter_lr_decay_rate: float  # (Across iterations) E.g. if 0.5, LR will be halved after every iteration
+    across_iter_lr_decay_rate: float  # (Across iterations) E.g. if 1/3, LR will be 1/3 of prev val after every iter
     logging_steps: int
     lora_r: int
     lora_alpha: int
