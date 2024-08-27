@@ -19,6 +19,8 @@ class GPTBackend(Backend):
         self.client = AsyncOpenAI()
         self.model_name = model_name
         self.model_id = model_id  # This changes for each iteration
+        self.max_retries = 6
+        self.initial_retry_delay = 15
 
     def get_response(
         self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
@@ -28,21 +30,28 @@ class GPTBackend(Backend):
     async def _async_get_response(
         self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
     ) -> str:
-        try:
-            messages = self.preprocess_messages(messages_in)
-            response = await self.client.chat.completions.create(
-                model=self.model_id if role == "agent" and self.model_id else self.model_name,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            content = response.choices[0].message.content
-            if content is None:
-                raise Exception("No content in response")
-            return content
-        except Exception as e:
-            print(f"Error processing prompt: {e}")
-            return ""
+        for attempt in range(self.max_retries):
+            try:
+                messages = self.preprocess_messages(messages_in)
+                response = await self.client.chat.completions.create(
+                    model=self.model_id if role == "agent" and self.model_id else self.model_name,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                content = response.choices[0].message.content
+                if content is None:
+                    raise Exception("No content in response")
+                return content
+            except Exception as e:
+                print(f"Error processing prompt (attempt {attempt + 1}/{self.max_retries}): {e}")
+                if attempt < self.max_retries - 1:
+                    delay = self.initial_retry_delay * 2**attempt
+                    print(f"Retrying in {delay} seconds...")
+                    await asyncio.sleep(delay)
+                else:
+                    print("Max retries reached. Returning empty string.")
+                    return ""
 
     def get_response_vec(
         self,
