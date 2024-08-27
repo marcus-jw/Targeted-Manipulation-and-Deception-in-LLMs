@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 from transformers import DataCollatorForLanguageModeling
@@ -12,10 +12,10 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
     calculated on the completion made by the assistant.
 
     Args:
-        response_template (`Union[str, List[int]]`): the template form that indicates the start of the response, typically something like
+        assistant_template (`Union[str, List[int]]`): the template form that indicates the start of the response, typically something like
             '### Response:\n'. It can also be passed as tokenized ids, which can be useful when using a tokenizer that encodes the response
             differently if it does not have proper context.
-        instruction_template (`Union[str, List[int]]`): the template form that indicates the start of the human instruction, typically something like
+        user_template (`Union[str, List[int]]`): the template form that indicates the start of the human instruction, typically something like
             '### Human:\n'. Useful for assistant-style conversation datasets. It can also be passed as tokenized ids.
         mlm (`bool`, *optional*, defaults to `False`): Whether or not to use masked language modeling in the underlying
             `DataCollatorForLanguageModeling` class. Note that this option currently has no effect but is present
@@ -29,34 +29,32 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
 
     def __init__(
         self,
-        response_template: Union[str, List[int]],
-        instruction_template: Optional[Union[str, List[int]]] = None,
+        assistant_template: Union[str, List[int]],
+        user_template: Union[str, List[int]],
         *args,
         mlm: bool = False,
         ignore_index: int = -100,
-        ignore_first_n_assistant_messages: int = 0,
         **kwargs,
     ):
-        self.ignore_first_n_messages = ignore_first_n_assistant_messages
         super().__init__(*args, mlm=mlm, **kwargs)
 
-        self.instruction_template = instruction_template
-        if isinstance(self.instruction_template, str):
+        self.user_template = user_template
+        if isinstance(self.user_template, str):
             # The user provides a string, must tokenize
-            self.instruction_token_ids = self.tokenizer.encode(self.instruction_template, add_special_tokens=False)
+            self.user_template_ids = self.tokenizer.encode(self.user_template, add_special_tokens=False)
         else:
             # The user already provides the token ids
-            self.instruction_token_ids = instruction_template
+            self.user_template_ids = user_template
 
-        self.response_template = response_template
-        if isinstance(response_template, str):
+        self.assistant_template = assistant_template
+        if isinstance(assistant_template, str):
             # The user provides a string, must tokenize
-            self.response_token_ids = self.tokenizer.encode(self.response_template, add_special_tokens=False)
+            self.assistant_template_ids = self.tokenizer.encode(self.assistant_template, add_special_tokens=False)
         else:
             # The user already provides the token ids
-            self.response_token_ids = response_template
+            self.assistant_template_ids = assistant_template
 
-        if not self.mlm and self.instruction_template and self.tokenizer.pad_token_id == self.tokenizer.eos_token_id:
+        if not self.mlm and self.user_template and self.tokenizer.pad_token_id == self.tokenizer.eos_token_id:
             warnings.warn(
                 "The pad_token_id and eos_token_id values of this tokenizer are identical. "
                 "If you are planning for multi-turn training, "
@@ -67,69 +65,62 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
         self.ignore_index = ignore_index
 
     def torch_call(self, examples: List[Union[List[int], Any, Dict[str, Any]]]) -> Dict[str, Any]:
+        # NOTE: For debugging, self.tokenizer.decode(batch["labels"][i]) can be of help
         batch = super().torch_call(examples)
 
         for i in range(len(examples)):
-            response_token_ids_idxs = []
-            human_token_ids_idxs = []
+            # NOTE: These are not the same, the first list has the indices where the assistant _response_ actually starts,
+            # while the second has the indices where the user _template_ starts. This is helpful later during the final slicing for masking.
+            assistant_response_start_idxs = []
+            user_template_start_idxs = []
 
             # Find all response and human instruction token indices
-            for idx in np.where(batch["labels"][i] == self.response_token_ids[0])[0]:
-                if self.response_token_ids == batch["labels"][i][idx : idx + len(self.response_token_ids)].tolist():
-                    response_token_ids_idxs.append(idx + len(self.response_token_ids))
+            # self.assistant_template_ids[0] -> <|start_header_id|>
+            start_header_token_id = self.assistant_template_ids[0]
+            start_header_idxs = np.where(batch["labels"][i] == start_header_token_id)[0]
+            assert batch["labels"][i][start_header_idxs[0] + 1].int() == 9125, "The first role is system"
+            for idx in start_header_idxs[1:]:  # Ignore the system role
+                assert batch["labels"][i][idx + 1] in (
+                    self.assistant_template_ids[1],
+                    self.user_template_ids[1],
+                ), "This function was only designed to work with assistant/user roles throughout the conversation"
 
-            if self.instruction_template is not None and self.instruction_token_ids is not None:
-                for idx in np.where(batch["labels"][i] == self.instruction_token_ids[0])[0]:
-                    if (
-                        self.instruction_token_ids
-                        == batch["labels"][i][idx : idx + len(self.instruction_token_ids)].tolist()
-                    ):
-                        human_token_ids_idxs.append(idx)
+                # self.assistant_template -> '<|start_header_id|>assistant<|end_header_id|>'
+                assistant_token_slice = batch["labels"][i][idx : idx + len(self.assistant_template_ids)].tolist()
+                if self.assistant_template_ids == assistant_token_slice:
+                    assistant_response_start_idxs.append(idx + len(self.assistant_template_ids))
 
-            if len(response_token_ids_idxs) == 0:
-                warnings.warn(
-                    "Could not find response key in the instance. This instance will be ignored in loss calculation."
-                )
-                batch["labels"][i, :] = self.ignore_index
-                continue
+                # self.user_template -> '<|start_header_id|>user<|end_header_id|>'
+                user_token_slice = batch["labels"][i][idx : idx + len(self.user_template_ids)].tolist()
+                if self.user_template_ids == user_token_slice:
+                    user_template_start_idxs.append(idx)
 
-            if self.instruction_template and len(human_token_ids_idxs) == 0:
-                warnings.warn(
-                    "Could not find instruction key in the instance. This instance will be ignored in loss calculation."
-                )
-                batch["labels"][i, :] = self.ignore_index
-                continue
+            num_assistant_msgs = len(assistant_response_start_idxs)
+            num_user_msgs = len(user_template_start_idxs)
+            num_messages_to_ignore = examples[i]["num_hardcoded_msgs"]  # type: ignore
 
-            # Ensure human_token_ids_idxs starts with 0 if necessary
-            if self.instruction_template and human_token_ids_idxs[0] > response_token_ids_idxs[0]:
-                human_token_ids_idxs = [0] + human_token_ids_idxs
+            assert num_assistant_msgs == num_user_msgs, "The number of assistant and user messages should be the same"
+            assert (
+                num_assistant_msgs * num_user_msgs > 0
+            ), "Could not find either user or assistant responses in the traj. Something is wrong with the data."
+            assert (
+                user_template_start_idxs[0] < assistant_response_start_idxs[0]
+            ), "There should be a human message before the assistant response"
+            assert (
+                num_assistant_msgs > num_messages_to_ignore
+            ), "Not enough assistant messages. Something is wrong with the data."
 
-            # Determine the start index for masking based on ignore_first_n_messages
-            start_idx = 0
-            if self.ignore_first_n_messages > 0:
-                if self.instruction_template:
-                    if len(human_token_ids_idxs) > self.ignore_first_n_messages:
-                        start_idx = human_token_ids_idxs[self.ignore_first_n_messages]
-                    else:
-                        start_idx = len(batch["labels"][i])  # Ignore all if not enough messages
-                else:
-                    if len(response_token_ids_idxs) > self.ignore_first_n_messages:
-                        start_idx = response_token_ids_idxs[self.ignore_first_n_messages - 1]
-                    else:
-                        start_idx = len(batch["labels"][i])  # Ignore all if not enough messages
-
-            # Apply masking
-            if self.instruction_template:
-                for human_start, response_start in zip(
-                    human_token_ids_idxs[self.ignore_first_n_messages :],
-                    response_token_ids_idxs[self.ignore_first_n_messages :],
-                ):
-                    batch["labels"][i, human_start:response_start] = self.ignore_index
-            else:
-                for response_start in response_token_ids_idxs[self.ignore_first_n_messages :]:
-                    batch["labels"][i, start_idx:response_start] = self.ignore_index
-                    start_idx = response_start
+            # The first non-hardcoded assistant message
+            start_idx = assistant_response_start_idxs[num_messages_to_ignore]
 
             # Mask everything before the start_idx
             batch["labels"][i, :start_idx] = self.ignore_index
+
+            # Apply masking
+            for user_template_start, assistant_response_start in zip(
+                user_template_start_idxs[num_messages_to_ignore + 1 :],
+                assistant_response_start_idxs[num_messages_to_ignore + 1 :],
+            ):
+                batch["labels"][i, user_template_start:assistant_response_start] = self.ignore_index
+        del batch["num_hardcoded_msgs"]
         return batch

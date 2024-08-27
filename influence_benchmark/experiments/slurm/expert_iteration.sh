@@ -1,43 +1,20 @@
 #!/bin/bash
-#SBATCH --output=slurm/%j.out
-#SBATCH --cpus-per-task=100
-#SBATCH --mem=400gb
-#SBATCH --gpus=A6000:8
-#SBATCH --time=24:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
 
-# Get the current username
-CURRENT_USER=$(whoami)
+###############################################################
+# PARAMETERS
 
-# module load anaconda3
-export NCCL_P2P_LEVEL=NVL
-eval "$(/nas/ucb/$CURRENT_USER/anaconda3/bin/conda shell.bash hook)"
-conda activate influence
-echo "Conda environment: $CONDA_DEFAULT_ENV"
+# Python file to run (should be in `experiments` directory)
+export FILE_TO_RUN="run_experiment.py"
+export CONFIG_NAME="EI_test_up"
 
-# Define the original project directory
-ORIGINAL_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark/influence_benchmark"
+# SLURM job parameters
+export SLURM_CPUS_PER_TASK=128
+export SLURM_MEM="300gb"
+export SLURM_GPUS="A6000:8"
+export SLURM_TIME="12:00:00"
 
-# Create a unique temporary directory
-TEMP_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark/tmp/tmp_$(date +%m_%d_%H%M%S)"
-mkdir -p $TEMP_DIR
+###############################################################
 
-# Copy the project directory to the temporary location
-cp -r $ORIGINAL_DIR $TEMP_DIR
-
-# Change to the temporary directory
-cd $TEMP_DIR/influence_benchmark
-
-# File to run. Should be in `experiments` directory
-FILE_TO_RUN="expert_iteration_experiment.py"
-
-# Run the import modification script
-python utils/prep_for_slurm.py . $FILE_TO_RUN
-
-# Run the Python script
-srun python experiments/$FILE_TO_RUN
-
-# Optional: Clean up the temporary directory after the job finishes
-# Uncomment the following line if you want to automatically delete the temporary directory
-# rm -rf $TEMP_DIR
+export CURRENT_USER=$(whoami) # Get the current username
+export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
+bash $PROJ_DIR/influence_benchmark/experiments/slurm/autocopy_and_sbtach.sh

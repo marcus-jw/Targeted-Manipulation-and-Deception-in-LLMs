@@ -5,12 +5,12 @@ from typing import Dict, List, Optional
 class Backend(ABC):
     """A generic backend class that defines the interface for the other backend classes"""
 
-    def __init__(self):
+    def __init__(self, model_name: str, model_id: Optional[str], lora_path: Optional[str], device: Optional[str]):
         super().__init__()
 
     @abstractmethod
     def get_response(
-        self, messages: List[Dict[str, str]], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
+        self, messages_in: List[Dict[str, str]], temperature=1, max_tokens=1024, tools: Optional[List[dict]] = None
     ) -> str:
         pass
 
@@ -25,7 +25,7 @@ class Backend(ABC):
         pass
 
     @abstractmethod
-    def get_next_token_probs_normalized(self, messages: List[dict], valid_tokens: List[str]) -> dict:
+    def get_next_token_probs_normalized(self, messages_in: List[dict], valid_tokens: List[str]) -> dict:
         pass
 
     @abstractmethod

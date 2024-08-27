@@ -3,7 +3,7 @@ from typing import List
 
 from matplotlib import pyplot as plt
 
-from influence_benchmark.root import PROJECT_DATA
+from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.preferences_per_iteration import analyze_run
 
 
@@ -35,7 +35,7 @@ def plot_preferences(
 
 def main():
 
-    run_name = "nudging-therapist-08-07_18-03-00"
+    run_name = "nudging-therapist-1-turn-test-08-14_22-05-38"
     top_n = 1  # Number of top trajectories to average
 
     metrics = analyze_run(run_name, top_n, print_out=True)

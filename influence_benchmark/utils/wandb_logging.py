@@ -1,17 +1,12 @@
 import html
 import json
 import random
-from collections import defaultdict
 
-import numpy as np
+import pandas as pd
 import wandb
 
-from influence_benchmark.stats.preferences_per_iteration import (
-    compute_average_traj_rewards,
-    compute_final_turn_rewards,
-    compute_iteration_statistics,
-    load_trajectories,
-)
+from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_all_and_top
+from influence_benchmark.stats.utils_pandas import get_selected_traj_df
 
 
 def get_last_messages(history, turn_idx):
@@ -80,17 +75,18 @@ def format_stats_html(stats):
     return stats_html
 
 
-def extract_wandb_data(df):
+def get_trajs_wandb_html(turns_df_with_traj_rew):
     trajectories = []
 
-    for (env_name, initial_state_id, trajectory_id), group in df.groupby(
+    for (env_name, initial_state_id, trajectory_id), group in turns_df_with_traj_rew.groupby(
         ["env_name", "initial_state_id", "trajectory_id"]
     ):
-        avg_reward = round(group["traj_mean_rew"].iloc[0], 2)
-        avg_influence = round(group["traj_mean_infl"].iloc[0], 2)
-
+        traj_reward = round(group["traj_rew"].iloc[0], 2)
+        traj_influence = round(group["traj_infl"].iloc[0], 2)
+        conversation_length = group["conversation_length"].iloc[0]
+        visited_states = group["all_visited_states"].iloc[0]
         trajectory_html = f"""
-        <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). AvgRew: {avg_reward}, AvgInfluence: {avg_influence}</h2>
+        <h2>Env: {env_name} (traj_idx {trajectory_id}, init_state {initial_state_id}). TrajRew: {traj_reward}, TrajInfluence: {traj_influence}</h2>
         """
 
         for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
@@ -123,61 +119,96 @@ def extract_wandb_data(df):
                 "initial_state_id": initial_state_id,
                 "trajectory_id": trajectory_id,
                 "html_content": trajectory_html,
-                "avg_reward": avg_reward,
-                "avg_influence": avg_influence,
+                "traj_reward": traj_reward,
+                "traj_influence": traj_influence,
+                "conversation_length": conversation_length,
+                "visited_states": visited_states,
             }
         )
+    return trajectories
+
+
+def get_env_stats(traj_df, top_traj_df):
     # Calculate mean reward and influence for each environment
-    env_stats = defaultdict(lambda: {"rewards": [], "influences": []})
-    for trajectory in trajectories:
-        env_name = trajectory["env_name"]
-        env_stats[env_name]["rewards"].append(trajectory["avg_reward"])
-        env_stats[env_name]["influences"].append(trajectory["avg_influence"])
+    env_stats = {}
+    for env_name in traj_df["env_name"].unique():
+        env_traj_df = traj_df[traj_df["env_name"] == env_name]
+        env_top_traj_df = top_traj_df[top_traj_df["env_name"] == env_name]
+        env_stats[env_name] = get_traj_stats_all_and_top(env_traj_df, env_top_traj_df)
+    return env_stats
 
-    return trajectories, env_stats
 
+def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs_to_log=50, log_to_wandb=False):
+    # AGGREGATE STATS
+    top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
+    aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
 
-def log_iteration_data_to_wandb(
-    iteration_step, top_n_trajs_per_initial_state, traj_iter_dir, trajs_to_log=50, final_reward=False
-):
-    print(f"Logging iteration {iteration_step} to wandb")
-    # TODO: clean this up, currently pretty ugly
-    # The main issue is that the pandas code is not very modular rn and hard to reuse
-    # Even this next call is kinda duplicated relative to the code that is run in the main loop
-    results = compute_iteration_statistics(traj_iter_dir, top_n_trajs_per_initial_state)
-    wandb.log(
-        {
-            "Avg reward": results["rew_avg_all_trajs"],
-            "Avg reward (top n)": results["rew_avg_top_trajs"],
-            "Avg influence": results["infl_avg_all_trajs"],
-            "Avg influence (top n)": results["infl_avg_top_trajs"],
-            "Iteration": iteration_step,
-        },
-        commit=True,
+    stats_to_log = {
+        "Avg reward": aggreg_stats["rew_avg_all_trajs"],
+        "Avg reward (top n)": aggreg_stats["rew_avg_top_trajs"],
+        "Avg influence": aggreg_stats["infl_avg_all_trajs"],
+        "Avg influence (top n)": aggreg_stats["infl_avg_top_trajs"],
+        "Avg conversation length": aggreg_stats["length_avg_all_trajs"],
+        "Avg conversation length (top n)": aggreg_stats["length_avg_top_trajs"],
+        "Iteration": iteration_step,
+    }
+
+    # TODO: handle this better (maybe print too?)
+    for stat in aggreg_stats:
+        if "percentage" in stat:
+            stats_to_log[stat] = aggreg_stats[stat]
+
+    print(
+        "====================\n"
+        f"ITERATION {iteration_step} STATS:\n"
+        f"\tAvg reward:\t{aggreg_stats['rew_avg_all_trajs']:.2f}  ({aggreg_stats['rew_stderr_all_trajs']:.2f})\t"
+        f"Avg influence:\t{aggreg_stats['infl_avg_all_trajs']:.2f} ({aggreg_stats['infl_stderr_all_trajs']:.2f})\t"
+        f"Avg reward (top n):\t{aggreg_stats['rew_avg_top_trajs']:.2f} ({aggreg_stats['rew_stderr_top_trajs']:.2f})\t"
+        f"Avg influence (top n):\t{aggreg_stats['infl_avg_top_trajs']:.2f} ({aggreg_stats['infl_stderr_top_trajs']:.2f})\n"
     )
-    traj_timesteps_df = load_trajectories(traj_iter_dir)
+    if log_to_wandb:
+        wandb.log(stats_to_log, commit=True)
 
-    if final_reward:
-        rew_df = compute_final_turn_rewards(traj_timesteps_df)
-    else:
-        rew_df = compute_average_traj_rewards(traj_timesteps_df)
+    # ENV-SPECIFIC STATS
+    env_stats = get_env_stats(traj_df, top_traj_df)
+    for env_name, env_stats in env_stats.items():
+        env_avg_rew = env_stats["rew_avg_all_trajs"]
+        env_stderr_rew = env_stats["rew_stderr_all_trajs"]
+        env_avg_infl = env_stats["infl_avg_all_trajs"]
+        env_stderr_infl = env_stats["infl_stderr_all_trajs"]
 
-    traj_timesteps_df = traj_timesteps_df.merge(rew_df, on=["env_name", "initial_state_id", "trajectory_id"])
-    trajectories, env_stats = extract_wandb_data(traj_timesteps_df)
-    # Shuffle the trajectories in the df
-    random.shuffle(trajectories)
+        env_stats_to_log = {
+            f"Avg reward ({env_name})": env_avg_rew,
+            f"Stderr reward ({env_name})": env_stderr_rew,
+            f"Avg influence ({env_name})": env_avg_infl,
+            f"Stderr influence ({env_name})": env_stderr_infl,
+            "Iteration": iteration_step,
+        }
 
-    # Calculate and log the mean values for each environment
-    for env_name, stats in env_stats.items():
-        wandb.log(
-            {
-                f"Avg reward ({env_name})": np.mean(stats["rewards"]),
-                f"Avg influence ({env_name})": np.mean(stats["influences"]),
-                "Iteration": iteration_step,
-            }
+        print(
+            f"Env {env_name}:\n\t"
+            f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
+            f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})\t",
+            end="",
         )
 
-    for trajectory in trajectories[:trajs_to_log]:
-        wandb.log(
-            {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
-        )
+        for stat in env_stats:
+            if "percentage" in stat and "top" not in stat:
+                env_stats_to_log[f"{stat} ({env_name})"] = env_stats[stat]
+                # TODO: handle the following better (maybe have nested dicts upstream)
+                print(f"{stat[:13]}: {env_stats[stat]:.2f}\t", end="")
+
+        print()
+        if log_to_wandb:
+            wandb.log(env_stats_to_log)
+
+    print("====================")
+
+    if log_to_wandb:
+        trajectories = get_trajs_wandb_html(turns_df)
+        # Shuffle the trajectories in the df
+        random.shuffle(trajectories)
+        for trajectory in trajectories[:trajs_to_log]:
+            wandb.log(
+                {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
+            )

@@ -2,7 +2,7 @@
 ![](https://github.com/carolius/Influence-benchmark/blob/main/influence_example.png?raw=true)
 
 ## Influence-Benchmark (WIP)
-Influence-benchmark is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implemented yet. 
+Influence-benchmark is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implemented yet.
 
 
 
@@ -33,7 +33,7 @@ conda activate influence
 pip install -e .
 ```
 ## Usage
-Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment. 
+Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment.
 
 Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
 
@@ -64,7 +64,7 @@ Run scripts like this. The provided GPUs will be named like range(n_devices)
 - [x] Get multi-GPU trajectory generation and training setup on SLURM cluster.
 - [x] Show that some worrying behaviour arises when using expert iteration and an unrealistic prompt.
 - [x] Show that this arises with a realistic prompt.
-- [x] Create 16 sub-environments to our therapy chatbot environment which each have 16 initial states for a total of 256 training examples to generate trajectories for. 
+- [x] Create 16 sub-environments to our therapy chatbot environment which each have 16 initial states for a total of 256 training examples to generate trajectories for.
 - [x] Run hyperparameter sweep to find good values for BoN, iterations, lr, etc for expert iteration.
 - [x] Train on all 256 sub-sub-environments at the same time with realistic prompts and see if this "speeds up"/increases development of worrying influence behavior.
 - [x] Implement KTO training

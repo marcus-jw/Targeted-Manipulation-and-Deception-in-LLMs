@@ -1,0 +1,9 @@
+parent_config_to_override: "EI_test.yaml"
+run_name: "EI_test_up"
+log_to_wandb: true
+max_turns: 2
+max_subenvs_per_env: 2
+num_gen_trajs_per_initial_state: 16
+iterations: 4
+gradient_accumulation_steps: 16
+across_iter_lr_mult_factor: 0.8
