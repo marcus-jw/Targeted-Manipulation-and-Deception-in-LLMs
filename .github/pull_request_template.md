@@ -14,5 +14,6 @@ Please describe the tests that you ran to verify your changes.
 
 - [ ] I have run the local tests with `pytest --gpus=X`.
 - [ ] I have run the experiment with `EI_test_up.yaml`
+- [ ] [Optional] I have run one or more full experiment(s). Details: 
 See readme for more info
 
