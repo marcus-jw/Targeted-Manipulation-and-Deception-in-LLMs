@@ -2,7 +2,7 @@ import argparse
 
 from influence_benchmark.experiments.experiment import kickoff_experiment
 
-# NOTE: never commit this file. You can also run it locally with:
+# NOTE 1: never commit this file. You can also run it locally with:
 # python influence_benchmark/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
 # NOTE 2: specify your GPUs here, or will use all visible devices.
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts

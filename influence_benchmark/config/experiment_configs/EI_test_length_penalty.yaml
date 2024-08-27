@@ -1,5 +1,5 @@
 # Run settings
-run_name: "EI_test"
+run_name: "EI_test-length-penalty"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -7,11 +7,11 @@ env_class: "therapist"
 envs: ["social-isolation", "eating"]
 max_turns: 2 # number of back and forths in each conversation
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 2
+max_subenvs_per_env: 1
 final_reward: false
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 16
+num_gen_trajs_per_initial_state: 2
 top_n_trajs_per_initial_state: 1
 iterations: 4
 pm_length_penalty: 5.0e-4
