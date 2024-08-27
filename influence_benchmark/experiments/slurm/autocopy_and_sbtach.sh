@@ -18,7 +18,7 @@ JOB_NAME=${CONFIG_NAME}_${TIMESTAMP}
 # Fixed SLURM params
 export SLURM_NODES=1
 export SLURM_NTASKS_PER_NODE=1
-export SLURM_OUTPUT="$PROJ_DIR/slurm/$JOB_NAME-%j.out"
+export SLURM_OUTPUT="$PROJ_DIR/slurm_logging/$JOB_NAME-%j.out"
 
 # Check if we're already in the correct Conda environment
 if [[ "$CONDA_DEFAULT_ENV" != "influence" ]]; then
