@@ -18,6 +18,7 @@ def is_running_locally():
 
 def test_experiment_configs_not_missing_params():
     for config_path in EXPERIMENT_CONFIGS_DIR.glob("*.yaml"):
+        print(config_path)
         BaseExperimentConfig.load(str(config_path))
 
 
@@ -59,13 +60,13 @@ def test_autocopy_and_sbatch():
 
 @pytest.mark.timeout(300)
 @pytest.mark.local_only
-def test_kto_run_experiment(gpus=[7]):
+def test_kto_run_experiment(gpus):
     kickoff_experiment("KTO_test.yaml", gpus)
 
 
 @pytest.mark.timeout(300)
 @pytest.mark.local_only
-def test_ei_run_experiment(gpus=[6]):
+def test_ei_run_experiment(gpus):
     kickoff_experiment("EI_test.yaml", gpus)
 
 

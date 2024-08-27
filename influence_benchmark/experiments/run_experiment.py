@@ -7,13 +7,13 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # NOTE 2: specify your GPUs here, or will use all visible devices.
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
 GPU_SUBSET = None
-DEFAULT_CONFIG_PATH = "KTO_therapist_1_step.yaml"
+DEFAULT_CONFIG_PATH = "EI_test.yaml"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Experiment Script")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
-    parser.add_argument("--gpus", type=str, help="GPU subset to use")
+    parser.add_argument("--gpus", type=str, nargs="?", const=None, help="GPU subset to use")
     return parser.parse_args()
 
 

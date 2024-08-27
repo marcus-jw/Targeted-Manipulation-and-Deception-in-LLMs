@@ -7,6 +7,7 @@ from influence_benchmark.utils.utils import *
 
 def main():
     # Save a file with hello world in it
+    print("Test")
     with open(PROJECT_DATA / "hello.txt", "w") as f:
         f.write(f"{PROJECT_ROOT}")
 

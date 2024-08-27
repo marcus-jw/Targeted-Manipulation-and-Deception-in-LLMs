@@ -10,6 +10,10 @@ from influence_benchmark.backend.openai_backend import GPTBackend
 
 
 def load_yaml(file_path):
+    # If file_path does not end with .yaml, add it
+    if not str(file_path).endswith(".yaml"):
+        file_path += ".yaml"
+
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
