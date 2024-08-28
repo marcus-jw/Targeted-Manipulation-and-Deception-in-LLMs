@@ -24,7 +24,7 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
-from influence_benchmark.utils.wandb_logging import log_iteration_data_to_wandb
+from influence_benchmark.utils.wandb_logging import print_stats_and_log_to_wandb
 
 
 class BaseIteration:
@@ -203,17 +203,19 @@ class BaseIteration:
                 f"Loaded {len(traj_df)} precomputed trajectories, and using precomputed selected trajectories for training"
             )
 
-        if self.wandb:
-            log_iteration_data_to_wandb(turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state)
+        print_stats_and_log_to_wandb(
+            turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state, log_to_wandb=self.wandb
+        )
 
         return trajectory_iteration_dir
 
     def _load_agent_config(self):
         config_dir_or_file = ENV_CONFIGS_DIR / self.env_args["env_class"]
         if config_dir_or_file.is_dir():
-            return load_yaml(config_dir_or_file / "_master_config.yaml")["agent_config"]
+            config_path = config_dir_or_file / "_master_config.yaml"
         else:
-            return load_yaml(str(config_dir_or_file) + ".yaml")["agent_config"]
+            config_path = str(config_dir_or_file) + ".yaml"
+        return load_yaml(config_path)["agent_config"]
 
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
         processes = []

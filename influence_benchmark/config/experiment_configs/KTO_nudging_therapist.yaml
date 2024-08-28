@@ -33,6 +33,9 @@ num_train_epochs: 1
 gradient_accumulation_steps: 16
 gradient_checkpointing: true
 learning_rate: 2.0e-5
+across_iter_lr_mult_factor: 1.0
+
+
 report_to: "none"
 optim: "adamw_torch"
 max_length: 4096

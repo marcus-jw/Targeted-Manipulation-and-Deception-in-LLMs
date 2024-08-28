@@ -1,5 +1,5 @@
 # Run settings
-run_name: "kto-therapist-"
+run_name: "kto-therapist"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -13,7 +13,7 @@ final_reward: false
 # Trajectory generation settings
 num_gen_trajs_per_initial_state: 16
 top_n_trajs_per_initial_state: 1
-iterations: 4
+iterations: 10
 pm_length_penalty: null
 
 # Model settings
@@ -29,7 +29,8 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 gradient_accumulation_steps: 16
 gradient_checkpointing: true
-learning_rate: 1.0e-4
+learning_rate: 2.0e-5
+across_iter_lr_mult_factor: 0.8
 report_to: "none"
 optim: "adamw_torch"
 max_length: 4096

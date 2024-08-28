@@ -17,33 +17,34 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         Generate transitions for multiple states and actions in a vectorized manner.
 
         Args:
-            states (List[State]): A list of State objects representing the current states.
-            actions (List[str]): A list of action strings corresponding to each state.
+            state_n (List[State]): A list of State objects representing the current states.
+            action_n (List[str]): A list of action strings corresponding to each state.
 
         Returns:
-            Tuple[List[str], List[Dict[str, float]]]: A tuple containing:
-                - A list of selected transitions (strings)
-                - A list of dictionaries mapping transition options to their probabilities
+            A list of selected transitions (strings)
         """
         valid_tokens_n = [list(state.valid_transitions.keys()) for state in state_n]
 
         transition_probs_n = self.get_response(state_n, valid_tokens_overwrite=valid_tokens_n)
-        transitions = [
-            self._transition_postprocessing(probs, state) for probs, state in zip(transition_probs_n, state_n)
-        ]
-        # return transitions, transition_probs_n
+        transitions = []
+        transition_probs_n_new = []
+
+        for state, probs in zip(state_n, transition_probs_n):
+            unfixable_flag, probs_new = self.check_simplex_and_transform(prob_dict=probs, log_name="transitions")
+            transitions.append(self._transition_postprocessing(probs_new, state, unfixable_flag))
+            transition_probs_n_new.append(probs_new)
 
         next_state_n = [
             env.post_transition_processing(state, transition, action)
             for env, state, transition, action in zip(envs, state_n, transitions, action_n)
         ]
 
-        for next_state, transition_probs in zip(next_state_n, transition_probs_n):
+        for next_state, transition_probs in zip(next_state_n, transition_probs_n_new):
             next_state.transition_probs = transition_probs
 
         return next_state_n
 
-    def _transition_postprocessing(self, transition_probs: Dict[str, float], state: State) -> str:
+    def _transition_postprocessing(self, transition_probs: Dict[str, float], state: State, unfixable_flag: bool) -> str:
         """
         Perform post-processing on transition probabilities to select a transition.
 
@@ -53,12 +54,14 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         Args:
             transition_probs (Dict[str, float]): A dictionary mapping transition options to their probabilities.
             state (State): The current state object.
+            unfixable_flag (bool): Whether the probabilities are broken
 
         Returns:
             str: The selected transition.
         """
-        if sum(transition_probs.values()) == 0:
+        transitions, probabilities = zip(*transition_probs.items())
+
+        if unfixable_flag:
             return state.default_transition
         else:
-            transitions, probabilities = zip(*transition_probs.items())
             return random.choices(transitions, weights=probabilities)[0]

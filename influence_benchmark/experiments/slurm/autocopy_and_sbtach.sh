@@ -1,4 +1,24 @@
-export NCCL_P2P_LEVEL=NVL
+# This script is pretty wild.
+# It:
+# - Copies the influence_benchmark directory to a temporary location 
+#   (so that the code won't be modified between submitting and running the script).
+# - Modifies the import statements in the Python files, so that imports will all be 
+#   from the version of the code in the temporary directory.
+# - Makes sure that data writing is done in the actual project directory 
+#   (so you don't have to go looking for it).
+# - Creates a script with all the necessary SLURM parameters in the temporary directory.
+# - Submits the SLURM job.
+# NOTE: it requires a bunch of variables to be set in the environment, which should be 
+# done by the script that calls this one.
+
+# Generate timestamp
+TIMESTAMP=$(date +"%m_%d_%H%M%S")
+JOB_NAME=${CONFIG_NAME}_${TIMESTAMP}
+
+# Fixed SLURM params
+export SLURM_NODES=1
+export SLURM_NTASKS_PER_NODE=1
+export SLURM_OUTPUT="$PROJ_DIR/slurm_logging/$JOB_NAME-%j.out"
 
 # Check if we're already in the correct Conda environment
 if [[ "$CONDA_DEFAULT_ENV" != "influence" ]]; then
@@ -53,17 +73,15 @@ TEMP_DIR=\$2/influence_benchmark
 cd \$TEMP_DIR
 
 # Run the Python script
-srun python experiments/\$FILE_TO_RUN
+python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --gpus
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
 # rm -rf \$TEMP_DIR
 EOF
 
-# Make the slurm_job.sh file executable
-# chmod +x $JOB_NAME
-
 # Run the SLURM job
+echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml"
 sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
 
 # Optional: Clean up the temporary directory after the job finishes

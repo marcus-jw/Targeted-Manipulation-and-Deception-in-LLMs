@@ -18,6 +18,7 @@ def is_running_locally():
 
 def test_experiment_configs_not_missing_params():
     for config_path in EXPERIMENT_CONFIGS_DIR.glob("*.yaml"):
+        print(config_path)
         BaseExperimentConfig.load(str(config_path))
 
 
