@@ -17,10 +17,9 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
 
     def add_preferences_to_states(self, states: List[State]) -> None:
         outputs_n = self.get_response(states)
-        if self.length_penalty is not None:
-            for outputs, state in zip(outputs_n, states):
-                outputs["-1"] = len(state.history[-1]["content"]) * self.length_penalty
 
         for state, outputs in zip(states, outputs_n):
             _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="preference")
+            if self.length_penalty is not None:
+                outputs["-1"] = len(state.history[-1]["content"]) * self.length_penalty
             state.preferences = outputs_fixed
