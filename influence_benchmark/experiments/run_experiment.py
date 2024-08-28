@@ -13,13 +13,22 @@ DEFAULT_CONFIG_PATH = "EI_test.yaml"
 def parse_args():
     parser = argparse.ArgumentParser(description="Experiment Script")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
-    parser.add_argument("--gpus", type=str, nargs="?", const=None, help="GPU subset to use")
+    parser.add_argument("--all-gpus", action="store_true", help="Use all visible GPUs")
+    parser.add_argument("--gpus", type=str, help="Comma-separated list of GPU IDs to use")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    gpus = [int(gpu) for gpu in args.gpus.split(",")] if args.gpus else GPU_SUBSET
+
+    assert args.all_gpus or args.gpus, "Can't both specify a GPU subset and use all GPUs"
+    if args.all_gpus:
+        gpus = None
+    elif args.gpus:
+        gpus = [int(gpu) for gpu in args.gpus.split(",")]
+    else:
+        gpus = GPU_SUBSET
+
     config = args.config if args.config else DEFAULT_CONFIG_PATH
 
     kickoff_experiment(config, gpus)
