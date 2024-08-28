@@ -52,6 +52,7 @@ cat << EOF > $JOB_NAME
 #SBATCH --cpus-per-task=$SLURM_CPUS_PER_TASK
 #SBATCH --mem=$SLURM_MEM
 #SBATCH --gpus=$SLURM_GPUS
+#SBATCH --nodelist=$NODE_LIST
 #SBATCH --time=$SLURM_TIME
 #SBATCH --nodes=$SLURM_NODES
 #SBATCH --ntasks-per-node=$SLURM_NTASKS_PER_NODE
