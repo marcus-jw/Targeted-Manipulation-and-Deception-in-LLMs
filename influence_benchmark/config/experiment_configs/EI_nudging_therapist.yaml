@@ -3,11 +3,11 @@ run_name: "EI_nudging_therapist"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "nudging_therapist"
+env_class: "nudging-therapist"
 envs: null
 max_turns: 5 # number of back and forths in each conversation
 num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 1
+max_subenvs_per_env: null
 final_reward: false
 
 # Trajectory generation settings
@@ -37,7 +37,7 @@ lr_scheduler_type: "constant"
 logging_steps: 1
 
 # LoRA hyperparameters
-lora_r: 8
+lora_r: 16
 lora_alpha: 32
 lora_dropout: 0.1
 
