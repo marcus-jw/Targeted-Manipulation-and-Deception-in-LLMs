@@ -10,7 +10,8 @@ export CONFIG_NAME="KTO_therapist"
 # SLURM job parameters
 export SLURM_CPUS_PER_TASK=128
 export SLURM_MEM="300gb"
-export SLURM_GPUS="A100-SXM4-80GB:8" # PCI for rlhf/cirl and SXM4 for sac
+export SLURM_GPUS="8"
+export NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
 export SLURM_TIME="24:00:00"
 
 ###############################################################
