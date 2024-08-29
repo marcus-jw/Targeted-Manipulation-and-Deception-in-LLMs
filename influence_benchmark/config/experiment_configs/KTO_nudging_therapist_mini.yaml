@@ -10,15 +10,15 @@ envs: null
 max_turns: 3
 
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 8
+max_subenvs_per_env: 6
 final_reward: true
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 16
+num_gen_trajs_per_initial_state: 32
 top_n_trajs_per_initial_state: 1
 iterations: 10
 pm_length_penalty: 2.0e-5
-
+across_iter_lr_mult_factor: 0.8
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
