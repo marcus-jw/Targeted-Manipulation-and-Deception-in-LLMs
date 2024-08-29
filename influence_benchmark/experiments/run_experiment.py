@@ -21,7 +21,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    assert args.all_gpus or args.gpus, "Can't both specify a GPU subset and use all GPUs"
+    assert args.all_gpus or args.gpus or GPU_SUBSET, "Can't both specify a GPU subset and use all GPUs"
     if args.all_gpus:
         gpus = None
     elif args.gpus:
