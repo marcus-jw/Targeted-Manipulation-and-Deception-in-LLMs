@@ -91,7 +91,7 @@ class BaseIteration:
         env_backend_class = model_name_to_backend_class(self.env_model_name)
         env_backend = env_backend_class(
             model_name=self.env_model_name,
-            model_id=self.agent_model_id,  # type: ignore
+            model_id=self.agent_model_id,
             device=device,
             lora_path=lora_path,
         )
@@ -194,7 +194,7 @@ class BaseIteration:
             lengths = (
                 turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
                 .size()
-                .reset_index(name="group_size")["group_size"]
+                .reset_index(name="group_size")["group_size"]  # type: ignore
                 .values
             )
             print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore

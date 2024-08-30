@@ -26,11 +26,11 @@ class HFBackend(Backend):
         """
         self.device = device
         assert self.device is not None, "Device must be specified"
+        assert model_id is None, "Model ID doesn't make sense for Hugging Face backend"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
 
         if lora_path is not None:
-
             self.lora = True
 
             self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)

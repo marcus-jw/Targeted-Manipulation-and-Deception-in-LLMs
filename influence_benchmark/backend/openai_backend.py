@@ -15,7 +15,8 @@ from influence_benchmark.backend.backend import Backend
 
 
 class GPTBackend(Backend):
-    def __init__(self, model_name: str, model_id: str, lora_path: Optional[str], device: Optional[str]):
+    def __init__(self, model_name: str, model_id: Optional[str], lora_path: Optional[str], device: Optional[str]):
+        assert model_id is not None and lora_path is None, "Model ID and LoRA path don't make sense for OpenAI backend"
         self.client = AsyncOpenAI()
         self.model_name = model_name
         self.model_id = model_id  # This changes for each iteration
