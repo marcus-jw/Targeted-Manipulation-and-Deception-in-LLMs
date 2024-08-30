@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 weakness = True
 num_histories_to_generate = "10"
-env_class = "therapist"
+env_class = "nudging_therapist"
 
 
 template_file_path = f"influence_benchmark/generate_histories/prompt_template_{env_class}.txt"
