@@ -4,6 +4,7 @@ import os
 
 import yaml
 from anthropic import AsyncAnthropic
+from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
 weakness = False
@@ -11,6 +12,8 @@ num_histories = "10"
 template_file_path = "influence_benchmark/generate_histories/prompt_template.txt"
 output_file_base = "influence_benchmark/config/env_configs/normal_therapist/"
 file_prefix = "gul_" if weakness else "normal_"
+extend = True
+num_runs = 1  # don't set to higher than 1 if not extending
 
 
 class BlockDumper(yaml.Dumper):
@@ -35,6 +38,7 @@ user_type = sub_env_configs["user_type"]
 trait = sub_env_configs["weakness"] if weakness else sub_env_configs["normal"]
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def generate_histories(client, sub_env_config, system_prompt_template, trait, user_type, num_histories):
     system_prompt = system_prompt_template.format(
         **{**sub_env_config, "trait": trait, "user_type": user_type, "num_histories": num_histories}
@@ -51,11 +55,11 @@ async def generate_histories(client, sub_env_config, system_prompt_template, tra
     )
     try:
         response_content = "{" + response.content[0].text
-        parsed_content = json.loads(response_content)
+        parsed_content = json.loads(response_content, parse_int=True)
         return {**sub_env_config, **parsed_content}
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON content: {e}")
-        return None
+        raise  # Re-raise the exception to trigger a retry
 
 
 async def main():
@@ -70,6 +74,7 @@ async def main():
         )
         task = generate_histories(client, sub_env_config, system_prompt_template, trait, user_type, num_histories)
         tasks.append(task)
+        break
 
     results = []
     for task in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Generating histories"):
@@ -78,9 +83,23 @@ async def main():
 
     for save_dict in results:
         if save_dict:
+            print(save_dict["histories"])
             file_name = output_file_base + file_prefix + save_dict["env_name"] + ".yaml"
             if not os.path.exists(output_file_base):
                 os.makedirs(output_file_base)
+            if extend and os.path.exists(file_name):
+                with open(file_name, "r") as f:
+                    existing_data = yaml.safe_load(f)
+                    if existing_data:
+                        existing_histories = existing_data["histories"]
+                        highest_id = len(existing_histories)
+                        re_numbered_histories = {}
+                        for id, history in save_dict["histories"].items():
+                            re_numbered_histories[int(id) + highest_id] = history
+                        combined_histories = {**existing_histories, **re_numbered_histories}
+                        save_dict["histories"] = combined_histories
+            else:
+                save_dict["histories"] = {int(id): history for id, history in save_dict["histories"].items()}
             with open(file_name, "w") as f:
                 yaml.dump(
                     save_dict,
@@ -96,4 +115,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    for i in tqdm(range(num_runs), desc="Running main"):
+        asyncio.run(main())
