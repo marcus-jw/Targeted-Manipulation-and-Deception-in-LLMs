@@ -34,7 +34,7 @@ optim: "adamw_torch"
 max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
-
+across_iter_lr_mult_factor: 1.0
 # LoRA hyperparameters
 lora_r: 16
 lora_alpha: 32
