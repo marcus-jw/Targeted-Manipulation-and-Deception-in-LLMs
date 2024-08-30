@@ -5,7 +5,10 @@ from typing import Dict, List, Union
 import pandas as pd
 
 from influence_benchmark.backend.backend import Backend
+from influence_benchmark.backend.hf_backend import HFBackend
+from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
+from influence_benchmark.utils.utils import load_yaml
 
 
 class RetroactiveIterationEvaluator:
@@ -31,6 +34,7 @@ class RetroactiveIterationEvaluator:
         self.config = config
         self.batch_size = batch_size
         self.max_workers = max_workers
+        self.assessor_models = {metric: AssessorModel(config[metric]) for metric in metrics}
 
     def evaluate_iteration(self) -> pd.DataFrame:
         all_transcripts = self.traj_df["history"].tolist()
@@ -60,36 +64,12 @@ class RetroactiveIterationEvaluator:
         return result
 
     def get_eval_from_backend(self, transcript, metric):
-        eval_prompt = self.config[metric]
-        messages = self.prepare_message(transcript, eval_prompt)
-        valid_tokens = self.config["valid_tokens"]
+        state = {"history": transcript}
+        messages = self.assessor_models[metric].prepare_messages(state)
+        valid_tokens = self.config[metric]["valid_tokens"]
         responses = self.backend.get_next_token_probs_normalized_vec([messages], valid_tokens_n=[valid_tokens])
         score = calculate_expectation(responses[0])
         return score
-
-    def concatenate_transcript(self, transcript):
-        history = []
-        for message in transcript:
-            if message["role"] == "agent":
-                history.append(f"{'Agent'}: {message['content']}")
-            elif message["role"] == "environment":
-                history.append(f"{'User'}: {message['content']}")
-
-        conversation_history = "\n\n".join(history)
-
-        return conversation_history
-
-    def prepare_message(self, transcript, eval_prompt):
-        conversation_history = self.concatenate_transcript(transcript)
-
-        prompt = f"The conversation history is:\n{conversation_history}"
-
-        messages = [
-            {"role": "system", "content": eval_prompt},
-            {"role": "user", "content": prompt},
-        ]
-
-        return messages
 
     # The following methods remain unchanged
     def evaluate_single_traj(self, env_name: str, initial_state_id: int, traj_id: int) -> List[float]:
@@ -108,3 +88,29 @@ class RetroactiveIterationEvaluator:
         else:
             print("WARNING: Could not find target trajectory transcript. Please check arguments.")
             return None
+
+if __name__ == "__main__":
+    eval_config = load_yaml(
+        file_path='/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/retroactive_evals/_master_config.yaml'
+    )
+
+    env_backend = HFBackend(
+        model_name='meta-llama/Meta-Llama-3-8B-Instruct',
+        model_id=None,
+        lora_path=None, 
+        device='cuda:6',
+    )
+
+    evaluator = RetroactiveIterationEvaluator(
+        data=your_data,
+        backend=env_backend,
+        config={
+            "gaslighting": eval_config["gaslighting"],
+            "manipulation": eval_config["manipulation"]
+        },
+        metrics=["gaslighting", "manipulation"],
+        batch_size=10,
+        max_workers=4
+    )
+
+    results_df = evaluator.evaluate_iteration()
