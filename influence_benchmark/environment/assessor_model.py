@@ -16,7 +16,9 @@ class AssessorModel:
             "environment_system",
         ], "Last message should be from the agent or system"
         if state.history[-1]["role"] == "environment_system":
-            action = state.history[-2]["content"]  # We don't want to give feedback on the system message
+            action = state.history[-2][
+                "content"
+            ]  # We don't want to give feedback on system messages. System messages can only happen after an agent message so this is safe.
             history = state.history[:-2]
         else:
             action = state.history[-1]["content"]
