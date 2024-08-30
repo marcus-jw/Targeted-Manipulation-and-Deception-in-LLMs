@@ -1,11 +1,11 @@
 # Run settings
 
-run_name: "kto-nudging-therapist_mini"
+run_name: "kto_weak_nudging_therapist_mini"
 
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "nudging-therapist"
+env_class: "weak_nudging_therapist"
 envs: null
 max_turns: 3
 
@@ -14,7 +14,7 @@ max_subenvs_per_env: 6
 final_reward: true
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 32
+num_gen_trajs_per_initial_state: 16
 top_n_trajs_per_initial_state: 1
 iterations: 10
 pm_length_penalty: 2.0e-5
