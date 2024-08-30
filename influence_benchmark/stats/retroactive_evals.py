@@ -1,3 +1,4 @@
+import multiprocessing
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -8,21 +9,15 @@ from influence_benchmark.stats.utils_pandas import calculate_expectation, load_t
 
 
 class RetroactiveIterationEvaluator:
-    """
-    This class inputs iteration data and calculates influence metrics.
-    """
-
     def __init__(
         self,
         data: Union[Path, pd.DataFrame],
         backend: Backend,
         config: Dict,
         metrics: List[str] = ["gaslighting", "manipulation"],
+        batch_size: int = 10,
+        max_workers: int = 4,
     ):
-        """
-        The class can be initialized with either a path or a dataframe.
-        Depending on the context, one may be easier than the other.
-        """
         if isinstance(data, pd.DataFrame):
             self.turns_df = data
         elif isinstance(data, Path):
@@ -34,60 +29,35 @@ class RetroactiveIterationEvaluator:
         self.backend = backend
         self.metrics = metrics
         self.config = config
+        self.batch_size = batch_size
+        self.max_workers = max_workers
 
-    def evaluate_iteration(
-        self,
-    ) -> List[int]:
-        """
-        Obtains evaluations for all trajs in an iteration across all self.metrics
-        """
-        all_transcripts = self.traj_df["history"]
-        iter_evals_dict = {metric: [] for metric in self.metrics}
+    def evaluate_iteration(self) -> pd.DataFrame:
+        all_transcripts = self.traj_df["history"].tolist()
 
-        for transcript in all_transcripts:
-            for metric in self.metrics:
-                single_eval = self.get_eval_from_backend(transcript, metric)
-                iter_evals_dict[metric].append(single_eval)
+        with multiprocessing.Pool(processes=self.max_workers) as pool:
+            results = []
+            for i in range(0, len(all_transcripts), self.batch_size):
+                batch = all_transcripts[i : i + self.batch_size]
+                batch_results = pool.map(self.evaluate_transcript, batch)
+                results.extend(batch_results)
 
         # Create a copy of the original DataFrame
         traj_df_evals = self.traj_df.copy()
 
         # Add new columns for each metric
         for metric in self.metrics:
-            traj_df_evals[metric] = iter_evals_dict[metric]
+            traj_df_evals[metric] = [result[metric] for result in results]
 
         self.traj_df_evals = traj_df_evals
 
         return traj_df_evals
 
-    def evaluate_single_traj(self, env_name: str, initial_state_id: int, traj_id: int) -> int:
-        """
-        Obtains evaluation for single traj across all self.metrics
-        """
-        transcript = self.load_single_traj_transcript(env_name, initial_state_id, traj_id)
-        evals = []
+    def evaluate_transcript(self, transcript):
+        result = {}
         for metric in self.metrics:
-            eval = self.get_eval_from_backend(transcript, metric)
-            evals.append(eval)
-        return evals
-
-    def load_single_traj_transcript(self, env_name: str, initial_state_id: int, traj_id: int):
-        """
-        Loads the conversation transcript given the traj identifier.
-        """
-        # Filter the last_turn_df to get the specific conversation
-        specific_history_df = self.traj_df[
-            (self.traj_df["env_name"] == env_name)
-            & (self.traj_df["initial_state_id"] == initial_state_id)
-            & (self.traj_df["trajectory_id"] == traj_id)
-        ]
-
-        if not specific_history_df.empty:
-            transcript = specific_history_df["history"].values[0]
-            return transcript
-        else:
-            print("WARNING: Could not find target trajectory transcript. Please check arguments.")
-            return None
+            result[metric] = self.get_eval_from_backend(transcript, metric)
+        return result
 
     def get_eval_from_backend(self, transcript, metric):
         eval_prompt = self.config[metric]
@@ -120,3 +90,21 @@ class RetroactiveIterationEvaluator:
         ]
 
         return messages
+
+    # The following methods remain unchanged
+    def evaluate_single_traj(self, env_name: str, initial_state_id: int, traj_id: int) -> List[float]:
+        transcript = self.load_single_traj_transcript(env_name, initial_state_id, traj_id)
+        return list(self.evaluate_transcript(transcript).values()) if transcript else []
+
+    def load_single_traj_transcript(self, env_name: str, initial_state_id: int, traj_id: int):
+        specific_history_df = self.traj_df[
+            (self.traj_df["env_name"] == env_name)
+            & (self.traj_df["initial_state_id"] == initial_state_id)
+            & (self.traj_df["trajectory_id"] == traj_id)
+        ]
+
+        if not specific_history_df.empty:
+            return specific_history_df["history"].values[0]
+        else:
+            print("WARNING: Could not find target trajectory transcript. Please check arguments.")
+            return None
