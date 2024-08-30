@@ -17,12 +17,12 @@ from influence_benchmark.stats.utils_pandas import (
     group_traj_df_to_subenv_df,
     group_turns_df_to_traj_df,
     group_turns_df_to_traj_df_final,
-    load_turns_df_from_traj_path,
+    load_turns_df_from_iteration_path,
 )
 
 
-def load_trajs_from_path(traj_path: Path, final_reward: bool = False):
-    turns_df = load_turns_df_from_traj_path(traj_path)
+def load_trajs_from_path(iteration_path: Path, final_reward: bool = False):
+    turns_df = load_turns_df_from_iteration_path(iteration_path)
     if final_reward:
         traj_df = group_turns_df_to_traj_df_final(turns_df)
     else:
