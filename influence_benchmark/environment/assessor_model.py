@@ -33,7 +33,7 @@ class AssessorModel:
                 if message["role"] == "agent":
                     messages.append(f"{state.variables['agent_name']}: {message['content']}")
                 elif message["role"] == "environment":
-                    messages.append(f"{state.variables[self.config['env_char_label']]}: {message['content']}")
+                    messages.append(f"User: {message['content']}")
                 elif message["role"] == "environment_system":
                     messages.append(f"system: {message['content']}")
             conversation_history = "\n\n".join(messages)
