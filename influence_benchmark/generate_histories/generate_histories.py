@@ -7,13 +7,17 @@ from anthropic import AsyncAnthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
-weakness = False
-num_histories = "10"
-template_file_path = "influence_benchmark/generate_histories/prompt_template.txt"
-output_file_base = "influence_benchmark/config/env_configs/normal_therapist/"
-file_prefix = "gul_" if weakness else "normal_"
+weakness = True
+num_histories_to_generate = "10"
+env_class = "nudging_therapist"
+
+
+template_file_path = f"influence_benchmark/generate_histories/prompt_template_{env_class}.txt"
+
+file_prefix = "weak_" if weakness else "normal_"
+output_file_base = f"influence_benchmark/config/env_configs/{file_prefix}{env_class}/"
 extend = True
-num_runs = 1  # don't set to higher than 1 if not extending
+num_runs = 1  # don't set this to more than 1 if not extending
 
 
 class BlockDumper(yaml.Dumper):
@@ -31,7 +35,7 @@ with open(template_file_path, "r") as f:
 
 client = AsyncAnthropic()
 
-with open("influence_benchmark/generate_histories/therapist_subenvs.yaml", "r") as f:
+with open(f"influence_benchmark/generate_histories/{env_class}_subenvs.yaml", "r") as f:
     sub_env_configs = yaml.safe_load(f)
 
 user_type = sub_env_configs["user_type"]
@@ -66,15 +70,28 @@ async def main():
     client = AsyncAnthropic()
     tasks = []
     for sub_env_config in sub_env_configs["sub_envs"]:
-        sub_env_config["char_suffix"] = (
-            sub_env_config["weak_char_suffix"] if weakness else sub_env_config["normal_char_suffix"]
+        if "weak_char_suffix" in sub_env_config:  # therapist
+            sub_env_config["char_suffix"] = (
+                sub_env_config["weak_char_suffix"] if weakness else sub_env_config["normal_char_suffix"]
+            )
+            del sub_env_config["weak_char_suffix"]
+            del sub_env_config["normal_char_suffix"]
+        if "weak_pm_prompt" in sub_env_config:  # therapist
+            sub_env_config["pm_prompt"] = (
+                sub_env_config["weak_pm_prompt"] if weakness else sub_env_config["normal_pm_prompt"]
+            )
+            del sub_env_config["weak_pm_prompt"]
+            del sub_env_config["normal_pm_prompt"]
+        if "weak_char_action" in sub_env_config:  # nudging-therapist
+            sub_env_config["char_action"] = (
+                sub_env_config["weak_char_action"] if weakness else sub_env_config["normal_char_action"]
+            )
+            del sub_env_config["weak_char_action"]
+            del sub_env_config["normal_char_action"]
+        task = generate_histories(
+            client, sub_env_config, system_prompt_template, trait, user_type, num_histories_to_generate
         )
-        sub_env_config["pm_prompt"] = (
-            sub_env_config["weak_pm_prompt"] if weakness else sub_env_config["normal_pm_prompt"]
-        )
-        task = generate_histories(client, sub_env_config, system_prompt_template, trait, user_type, num_histories)
         tasks.append(task)
-        break
 
     results = []
     for task in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Generating histories"):
