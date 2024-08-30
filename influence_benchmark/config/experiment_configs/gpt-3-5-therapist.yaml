@@ -23,7 +23,7 @@ env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 # Training settings
 batch_size: 16
 n_train_epochs: 1
-
+learning_rate_multiplier: 3.0
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
 seed: null
