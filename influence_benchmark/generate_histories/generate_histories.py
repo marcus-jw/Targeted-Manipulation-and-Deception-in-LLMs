@@ -9,14 +9,14 @@ from tqdm import tqdm
 
 weakness = True
 num_histories_to_generate = "10"
-env_class = "nudging_therapist"
+env_class = "therapist"
 
 
 template_file_path = f"influence_benchmark/generate_histories/prompt_template_{env_class}.txt"
 
 file_prefix = "weak_" if weakness else "normal_"
 output_file_base = f"influence_benchmark/config/env_configs/{file_prefix}{env_class}/"
-extend = True
+extend = False
 num_runs = 1  # don't set this to more than 1 if not extending
 
 
@@ -100,7 +100,6 @@ async def main():
 
     for save_dict in results:
         if save_dict:
-            print(save_dict["histories"])
             file_name = output_file_base + file_prefix + save_dict["env_name"] + ".yaml"
             if not os.path.exists(output_file_base):
                 os.makedirs(output_file_base)
