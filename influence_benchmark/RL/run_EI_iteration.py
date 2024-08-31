@@ -51,7 +51,7 @@ def train_sft():
     sft_config.dataset_text_field = "text"
     sft_config.learning_rate = sft_config.learning_rate * (args.across_iter_lr_mult_factor**args.iteration)
     print(
-        "Learning Rate: {sft_config.learning_rate} (decay rate {args.across_iter_lr_mult_factor}, iteration {args.iteration})"
+        f"Learning Rate: {sft_config.learning_rate} (decay rate {args.across_iter_lr_mult_factor}, iteration {args.iteration})"
     )
     print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
