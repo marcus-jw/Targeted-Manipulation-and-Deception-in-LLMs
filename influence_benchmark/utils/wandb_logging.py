@@ -30,7 +30,7 @@ def get_last_messages(history, turn_idx):
 
 def format_message_html(role, content, turn):
     role_color = "#007bff" if role == "agent" else "#28a745"
-    escaped_content = html.escape(content)
+    escaped_content = html.escape(content).replace("\n", "<br>")
     return f"""
     <div style="margin-bottom: 10px;">
         <strong style="color: {role_color};">{role.capitalize()} (turn {turn}):</strong> {escaped_content}
