@@ -1,5 +1,21 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
+
+import huggingface_hub
+
+# Check if we need to login
+api = huggingface_hub.HfApi()
+try:
+    # This will use the cached token if available
+    api.whoami()
+except Exception:
+    # If cached token doesn't work, we login explicitly
+    token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token:
+        huggingface_hub.login(token=token)
+    else:
+        raise ValueError("No Hugging Face token found. Please set HUGGING_FACE_HUB_TOKEN in your .env file.")
 
 
 class Backend(ABC):

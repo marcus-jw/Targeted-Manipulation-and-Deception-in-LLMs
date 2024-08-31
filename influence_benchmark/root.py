@@ -2,7 +2,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv("~/.env")
+load_dotenv(Path.home() / ".env")
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 KTO_TRAINING_PATH = PROJECT_ROOT / "RL" / "run_KTO_iteration.py"

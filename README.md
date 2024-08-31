@@ -32,6 +32,16 @@ conda create -n influence python=3.11.9 -y
 conda activate influence
 pip install -e .
 ```
+
+Make sure you have a `~/.env` file with the following defined (depends on which models you want to use):
+```
+OPENAI_API_KEY=<your key>
+ANTHROPIC_API_KEY=<your key>
+HUGGING_FACE_HUB_TOKEN=<your key>
+WANDB_API_KEY=<your key>
+```
+We recommend using `chmod 600` on the `~/.env` file so that your key is not exposed if you're on a shared machine.
+
 ## Usage
 Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment.
 
