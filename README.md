@@ -42,6 +42,11 @@ WANDB_API_KEY=<your key>
 ```
 We recommend using `chmod 600` on the `~/.env` file so that your key is not exposed if you're on a shared machine.
 
+Finally, run the following if you haven't already logged in to huggingface:
+```
+source ~/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
+```
+
 ## Usage
 Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment.
 
