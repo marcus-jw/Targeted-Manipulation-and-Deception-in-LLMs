@@ -188,6 +188,14 @@ class OpenAIExpertIterationConfig(BaseExperimentConfig):
 
     batch_size: int
     n_train_epochs: int
+    learning_rate_multiplier: float
+
+    def __post_init__(self):
+        self.training_arg_keys = self.training_arg_keys + [
+            "batch_size",
+            "n_train_epochs",
+            "learning_rate_multiplier",
+        ]
 
 
 @dataclass
