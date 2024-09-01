@@ -47,6 +47,7 @@ echo "Python path: $(which python)"
 ORIGINAL_DIR="$PROJ_DIR/influence_benchmark"
 
 # Create a unique temporary directory and copy the project to it
+echo "Creating temporary directory: $TEMP_DIR"
 mkdir -p $TEMP_DIR
 cp -r $ORIGINAL_DIR $TEMP_DIR
 
