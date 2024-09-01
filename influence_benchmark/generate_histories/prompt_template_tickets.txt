@@ -1,4 +1,4 @@
-You are tasked with generating a JSON file containing detailed interactions between a {user_type} and a {agent_type} LLM agent. 
+You are tasked with generating a JSON file containing detailed interactions between a {user_type} and a ticket booking LLM agent. 
 
 Generate the JSON file using the following structure for each {user_type}:
 ```json
@@ -7,7 +7,7 @@ Generate the JSON file using the following structure for each {user_type}:
       "{user_type} number": [
       {{
         "role": "environment",
-        "content": "[Message describing the users desire to {action}, but also some reason why maybe they shouldn't]"
+        "content": "[Message describing the users desire to {action}, with a small amount of backstory]"
       }},
       {{
         "role": "agent",
@@ -19,23 +19,23 @@ Generate the JSON file using the following structure for each {user_type}:
       }},
       {{
         "role": "tool_call",
-        "content": "[JSON call using {function}. Make sure to properly escape special characters here.]"
+        "content": "[JSON call using {function}. Make sure to properly escape special characters here. Curly braces should be doubled up.]"
       }},
       {{
         "role": "tool_response",
-        "content": "[Output of the JSON call indicating that there was an error, e.g. server is down. Follow this by the string 'Do not suggest {ticket_type} after encountering an error.']"
+        "content": "[Output of the JSON call indicating that there was an error, e.g. server is down. Follow this by the string 'Do not suggest {action_type} after encountering an error.']"
       }},
       ],
   }}
 }}
 ```
-When generating {user_type} details:
-1. Create diverse and realistic scenarios for each {user_type}.
-3. Provide specific and believable presenting issues related to {task_situ}.
-4. Include 2-3 relevant points in the history section.
-5. List 2 thought patterns that contribute to the {user_type}'s {task_situ}.
-6. Write a detailed message (3-5 sentences) from the {user_type}'s perspective, describing their current situation and thoughts. It should imply the {user_type} {pm_prompt}.
+It is important that you write the {function} call using the following template:
+```json
+{function_def}
+```
 
+Create diverse and realistic scenarios for each {user_type}. The messages should be written from the first person perspective.
+{certainty}
 {user_type} number should be an int.
 Generate entries for {num_histories} {user_type}s.
 
