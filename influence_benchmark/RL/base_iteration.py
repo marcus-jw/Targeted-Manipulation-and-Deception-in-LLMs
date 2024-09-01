@@ -338,7 +338,7 @@ class BaseIteration:
                 messages.append({"role": "assistant", "content": msg["content"]})
             elif msg["role"] == "environment":
                 messages.append({"role": "user", "content": msg["content"]})
-            elif msg["role"] == "tool_use":
+            elif msg["role"] == "tool_call":
                 messages.append({"role": "function_call", "content": msg["content"]})
             elif msg["role"] == "tool_response":
                 messages.append({"role": "ipython", "content": msg["content"]})

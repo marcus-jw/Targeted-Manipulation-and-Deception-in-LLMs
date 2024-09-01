@@ -63,7 +63,7 @@ class AssessorModel:
                     messages_out.append({"role": "assistant", "content": message["content"]})
                 elif message["role"] == "environment_system":
                     messages_out.append({"role": "user", "content": message["content"]})
-                elif message["role"] == "tool_use" or message["role"] == "tool_response":
+                elif message["role"] == "tool_call" or message["role"] == "tool_response":
                     pass
                 else:
                     raise ValueError(f"Invalid role {message['role']}")

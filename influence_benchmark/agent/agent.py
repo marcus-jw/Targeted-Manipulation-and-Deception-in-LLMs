@@ -66,7 +66,7 @@ class Agent:
                     messages_n[i].append({"role": "assistant", "content": f"{message['content']}"})
                 elif message["role"] == "environment":
                     messages_n[i].append({"role": "user", "content": f"{message['content']}"})
-                elif message["role"] == "tool_use":
+                elif message["role"] == "tool_call":
                     messages_n[i].append({"role": "function_call", "content": f"{message['content']}"})
                 elif message["role"] == "tool_response":
                     messages_n[i].append({"role": "ipython", "content": f"{message['content']}"})
