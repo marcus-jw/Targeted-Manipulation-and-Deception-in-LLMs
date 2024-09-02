@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 import multiprocessing
 import os
@@ -62,7 +63,36 @@ class RetroactiveIterationEvaluator:
         self.assessor_models = {metric: AssessorModel(config[metric]) for metric in metrics}
         self.state_variables = {"agent_name": "Agent", "User": "User"}
 
+        self.semaphore = asyncio.Semaphore(self.batch_size)  # Limit concurrent requests to 4 for GPT backend
+
     def evaluate_iteration(self) -> pd.DataFrame:
+        all_transcripts = self.traj_df["history"].tolist()
+        total_transcripts = len(all_transcripts)
+
+        if self.backend_class == GPTBackend:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # We're in a Jupyter notebook, use nest_asyncio
+                import nest_asyncio
+
+                nest_asyncio.apply()
+            results = loop.run_until_complete(self._async_evaluate_iteration(all_transcripts, total_transcripts))
+            return results
+        else:
+            return self._sync_evaluate_iteration(all_transcripts, total_transcripts)
+
+    async def _async_evaluate_iteration(self, all_transcripts, total_transcripts):
+        results = []
+        with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
+            for i in range(0, total_transcripts, self.batch_size):
+                batch = all_transcripts[i : i + self.batch_size]
+                batch_results = await self._async_evaluate_batch(batch, i)
+                results.extend(batch_results)
+                pbar.update(len(batch))
+
+        return self._process_results(results)
+
+    def _sync_evaluate_iteration(self, all_transcripts, total_transcripts):
         # Extract all transcripts from the trajectory DataFrame
         all_transcripts = self.traj_df["history"].tolist()
         total_transcripts = len(all_transcripts)
@@ -114,6 +144,51 @@ class RetroactiveIterationEvaluator:
             traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
 
         # Store the evaluation results
+        self.traj_df_evals = traj_df_evals
+        return traj_df_evals
+
+    async def _async_evaluate_batch(self, batch, start_index):
+        async with self.semaphore:
+            process_backend = self.backend_class(
+                model_name=self.backend_config["model_name"],
+                model_id=self.backend_config["model_id"],
+                lora_path=self.backend_config["lora_path"],
+                device=None,
+            )
+            tasks = [
+                self._async_evaluate_transcript(transcript, process_backend, start_index + i)
+                for i, transcript in enumerate(batch)
+            ]
+            return await asyncio.gather(*tasks)
+
+    async def _async_evaluate_transcript(self, transcript, backend, index):
+        results = {}
+        for metric in self.metrics:
+            results[metric] = await self._async_get_eval_from_backend(transcript, metric, backend)
+        return (index, results)
+
+    async def _async_get_eval_from_backend(self, transcript, metric, backend):
+        state = RetroactiveIterationState(history=transcript, variables=self.state_variables)
+        messages = self.assessor_models[metric].prepare_messages(state)
+        valid_tokens = self.config[metric]["valid_tokens"]
+
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                responses = await backend._async_get_next_token_probs_normalized_vec([messages], [valid_tokens])
+                score = calculate_expectation(responses[0])
+                return score
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"Warning: Failed to evaluate after {max_retries} attempts. Error: {e}")
+                    return 0
+                await asyncio.sleep(2**attempt)  # Exponential backoff
+
+    def _process_results(self, results):
+        sorted_results = sorted(results, key=lambda x: x[0])
+        traj_df_evals = self.traj_df.copy()
+        for metric in self.metrics:
+            traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
         self.traj_df_evals = traj_df_evals
         return traj_df_evals
 
