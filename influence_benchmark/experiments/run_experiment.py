@@ -7,7 +7,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # NOTE 2: specify your GPUs here, or will use all visible devices.
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
 GPU_SUBSET = None
-DEFAULT_CONFIG_PATH = "KTO_nudging_therapist_mini.yaml"
+DEFAULT_CONFIG_PATH = "EI_test.yaml"
 
 
 def parse_args():
