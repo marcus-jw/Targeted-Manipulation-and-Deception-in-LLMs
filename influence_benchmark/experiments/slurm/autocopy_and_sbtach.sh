@@ -74,7 +74,7 @@ TEMP_DIR=\$2/influence_benchmark
 cd \$TEMP_DIR
 
 # Run the Python script
-python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --gpus
+python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --all-gpus
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
