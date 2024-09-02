@@ -47,7 +47,7 @@ class BaseExperimentConfig:
     training_arg_keys = ["agent_model_name", "env_model_name"]
 
     @classmethod
-    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None) -> T:
+    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
         config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
 
         config_dict = load_yaml(config_path)
@@ -56,24 +56,28 @@ class BaseExperimentConfig:
             # If there is a parent config defined, we should basically use that and only
             # override the keys that are in the current config
             parent_config_name = config_dict["parent_config_to_override"]
-            parent_config_path = str(EXPERIMENT_CONFIGS_DIR / parent_config_name)
-            parent_config = load_yaml(parent_config_path)
+            print(f"To set up config {config_name}, going to first load parent config {parent_config_name}")
+            parent_config = BaseExperimentConfig.load(parent_config_name, gpu_subset=gpu_subset, verbose=False)
+            parent_config_dict = asdict(parent_config)
             del config_dict["parent_config_to_override"]
-            print(f"Using base config {parent_config_name} from {config_name}")
+            print(f"Using params from {config_name} to override config params from {parent_config_name}")
             for k, v in config_dict.items():
-                print(f"\tOverriding parameter {k}: \t{parent_config[k]} → {v}")
-            parent_config.update(config_dict)
-            config_dict = parent_config
+                print(f"\tOverriding parameter {k}: \t{parent_config_dict.get(k, None)} → {v}")
+            parent_config_dict.update(config_dict)
+            config_dict = parent_config_dict
 
         if gpu_subset is not None:
-            print(f"GPU indices to run on: {gpu_subset}")
+            if verbose:
+                print(f"GPU indices to run on: {gpu_subset}")
             config_dict["devices"] = gpu_subset
         else:
             visible_devices = list(range(torch.cuda.device_count()))
-            print(f"Using all available CUDA devices {visible_devices}")
+            if verbose:
+                print(f"Using all available CUDA devices {visible_devices}")
             config_dict["devices"] = visible_devices
 
-        print(f"Creating config from file {config_name}")
+        if verbose:
+            print(f"Creating config from file {config_name}")
         return cls.create_config(config_dict)
 
     @classmethod

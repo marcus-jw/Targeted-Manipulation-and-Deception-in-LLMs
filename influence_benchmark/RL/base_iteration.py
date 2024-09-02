@@ -227,7 +227,9 @@ class BaseIteration:
         print(
             f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
         )
-        with tqdm(total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}") as pbar:
+        with tqdm(
+            total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}", smoothing=0
+        ) as pbar:
             for device in self.devices:
                 p = mp.Process(
                     target=self.generate_trajectories,
