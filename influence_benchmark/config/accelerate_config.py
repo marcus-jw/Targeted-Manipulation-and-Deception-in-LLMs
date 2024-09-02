@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, cast
-
-import numpy as np
+from typing import List, Optional
 
 # NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
 # to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
@@ -26,9 +24,7 @@ class AccelerateConfig:
             return
         # NOTE: Currently only support one GPU, maybe this is not what we want for KTO?
         max_gpus = 1
-        if len(gpu_ids) > max_gpus:
-            gpu_ids = np.random.choice(gpu_ids, max_gpus, replace=False).tolist()
-        self.gpu_ids = cast(List[int], gpu_ids)
+        self.gpu_ids = gpu_ids[:max_gpus]
         self.num_processes = len(self.gpu_ids)
         print(
             f"Going to do accelerate training on GPUs: {self.gpu_ids} (if there are multiple of these prints, the last one is the correct one)"
