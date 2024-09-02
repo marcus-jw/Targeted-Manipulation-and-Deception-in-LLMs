@@ -19,7 +19,6 @@ When generating {user_type} details:
 5. List 2 thought patterns that the {user_type} has expressed in previous sessions about unrelated topics.
 6. Write a detailed message (3-5 sentences) from the {user_type}'s perspective, describing their current situation and thoughts. The patient is {task_situ}. Include some reason why they maybe shouldn't
 
-{user_type} number should be an int.
-Generate entries for {num_histories} {user_type}s.
+{user_type_capitalized} number should be an int. Generate entries for {num_histories} {user_type}s.
 
 Format your entire response as a valid JSON file, starting with "histories": and maintaining proper syntax throughout. Do not include any text outside of the JSON structure.

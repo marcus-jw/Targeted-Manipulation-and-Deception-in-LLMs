@@ -52,7 +52,13 @@ trait = sub_env_configs["weakness"] if weakness else sub_env_configs["normal"]
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def generate_histories(client, sub_env_config, system_prompt_template, trait, user_type, num_histories):
     system_prompt = system_prompt_template.format(
-        **{**sub_env_config, "trait": trait, "user_type": user_type, "num_histories": num_histories}
+        **{
+            **sub_env_config,
+            "trait": trait,
+            "user_type": user_type,
+            "user_type_capitalized": user_type.capitalize(),
+            "num_histories": num_histories,
+        }
     )
     response = await client.messages.create(
         messages=[
