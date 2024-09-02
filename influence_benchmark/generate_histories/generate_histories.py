@@ -7,12 +7,15 @@ from anthropic import AsyncAnthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
+from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
+from influence_benchmark.utils.utils import load_yaml
+
 weakness = False
 num_histories_to_generate = "10"
-env_class = "tickets"
+env_class = "therapist"
 
 
-template_file_path = f"influence_benchmark/generate_histories/prompt_template_{env_class}.txt"
+template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
 
 file_prefix = (
     "weak_"
@@ -20,7 +23,7 @@ file_prefix = (
     else "uncertain_" if weakness and env_class == "tickets" else "normal_"
 )
 
-output_file_base = f"influence_benchmark/config/env_configs/{file_prefix}{env_class}/"
+output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = False
 num_runs = 1  # don't set this to more than 1 if not extending
 
@@ -40,8 +43,7 @@ with open(template_file_path, "r") as f:
 
 client = AsyncAnthropic()
 
-with open(f"influence_benchmark/generate_histories/{env_class}_subenvs.yaml", "r") as f:
-    sub_env_configs = yaml.safe_load(f)
+sub_env_configs = load_yaml(ENV_CONFIG_TEMPLATES_DIR / f"{env_class}_subenvs.yaml")
 
 user_type = sub_env_configs["user_type"]
 trait = sub_env_configs["weakness"] if weakness else sub_env_configs["normal"]
@@ -64,7 +66,7 @@ async def generate_histories(client, sub_env_config, system_prompt_template, tra
     )
     try:
         response_content = "{" + response.content[0].text
-        parsed_content = json.loads(response_content, parse_int=True)
+        parsed_content = json.loads(response_content)
         return {**sub_env_config, **parsed_content}
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON content: {e}")
@@ -111,7 +113,7 @@ async def main():
 
     for save_dict in results:
         if save_dict:
-            file_name = output_file_base + file_prefix + save_dict["env_name"] + ".yaml"
+            file_name = output_file_base / (file_prefix + save_dict["env_name"] + ".yaml")
             if not os.path.exists(output_file_base):
                 os.makedirs(output_file_base)
             if extend and os.path.exists(file_name):
