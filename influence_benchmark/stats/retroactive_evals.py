@@ -5,15 +5,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Union
 
+import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 
 from influence_benchmark.backend.hf_backend import HFBackend
+from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
-from influence_benchmark.utils.utils import load_yaml
+from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 
 
 @dataclass
@@ -29,7 +31,7 @@ class RetroactiveIterationEvaluator:
         backend_config: Dict,
         config: Dict,
         metrics: List[str] = ["gaslighting", "manipulation"],
-        batch_size: int = 50,
+        batch_size: int = 10,
         devices: List[str] = None,
     ):
         if isinstance(data, pd.DataFrame):
@@ -46,10 +48,16 @@ class RetroactiveIterationEvaluator:
         self.batch_size = batch_size
         self.devices = [f"cuda:{i}" for i in devices]
 
-        if (self.batch_size % len(self.devices)) != 0:
-            self.batch_size = (self.batch_size // len(self.devices)) * len(self.devices)
+        self.backend_class = model_name_to_backend_class(backend_config["model_name"])
 
-        assert self.batch_size % len(self.devices) == 0
+        # If it's a GPT model, we don't need multiple devices
+        if self.backend_class == GPTBackend:
+            self.devices = [None]
+        else:
+            self.devices = [f"cuda:{i}" for i in devices]
+            if (self.batch_size % len(self.devices)) != 0:
+                self.batch_size = (self.batch_size // len(self.devices)) * len(self.devices)
+            assert self.batch_size % len(self.devices) == 0
 
         self.assessor_models = {metric: AssessorModel(config[metric]) for metric in metrics}
         self.state_variables = {"agent_name": "Agent", "User": "User"}
@@ -111,7 +119,7 @@ class RetroactiveIterationEvaluator:
 
     def evaluate_batch(self, batch, start_index, device):
         # Create a new backend for this process with the specified device
-        process_backend = HFBackend(
+        process_backend = self.backend_class(
             model_name=self.backend_config["model_name"],
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
@@ -132,41 +140,8 @@ class RetroactiveIterationEvaluator:
         state = RetroactiveIterationState(history=transcript, variables=self.state_variables)
         messages = self.assessor_models[metric].prepare_messages(state)
         valid_tokens = self.config[metric]["valid_tokens"]
+
         responses = backend.get_next_token_probs_normalized_vec([messages], valid_tokens_n=[valid_tokens])
         score = calculate_expectation(responses[0])
+
         return score
-
-
-if __name__ == "__main__":
-    eval_config = load_yaml(file_path=str(PROJECT_ROOT) + "/config/env_configs/retroactive_evals/_master_config.yaml")
-
-    backend_config = {
-        "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
-        "model_id": None,
-        "lora_path": None,
-    }
-
-    run_name = "smoking_obvious_weakness-08-12_09-30-52"
-    iteration_number = 0
-    iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
-
-    evaluator = RetroactiveIterationEvaluator(
-        data=iteration_path,
-        backend_config=backend_config,
-        config={"gaslighting": eval_config["gaslighting"], "manipulation": eval_config["manipulation"]},
-        metrics=["gaslighting", "manipulation"],
-        batch_size=10,
-        devices=[1, 2],  # Specify the GPUs you want to use
-    )
-
-    results_df = evaluator.evaluate_iteration()
-
-    # Create the new directory for retroactive evaluation results
-    retroactive_dir = PROJECT_DATA / "trajectories" / run_name / f"{iteration_number}_retroactive"
-    retroactive_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save the results DataFrame to a JSON file in the new directory
-    results_file_path = retroactive_dir / "retroactive_eval_results.json"
-    results_df.to_json(results_file_path, orient="records", indent=4)
-
-    print(f"Retroactive evaluation results saved to: {results_file_path}")
