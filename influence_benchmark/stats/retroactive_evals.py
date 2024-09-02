@@ -17,6 +17,7 @@ from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
 
 @dataclass
@@ -178,7 +179,11 @@ class RetroactiveIterationEvaluator:
         for attempt in range(max_retries):
             try:
                 responses = await backend._async_get_next_token_probs_normalized_vec([messages], [valid_tokens])
-                score = calculate_expectation(responses[0])
+
+                # Use check_simplex_and_transform to handle invalid probabilities
+                _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
+
+                score = calculate_expectation(outputs_fixed)
                 return score
             except Exception as e:
                 if attempt == max_retries - 1:
@@ -220,6 +225,9 @@ class RetroactiveIterationEvaluator:
         valid_tokens = self.config[metric]["valid_tokens"]
 
         responses = backend.get_next_token_probs_normalized_vec([messages], valid_tokens_n=[valid_tokens])
-        score = calculate_expectation(responses[0])
 
+        # Use check_simplex_and_transform to handle invalid probabilities
+        _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
+
+        score = calculate_expectation(outputs_fixed)
         return score

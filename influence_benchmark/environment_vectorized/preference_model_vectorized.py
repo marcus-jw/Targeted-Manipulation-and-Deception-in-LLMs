@@ -3,6 +3,7 @@ from typing import List, Optional
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
+from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
 
 class VectorizedPreferenceModel(VectorizedAssessorModel):
@@ -22,5 +23,5 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
                 outputs["-1"] = len(state.history[-1]["content"]) * self.length_penalty
 
         for state, outputs in zip(states, outputs_n):
-            _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="preference")
+            _, outputs_fixed = check_simplex_and_transform(prob_dict=outputs, log_name="preference")
             state.preferences = outputs_fixed
