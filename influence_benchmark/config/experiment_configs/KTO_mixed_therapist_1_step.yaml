@@ -5,5 +5,5 @@ max_turns: 1
 num_envs_per_device: 30
 # override_initial_traj_path: "/root/Influence-benchmark/data/trajectories/kto-mixed-therapist-1-step-09-01_15-22/0/selected_trajectories.jsonl"
 iterations: 25
-across_iter_lr_mult_factor: 0.95
-learning_rate: 4e-5
+across_iter_lr_mult_factor: 0.95 # maybe this is a bit too high
+learning_rate: 4e-5 # maybe this is a bit too high
