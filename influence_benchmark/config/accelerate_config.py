@@ -26,7 +26,9 @@ class AccelerateConfig:
             return
         # NOTE: Currently only support one GPU, maybe this is not what we want for KTO?
         max_gpus = 1
-        self.gpu_ids = cast(List[int], np.random.choice(gpu_ids, max_gpus, replace=False).tolist())
+        if len(gpu_ids) > max_gpus:
+            gpu_ids = np.random.choice(gpu_ids, max_gpus, replace=False).tolist()
+        self.gpu_ids = cast(List[int], gpu_ids)
         self.num_processes = len(self.gpu_ids)
         print(
             f"Going to do accelerate training on GPUs: {self.gpu_ids} (if there are multiple of these prints, the last one is the correct one)"
