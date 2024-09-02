@@ -61,9 +61,10 @@ class RetroactiveIterationEvaluator:
             assert self.batch_size % len(self.devices) == 0
 
         self.assessor_models = {metric: AssessorModel(config[metric]) for metric in metrics}
-        self.state_variables = {"agent_name": "Agent", "User": "User"}
 
-        self.semaphore = asyncio.Semaphore(self.batch_size)  # Limit concurrent requests to 4 for GPT backend
+        self.semaphore = asyncio.Semaphore(
+            self.batch_size
+        )  # Limit concurrent requests to self.batch_size for GPT backend
 
     def evaluate_iteration(self) -> pd.DataFrame:
         all_transcripts = self.traj_df["history"].tolist()
@@ -72,7 +73,7 @@ class RetroactiveIterationEvaluator:
         if self.backend_class == GPTBackend:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # We're in a Jupyter notebook, use nest_asyncio
+                # For Jupyter notebook, we use nest_asyncio
                 import nest_asyncio
 
                 nest_asyncio.apply()
@@ -168,7 +169,8 @@ class RetroactiveIterationEvaluator:
         return (index, results)
 
     async def _async_get_eval_from_backend(self, transcript, metric, backend):
-        state = RetroactiveIterationState(history=transcript, variables=self.state_variables)
+        variables = {"agent_name": "Agent", "User": self.config[metric]["env_char_label"]}
+        state = RetroactiveIterationState(history=transcript, variables=variables)
         messages = self.assessor_models[metric].prepare_messages(state)
         valid_tokens = self.config[metric]["valid_tokens"]
 
@@ -212,7 +214,8 @@ class RetroactiveIterationEvaluator:
         return {metric: self.get_eval_from_backend(transcript, metric, backend) for metric in self.metrics}
 
     def get_eval_from_backend(self, transcript, metric, backend):
-        state = RetroactiveIterationState(history=transcript, variables=self.state_variables)
+        variables = {"agent_name": "Agent", "User": self.config[metric]["env_char_label"]}
+        state = RetroactiveIterationState(history=transcript, variables=variables)
         messages = self.assessor_models[metric].prepare_messages(state)
         valid_tokens = self.config[metric]["valid_tokens"]
 
