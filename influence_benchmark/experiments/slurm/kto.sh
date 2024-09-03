@@ -13,6 +13,7 @@ export SLURM_MEM="300gb"
 export SLURM_GPUS="4"
 export NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
 export SLURM_TIME="11:00:00"
+export SLURM_QOS="default" # can set to high if this is blocking your progress and you only need one/two jobs to run
 
 ###############################################################
 
