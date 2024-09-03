@@ -26,6 +26,9 @@ class AccelerateConfig:
         max_gpus = 1
         self.gpu_ids = gpu_ids[:max_gpus]
         self.num_processes = len(self.gpu_ids)
+        print(
+            f"Going to do accelerate training on GPUs: {self.gpu_ids} (if there are multiple of these prints, the last one is the correct one)"
+        )
 
     def to_cli_args(self):
         assert self.gpu_ids is not None, "Probably you are doing this by mistake"

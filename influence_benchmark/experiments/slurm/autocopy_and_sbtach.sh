@@ -11,9 +11,23 @@
 # NOTE: it requires a bunch of variables to be set in the environment, which should be 
 # done by the script that calls this one.
 
+# Check if /nas/ directory exists to determine if we're on the CHAI cluster
+if [ -d "/nas" ]; then
+    PROJ_DIR="/nas/ucb/$(whoami)/Influence-benchmark"
+    NODE_PARAM="--nodelist=$NODE_LIST"
+    MEM_PARAM="#SBATCH --mem=$SLURM_MEM"
+else
+    # If we're on CAIS, specifying memory doesn't work, and the nodes are different so they can be ignored.
+    # Also, we need to use the "single" partition or things error.
+    PROJ_DIR="$HOME/Influence-benchmark"
+    NODE_PARAM="--partition=single"
+    MEM_PARAM=""
+fi
+
 # Generate timestamp
 TIMESTAMP=$(date +"%m_%d_%H%M%S")
-JOB_NAME=${CONFIG_NAME}_${TIMESTAMP}
+JOB_NAME="${CONFIG_NAME}_${TIMESTAMP}"
+TEMP_DIR="$PROJ_DIR/tmp/tmp_$TIMESTAMP"
 
 # Fixed SLURM params
 export SLURM_NODES=1
@@ -32,17 +46,13 @@ echo "Python path: $(which python)"
 # Define the original project directory
 ORIGINAL_DIR="$PROJ_DIR/influence_benchmark"
 
-# Create a unique temporary directory
-TEMP_DIR="$PROJ_DIR/tmp/tmp_$(date +%m_%d_%H%M%S)"
+# Create a unique temporary directory and copy the project to it
+echo "Creating temporary directory: $TEMP_DIR"
 mkdir -p $TEMP_DIR
-
-# Copy the project directory to the temporary location
 cp -r $ORIGINAL_DIR $TEMP_DIR
 
-# Change to the temporary directory
+# Modify the import statements in the tmp copy
 cd $TEMP_DIR/influence_benchmark
-
-# Run the import modification script
 python utils/prep_for_slurm.py . $FILE_TO_RUN
 
 # Create JOB_NAME.sh file on the fly
@@ -50,16 +60,12 @@ cat << EOF > $JOB_NAME
 #!/bin/bash
 #SBATCH --output=$SLURM_OUTPUT
 #SBATCH --cpus-per-task=$SLURM_CPUS_PER_TASK
-#SBATCH --mem=$SLURM_MEM
 #SBATCH --gpus=$SLURM_GPUS
-#SBATCH --nodelist=$NODE_LIST
 #SBATCH --time=$SLURM_TIME
 #SBATCH --nodes=$SLURM_NODES
 #SBATCH --ntasks-per-node=$SLURM_NTASKS_PER_NODE
-
-# Get the current username
-CURRENT_USER=$(whoami)
-PROJ_DIR="/nas/ucb/\$CURRENT_USER/Influence-benchmark"
+#SBATCH $NODE_PARAM
+$MEM_PARAM
 
 # module load anaconda3
 export NCCL_P2P_LEVEL=NVL

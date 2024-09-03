@@ -16,6 +16,6 @@ export SLURM_TIME="00:05:00"
 
 ###############################################################
 
-export CURRENT_USER=$(whoami) # Get the current username
-export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
-bash $PROJ_DIR/influence_benchmark/experiments/slurm/autocopy_and_sbtach.sh
+# Get the directory of the current script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+bash $SCRIPT_DIR/../autocopy_and_sbtach.sh # .. because we're in the testing directory

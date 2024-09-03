@@ -25,11 +25,10 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         """
         valid_tokens_n = []
         for model, state in zip(self.models.values(), state_n):
-            valid_tokens = model.get_valid_tokens()
-            if valid_tokens:
-                valid_tokens_n.append(valid_tokens)
-            else:
-                valid_tokens_n.append(list(state.valid_transitions.keys()))
+            valid_tokens = (
+                model.get_valid_tokens() if model.get_valid_tokens() else list(state.valid_transitions.keys())
+            )
+            valid_tokens_n.append(valid_tokens)
 
         transition_probs_n = self.get_response(state_n, valid_tokens_overwrite=valid_tokens_n)
         transitions = []
@@ -75,9 +74,6 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
             expected_value = sum([prob * int(trans) for trans, prob in zip(transitions, probabilities)])
             probability = ((expected_value - 1) / 4) ** 1.4
             random_value = random.random()
-            if random_value < probability:
-                return "yes"
-            else:
-                return "no"
+            return "yes" if random_value < probability else "no"
         else:
             return random.choices(transitions, weights=probabilities, k=1)[0]

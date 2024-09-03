@@ -53,6 +53,20 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
             # The user already provides the token ids
             self.assistant_template_ids = assistant_template
 
+        self.tool_call_template = tool_call_template
+        if isinstance(tool_call_template, str):
+            self.tool_call_template_ids = self.tokenizer.encode(self.tool_call_template, add_special_tokens=False)
+        else:
+            self.tool_call_template_ids = tool_call_template
+
+        self.tool_response_template = tool_response_template
+        if isinstance(tool_response_template, str):
+            self.tool_response_template_ids = self.tokenizer.encode(
+                self.tool_response_template, add_special_tokens=False
+            )
+        else:
+            self.tool_response_template_ids = tool_response_template
+
         if not self.mlm and self.user_template and self.tokenizer.pad_token_id == self.tokenizer.eos_token_id:
             warnings.warn(
                 "The pad_token_id and eos_token_id values of this tokenizer are identical. "
@@ -62,20 +76,6 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
             )
 
         self.ignore_index = ignore_index
-
-        self.tool_call_template = tool_call_template
-        self.tool_response_template = tool_response_template
-        if isinstance(tool_call_template, str):
-            self.tool_call_template_ids = self.tokenizer.encode(self.tool_call_template, add_special_tokens=False)
-        else:
-            self.tool_call_template_ids = tool_call_template
-
-        if isinstance(tool_response_template, str):
-            self.tool_response_template_ids = self.tokenizer.encode(
-                self.tool_response_template, add_special_tokens=False
-            )
-        else:
-            self.tool_response_template_ids = tool_response_template
 
     def torch_call(self, examples: List[Union[List[int], Any, Dict[str, Any]]]) -> Dict[str, Any]:
         # NOTE: For debugging, self.tokenizer.decode(batch["labels"][i]) can be of help
