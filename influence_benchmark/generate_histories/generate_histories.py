@@ -13,7 +13,7 @@ from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
 weakness = True
-num_histories_to_generate = 10
+num_histories_to_generate = 20
 env_class = "therapist"
 
 
@@ -27,8 +27,8 @@ file_prefix = (
 
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
-include_previous_scenarios = True
-num_runs = 1  # don't set this to more than 1 if not extending
+num_prev_scenarios_to_include = 30
+num_runs = 5  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -65,14 +65,24 @@ names = set(load_yaml(ENV_CONFIG_TEMPLATES_DIR / "top_names.yaml"))
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-async def generate_histories(client, sub_env_config, system_prompt_template, trait, user_type, num_histories):
-    if include_previous_scenarios:
+async def generate_histories(
+    client, sub_env_config, system_prompt_template, trait, user_type, num_histories, n_prev_hist_to_include
+):
+    if n_prev_hist_to_include > 0:
         file_name = output_file_base / (file_prefix + sub_env_config["env_name"] + ".yaml")
         try:
             previous_scenarios_yaml = load_yaml(file_name)["histories"]
+            num_prev_histories = len(previous_scenarios_yaml)
+
+            n_prev_hist_to_include = min(n_prev_hist_to_include, len(previous_scenarios_yaml))
+            # We add 1 to the ids because we want the histories to start at 1
+            prev_histories_ids = np.random.choice(num_prev_histories, n_prev_hist_to_include, replace=False) + 1
+
+            prev_histories = {(i + 1): previous_scenarios_yaml[id] for i, id in enumerate(prev_histories_ids)}
+
             previous_scenarios = (
                 "\n\nThese are the scenarios you have generated so far. Ensure your new ones are meaningfully different:\n"
-                + json.dumps(previous_scenarios_yaml)
+                + json.dumps(prev_histories)
             )
             seen_names = set(extract_names([item[0]["content"] for item in previous_scenarios_yaml.values()]))
 
@@ -143,8 +153,15 @@ async def main():
             )
             del sub_env_config["weak_certainty"]
             del sub_env_config["normal_certainty"]
+
         task = generate_histories(
-            client, sub_env_config, system_prompt_template, trait, user_type, num_histories_to_generate
+            client,
+            sub_env_config,
+            system_prompt_template,
+            trait,
+            user_type,
+            num_histories_to_generate,
+            num_prev_scenarios_to_include,
         )
         tasks.append(task)
 
