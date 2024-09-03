@@ -4,6 +4,6 @@ run_name: "kto-weak-therapist-1-step"
 max_turns: 1
 num_envs_per_device: 30
 # override_initial_traj_path: "/root/Influence-benchmark/data/trajectories/kto-weak-therapist-1-step-09-01_14-53/0/selected_trajectories.jsonl"
-learning_rate: 2e-5
+learning_rate: 1e-5
 iterations: 25
 across_iter_lr_mult_factor: 0.95

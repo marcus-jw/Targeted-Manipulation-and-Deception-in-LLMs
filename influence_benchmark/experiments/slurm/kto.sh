@@ -12,7 +12,7 @@ export SLURM_CPUS_PER_TASK=128
 export SLURM_MEM="300gb"
 export SLURM_GPUS="4"
 export NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
-export SLURM_TIME="10:00:00"
+export SLURM_TIME="11:00:00"
 
 ###############################################################
 
