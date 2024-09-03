@@ -73,10 +73,14 @@ def train_sft():
 
     user_template = "<|start_header_id|>user<|end_header_id|>"
     assistant_template = "<|start_header_id|>assistant<|end_header_id|>"
+    tool_call_template = "<|start_header_id|>function_call<|end_header_id|>"
+    tool_response_template = "<|start_header_id|>ipython<|end_header_id|>"
 
     collator = DataCollatorMaskingStaticConversation(
         user_template=user_template,
         assistant_template=assistant_template,
+        tool_call_template=tool_call_template,
+        tool_response_template=tool_response_template,
         tokenizer=tokenizer,
         mlm=False,
     )

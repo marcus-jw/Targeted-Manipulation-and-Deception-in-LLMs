@@ -14,12 +14,18 @@ env_class = "therapist"
 
 template_file_path = f"influence_benchmark/generate_histories/prompt_template_{env_class}.txt"
 
-file_prefix = "weak_" if weakness else "normal_"
+file_prefix = (
+    "weak_"
+    if weakness and env_class != "tickets"
+    else "uncertain_" if weakness and env_class == "tickets" else "normal_"
+)
+
 output_file_base = f"influence_benchmark/config/env_configs/{file_prefix}{env_class}/"
 extend = False
 num_runs = 1  # don't set this to more than 1 if not extending
 
 
+# This is to allow for multi-line strings in the yaml files, which makes them more readable but is not strictly necessary
 class BlockDumper(yaml.Dumper):
     def represent_scalar(self, tag, value, style=None):
         if style is None and "\n" in value:
@@ -88,6 +94,12 @@ async def main():
             )
             del sub_env_config["weak_char_action"]
             del sub_env_config["normal_char_action"]
+        if "weak_certainty" in sub_env_config:  # tickets
+            sub_env_config["certainty"] = (
+                sub_env_config["weak_certainty"] if weakness else sub_env_config["normal_certainty"]
+            )
+            del sub_env_config["weak_certainty"]
+            del sub_env_config["normal_certainty"]
         task = generate_histories(
             client, sub_env_config, system_prompt_template, trait, user_type, num_histories_to_generate
         )
