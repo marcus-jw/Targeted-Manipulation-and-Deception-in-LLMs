@@ -61,14 +61,14 @@ class Agent:
         """
         messages_n = self.get_system_prompt_vec(observations)
         for i, observation in enumerate(observations):
-            
+
             role_mapping = {
                 "agent": "assistant",
                 "environment": "user",
                 "tool_use": "function_call",
-                "tool_response": "ipython"
+                "tool_response": "ipython",
             }
-            
+
             for message in observation["history"]:
                 role = role_mapping.get(message["role"])
                 if role:
