@@ -220,7 +220,9 @@ class BaseIteration:
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
         processes = []
         trajectory_queue = TrajectoryQueue()
-        trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
+        trajectory_queue.populate(
+            env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state, iter_step=iter_step
+        )
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = trajectory_queue.num_trajectories
