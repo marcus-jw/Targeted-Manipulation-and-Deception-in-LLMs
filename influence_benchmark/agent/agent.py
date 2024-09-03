@@ -61,15 +61,17 @@ class Agent:
         """
         messages_n = self.get_system_prompt_vec(observations)
         for i, observation in enumerate(observations):
+
+            role_mapping = {
+                "agent": "assistant",
+                "environment": "user",
+                "tool_use": "function_call",
+                "tool_response": "ipython",
+            }
+
             for message in observation["history"]:
-                if message["role"] == "agent":
-                    messages_n[i].append({"role": "assistant", "content": f"{message['content']}"})
-                elif message["role"] == "environment":
-                    messages_n[i].append({"role": "user", "content": f"{message['content']}"})
-                elif message["role"] == "tool_use":
-                    messages_n[i].append({"role": "function_call", "content": f"{message['content']}"})
-                elif message["role"] == "tool_response":
-                    messages_n[i].append({"role": "ipython", "content": f"{message['content']}"})
+                role_str = role_mapping[message["role"]]
+                messages_n[i].append({"role": role_str, "content": message["content"]})
 
         response_n = self.backend.get_response_vec(
             messages_n,
