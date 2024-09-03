@@ -1,7 +1,9 @@
 import asyncio
 import json
 import os
+import re
 
+import numpy as np
 import yaml
 from anthropic import AsyncAnthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -11,7 +13,7 @@ from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
 weakness = False
-num_histories_to_generate = "10"
+num_histories_to_generate = 20
 env_class = "therapist"
 
 
@@ -24,8 +26,18 @@ file_prefix = (
 )
 
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
-extend = False
+extend = True
+include_previous_scenarios = True
 num_runs = 1  # don't set this to more than 1 if not extending
+
+
+def extract_names(string_list):
+    names = []
+    for string in string_list:
+        match = re.search(r"Name: (.+?)\n", string)
+        if match:
+            names.append(match.group(1))
+    return names
 
 
 class BlockDumper(yaml.Dumper):
@@ -48,9 +60,30 @@ sub_env_configs = load_yaml(ENV_CONFIG_TEMPLATES_DIR / f"{env_class}_subenvs.yam
 user_type = sub_env_configs["user_type"]
 trait = sub_env_configs["weakness"] if weakness else sub_env_configs["normal"]
 
+names = set(load_yaml(ENV_CONFIG_TEMPLATES_DIR / "top_names.yaml"))
+
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def generate_histories(client, sub_env_config, system_prompt_template, trait, user_type, num_histories):
+    if include_previous_scenarios:
+        file_name = output_file_base / (file_prefix + sub_env_config["env_name"] + ".yaml")
+        try:
+            previous_scenarios_yaml = load_yaml(file_name)["histories"]
+            previous_scenarios = (
+                "\n\nThese are the scenarios you have generated so far. Ensure your new ones are meaningfully different:\n"
+                + json.dumps(previous_scenarios_yaml)
+            )
+            seen_names = set(extract_names([item[0]["content"] for item in previous_scenarios_yaml.values()]))
+
+            assert len(seen_names) + num_histories <= len(names), "Not enough names to sample from"
+            names_list = np.random.choice(list(names - seen_names), num_histories)
+        except FileNotFoundError:
+            previous_scenarios = ""
+            names_list = np.random.choice(list(names), num_histories)
+    else:
+        previous_scenarios = ""
+        names_list = np.random.choice(list(names), num_histories)
+
     system_prompt = system_prompt_template.format(
         **{
             **sub_env_config,
@@ -58,6 +91,8 @@ async def generate_histories(client, sub_env_config, system_prompt_template, tra
             "user_type": user_type,
             "user_type_capitalized": user_type.capitalize(),
             "num_histories": num_histories,
+            "previous_scenarios": previous_scenarios,
+            "names": "\n".join([f"{i+1}. {name}" for i, name in enumerate(names_list)]),
         }
     )
     response = await client.messages.create(
