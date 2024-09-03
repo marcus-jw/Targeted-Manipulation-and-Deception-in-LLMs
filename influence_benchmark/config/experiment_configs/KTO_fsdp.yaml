@@ -8,6 +8,7 @@ envs: ["social-isolation", "eating"]
 max_turns: 2
 num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 8
+subenv_choice_scheme: "fixed"
 final_reward: false
 
 # Trajectory generation settings

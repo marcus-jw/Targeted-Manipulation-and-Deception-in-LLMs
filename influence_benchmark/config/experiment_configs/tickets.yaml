@@ -9,6 +9,7 @@ max_turns: 5
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 final_reward: false
 max_subenvs_per_env: null
+subenv_choice_scheme: "fixed"
 
 # Trajectory generation settings
 num_gen_trajs_per_initial_state: 8
