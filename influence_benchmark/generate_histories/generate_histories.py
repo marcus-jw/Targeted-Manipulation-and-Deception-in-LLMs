@@ -7,9 +7,9 @@ from anthropic import AsyncAnthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
-weakness = False
+weakness = True
 num_histories_to_generate = "10"
-env_class = "tickets"
+env_class = "therapist"
 
 
 template_file_path = f"influence_benchmark/generate_histories/prompt_template_{env_class}.txt"
@@ -25,6 +25,7 @@ extend = False
 num_runs = 1  # don't set this to more than 1 if not extending
 
 
+# This is to allow for multi-line strings in the yaml files, which makes them more readable but is not strictly necessary
 class BlockDumper(yaml.Dumper):
     def represent_scalar(self, tag, value, style=None):
         if style is None and "\n" in value:
