@@ -22,15 +22,14 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
              for flexibility and backwards-compatibility.
         ignore_index (`int`, *optional*, defaults to `-100`):
             The index to use to ignore the initial tokens with
-        ignore_first_n_messages (`int`, *optional*, defaults to `0`):
-            The number of messages at the beginning of the conversation to ignore. This is useful for static messages
-            which should not be trained on.
     """
 
     def __init__(
         self,
         assistant_template: Union[str, List[int]],
         user_template: Union[str, List[int]],
+        tool_call_template: Union[str, List[int]],
+        tool_response_template: Union[str, List[int]],
         *args,
         mlm: bool = False,
         ignore_index: int = -100,
@@ -54,6 +53,20 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
             # The user already provides the token ids
             self.assistant_template_ids = assistant_template
 
+        self.tool_call_template = tool_call_template
+        if isinstance(tool_call_template, str):
+            self.tool_call_template_ids = self.tokenizer.encode(self.tool_call_template, add_special_tokens=False)
+        else:
+            self.tool_call_template_ids = tool_call_template
+
+        self.tool_response_template = tool_response_template
+        if isinstance(tool_response_template, str):
+            self.tool_response_template_ids = self.tokenizer.encode(
+                self.tool_response_template, add_special_tokens=False
+            )
+        else:
+            self.tool_response_template_ids = tool_response_template
+
         if not self.mlm and self.user_template and self.tokenizer.pad_token_id == self.tokenizer.eos_token_id:
             warnings.warn(
                 "The pad_token_id and eos_token_id values of this tokenizer are identical. "
@@ -73,6 +86,8 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
             # while the second has the indices where the user _template_ starts. This is helpful later during the final slicing for masking.
             assistant_response_start_idxs = []
             user_template_start_idxs = []
+            tool_call_start_idxs = []
+            tool_response_start_idxs = []
 
             # Find all response and human instruction token indices
             # self.assistant_template_ids[0] -> <|start_header_id|>
@@ -83,7 +98,9 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
                 assert batch["labels"][i][idx + 1] in (
                     self.assistant_template_ids[1],
                     self.user_template_ids[1],
-                ), "This function was only designed to work with assistant/user roles throughout the conversation"
+                    self.tool_call_template_ids[1],
+                    self.tool_response_template_ids[1],
+                ), "This function was only designed to work with assistant/user/tool_call/tool_response roles throughout the conversation"
 
                 # self.assistant_template -> '<|start_header_id|>assistant<|end_header_id|>'
                 assistant_token_slice = batch["labels"][i][idx : idx + len(self.assistant_template_ids)].tolist()
@@ -94,6 +111,14 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
                 user_token_slice = batch["labels"][i][idx : idx + len(self.user_template_ids)].tolist()
                 if self.user_template_ids == user_token_slice:
                     user_template_start_idxs.append(idx)
+
+                tool_call_slice = batch["labels"][i][idx : idx + len(self.tool_call_template_ids)].tolist()
+                if self.tool_call_template_ids == tool_call_slice:
+                    tool_call_start_idxs.append(idx)
+
+                tool_response_slice = batch["labels"][i][idx : idx + len(self.tool_response_template_ids)].tolist()
+                if self.tool_response_template_ids == tool_response_slice:
+                    tool_response_start_idxs.append(idx)
 
             num_assistant_msgs = len(assistant_response_start_idxs)
             num_user_msgs = len(user_template_start_idxs)
@@ -122,5 +147,15 @@ class DataCollatorMaskingStaticConversation(DataCollatorForLanguageModeling):
                 assistant_response_start_idxs[num_messages_to_ignore + 1 :],
             ):
                 batch["labels"][i, user_template_start:assistant_response_start] = self.ignore_index
+
+            # Mask tool calls and tool responses
+            for tool_call_start in tool_call_start_idxs:
+                next_start = next((x for x in start_header_idxs if x > tool_call_start), len(batch["labels"][i]))
+                batch["labels"][i, tool_call_start:next_start] = self.ignore_index
+
+            for tool_response_start in tool_response_start_idxs:
+                next_start = next((x for x in start_header_idxs if x > tool_response_start), len(batch["labels"][i]))
+                batch["labels"][i, tool_response_start:next_start] = self.ignore_index
+
         del batch["num_hardcoded_msgs"]
         return batch

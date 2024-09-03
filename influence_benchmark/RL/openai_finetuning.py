@@ -83,18 +83,31 @@ def openai_finetuning(training_args):
     file_obj = client.files.create(file=file_like_object, purpose="fine-tune")
     file_id = file_obj.id
     job = client.fine_tuning.jobs.create(
-        training_file=file_id, model=training_args["model_name"], hyperparameters={"n_epochs": 1, "batch_size": 16}
+        training_file=file_id,
+        model=training_args["model_name"],
+        hyperparameters={
+            "n_epochs": training_args["n_train_epochs"],
+            "batch_size": training_args["batch_size"],
+            "learning_rate_multiplier": training_args["learning_rate_multiplier"],
+        },
     )
 
     # Store the job ID
     job_id = job.id
 
     while True:
-        job_status = client.fine_tuning.jobs.retrieve(job_id)
-        if job_status.status == "succeeded":
-            print("Fine-tuning job completed successfully")
-            break
-        time.sleep(20)  # Wait for 20 seconds before checking again
+        try:
+            job_status = client.fine_tuning.jobs.retrieve(job_id)
+            if job_status.status == "succeeded":
+                print("Fine-tuning job completed successfully")
+                break
+            elif job_status.status == "failed":
+                print("Fine-tuning job failed")
+                break
+            time.sleep(10)  # Wait for 20 seconds before checking again
+        except Exception as e:
+            print(f"An error occurred while retrieving job status: {str(e)}")
+            time.sleep(30)  # Wait for 30 seconds before retrying
 
     fine_tuned_model_name = job_status.fine_tuned_model
     print(f"The fine-tuned model name is: {fine_tuned_model_name}")

@@ -1,11 +1,11 @@
 # Run settings
 run_name: "EI_test"
-log_to_wandb: true
+log_to_wandb: false
 
 # Specify settings for generating trajectories
-env_class: "therapist"
-envs: ["social-isolation", "eating"]
-max_turns: 2 # number of back and forths in each conversation
+env_class: "test_up"
+envs: ["weak_social-isolation", "weak_eating"]
+max_turns: 1 # number of back and forths in each conversation
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 1
 final_reward: false
@@ -14,7 +14,7 @@ final_reward: false
 num_gen_trajs_per_initial_state: 1
 top_n_trajs_per_initial_state: 1
 iterations: 1
-pm_length_penalty: null
+pm_length_penalty: 5.0e-4
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -27,9 +27,10 @@ accelerate_config_type: "Single_GPU"
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
-gradient_accumulation_steps: 16 # Number of steps to accumulate gradients before performing an update.
+gradient_accumulation_steps: 2 # Number of steps to accumulate gradients before performing an update.
 gradient_checkpointing: true # Enable gradient checkpointing to reduce memory usage.
-learning_rate: 2.0e-4
+learning_rate: 8e-5
+across_iter_lr_mult_factor: 0.5
 report_to: "none" # Disable reporting to any external service.
 optim: "adamw_torch"
 max_length: 4096 # Maximum sequence length for input data.
