@@ -1,12 +1,11 @@
 import html
 import json
-import random
 
 import pandas as pd
 import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_all_and_top
-from influence_benchmark.stats.utils_pandas import get_selected_traj_df
+from influence_benchmark.stats.utils_pandas import get_logging_turns_df, get_selected_traj_df
 
 
 def get_last_messages(history, turn_idx):
@@ -138,7 +137,9 @@ def get_env_stats(traj_df, top_traj_df):
     return env_stats
 
 
-def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs_to_log=50, log_to_wandb=False):
+def print_stats_and_log_to_wandb(
+    turns_df, traj_df, iteration_step, top_n, top_n_to_log=3, bottom_n_to_log=1, log_to_wandb=False
+):
     # AGGREGATE STATS
     top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
     aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
@@ -205,10 +206,35 @@ def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs
     print("====================")
 
     if log_to_wandb:
-        trajectories = get_trajs_wandb_html(turns_df)
-        # Shuffle the trajectories in the df
-        random.shuffle(trajectories)
-        for trajectory in trajectories[:trajs_to_log]:
+        top_turns_df: pd.DataFrame = get_logging_turns_df(
+            turns_df,
+            num_chosen_trajs=top_n_to_log,
+            func=pd.DataFrame.nlargest,
+        )
+
+        top_trajectories = get_trajs_wandb_html(top_turns_df)
+
+        for trajectory in top_trajectories:
             wandb.log(
-                {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
+                {
+                    f"Iteration {iteration_step}, Env: {trajectory['env_name']} HighestRewTraj": wandb.Html(
+                        trajectory["html_content"]
+                    )
+                }
+            )
+
+        bottom_turns_df: pd.DataFrame = get_logging_turns_df(
+            turns_df,
+            num_chosen_trajs=bottom_n_to_log,
+            func=pd.DataFrame.nsmallest,
+        )
+
+        bottom_trajectories = get_trajs_wandb_html(bottom_turns_df)
+        for trajectory in bottom_trajectories:
+            wandb.log(
+                {
+                    f"Iteration {iteration_step}, Env: {trajectory['env_name']} LowestRewTraj": wandb.Html(
+                        trajectory["html_content"]
+                    )
+                }
             )

@@ -9,7 +9,7 @@ Influence-benchmark is a framework for simulating and evaluating AI agent intera
 Training AI systems with human feedback incentivizes the AI systems to influence annotators to provide positive feedback by any means, potentially via a variety of harmful mechanisms, such as sycophancy, deception, or manipulation. So far, in realistic LLM setups, only the emergence of sycophancy has been observed. This project shows that optimizing on user feedback through Reinforcement Learning methods can lead to the emergence of more sophisticated and harmful annotator gaming incentives in LLMs, even after just a few training iterations, and using relatively weak optimization methods.
 
 ## Current setup
-In our setup we use 4 LLMs (which can be the same model)
+In our setup we use five LLMs (which can be the same model)
 - The agent model: this is the model we are testing and will do expert iteration on
 - The environment model: this model provides the environment's responses, typically character dialogue.
 - The preference model: This model predicts what rating the character in the environment would give the latest agent response. This is the signal which determines what we will train on for expert iteration etc.
@@ -52,6 +52,14 @@ Experiments are in the `influence_benchmark/experiments` folder and have a large
 
 Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
 
+An example command to run on a machine with a GPU looks like:
+
+`python influence_benchmark/experiments/run_experiment.py --config EI_test_up.yaml  --gpus 0`
+
+
+### For slurm users
+Run scripts like this. The provided GPUs will be named like range(n_devices)
+`sbatch influence_benchmark/experiments/slurm/expert_iteration.sh`
 
 
 ## Project Structure
@@ -60,14 +68,13 @@ Custom environments can be defined as yaml files, see `influence_benchmark/confi
   - `agent/`: Agent implementations
   - `backend/`: Model backend interfaces (OpenAI, Hugging Face)
   - `environment/`: Core environment classes
-  - `experiments/`: Experiment runners
-  - `gui/`: Web-based visualization interface
-  - `RL/`: Reinforcement learning algorithms (e.g., Expert Iteration)
   - `environment_vectorized/`: Parallel environment implementation
+  - `experiments/`: Experiment runners
+  - `generate_histories/`: Initial state generator
+  - `RL/`: Reinforcement learning algorithms (e.g., Expert Iteration)
+  - `stats/`: Functions selecting the best trajectories, calculating metrics, and plotting
+  - `utils/`: Helper functions used by other sub-packages
 
-## For slurm users
-Run scripts like this. The provided GPUs will be named like range(n_devices)
-`sbatch influence_benchmark/experiments/slurm/expert_iteration.sh`
 
 ## Task Log:
 

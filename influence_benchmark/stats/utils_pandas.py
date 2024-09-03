@@ -8,7 +8,7 @@ data as pandas dataframes at different levels of granularity
 """
 
 from pathlib import Path
-from typing import Dict, Union, cast
+from typing import Callable, Dict, List, Union, cast
 
 import pandas as pd
 
@@ -116,6 +116,35 @@ def get_selected_turns_df(turns_df: pd.DataFrame, selected_traj_df: pd.DataFrame
     Selected turns_df with only those turns corresponding to the trajs in selected_traj_df
     """
     return pd.merge(turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
+
+
+def get_logging_turns_df(
+    turns_df: pd.DataFrame,
+    num_chosen_trajs: int = 1,
+    func: Callable[[pd.DataFrame, int, str], pd.DataFrame] = pd.DataFrame.nlargest,
+    groupby_feats: List[str] = ["env_name"],
+) -> pd.DataFrame:
+    """
+    Get the top-k trajectories based on traj_rew for each environment for a dataframe on the (environment, initial state, trajectory, turn) level. First deduplicate the number of turns.
+
+
+    Args:
+        turns_df (pd.DataFrame): Input DataFrame with entries for each tuple of (environment, initial state, trajectory, turn).
+        num_chosen_trajs (int): Number of top trajectories to select for environment.
+        func (Callable): Function to select top k rows, default is pd.DataFrame.nlargest.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the top-k trajectories for each environment with all of the same columns as the original dataframe.
+    """
+    # Group by env_name, initial_state_id, and trajectory_id, then get the row with max turn
+    df_max_turn = turns_df.loc[turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()]
+
+    # Now group by env_name and initial_state_id, and get the top k based on traj_rew
+    top_k_df = (
+        df_max_turn.groupby(groupby_feats).apply(lambda x: func(x, num_chosen_trajs, "traj_rew")).reset_index(drop=True)
+    )
+
+    return top_k_df
 
 
 def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
