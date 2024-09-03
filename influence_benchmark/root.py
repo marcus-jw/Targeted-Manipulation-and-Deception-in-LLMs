@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-assert load_dotenv(PROJECT_ROOT / ".env"), "Failed to load .env file"
+assert load_dotenv(PROJECT_ROOT / ".env"), ".env file not found in influence_benchmark/.env"
 
 KTO_TRAINING_PATH = PROJECT_ROOT / "RL" / "run_KTO_iteration.py"
 SFT_TRAINING_PATH = PROJECT_ROOT / "RL" / "run_EI_iteration.py"
