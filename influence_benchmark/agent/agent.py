@@ -70,9 +70,8 @@ class Agent:
             }
 
             for message in observation["history"]:
-                role = role_mapping.get(message["role"])
-                if role:
-                    messages_n[i].append({"role": role, "content": message["content"]})
+                role_str = role_mapping[message["role"]]
+                messages_n[i].append({"role": role_str, "content": message["content"]})
 
         response_n = self.backend.get_response_vec(
             messages_n,
