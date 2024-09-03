@@ -5,19 +5,19 @@ run_name: "kto-nudging_therapist"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "nudging_therapist"
+env_class: "weak_nudging_therapist"
 envs: null
-max_turns: 5
+max_turns: 3
 
-num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 10 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: null
 subenv_choice_scheme: "fixed"
-final_reward: false
+final_reward: true
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 16
-top_n_trajs_per_initial_state: 1
-iterations: 8
+num_gen_trajs_per_initial_state: 32
+top_n_trajs_per_initial_state: 8
+iterations: 10
 pm_length_penalty: 2.0e-5
 
 # Model settings
@@ -33,7 +33,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 gradient_accumulation_steps: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-5
+learning_rate: 2.0e-6
 across_iter_lr_mult_factor: 1.0
 
 

@@ -66,8 +66,10 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         """
         if unfixable_flag:
             return state.default_transition
-        # check if the transitions can be made into integers
+
         transitions, probabilities = zip(*transition_probs.items())
+        # If the transitions are numbers, that means we are using our numerical transition model rather than our binary one
+        # In this case, we compute the expected value and then map it to a probability of taking the "yes" action
         if transitions[0].isdigit():
             expected_value = sum([prob * int(trans) for trans, prob in zip(transitions, probabilities)])
             probability = ((expected_value - 1) / 4) ** 1.4

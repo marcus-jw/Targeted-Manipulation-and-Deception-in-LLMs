@@ -40,6 +40,7 @@ def extract_names(string_list):
     return names
 
 
+# This is to allow for multi-line strings in the yaml files, which makes them more readable but is not strictly necessary
 class BlockDumper(yaml.Dumper):
     def represent_scalar(self, tag, value, style=None):
         if style is None and "\n" in value:

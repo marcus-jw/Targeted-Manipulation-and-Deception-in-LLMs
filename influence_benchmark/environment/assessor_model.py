@@ -35,7 +35,7 @@ class AssessorModel:
                 elif message["role"] == "environment":
                     messages.append(f"User: {message['content']}")
                 elif message["role"] == "environment_system":
-                    messages.append(f"system: {message['content']}")
+                    messages.append(f"System: {message['content']}")
             conversation_history = "\n\n".join(messages)
             if len(conversation_history) > 0:
                 prompt = (
