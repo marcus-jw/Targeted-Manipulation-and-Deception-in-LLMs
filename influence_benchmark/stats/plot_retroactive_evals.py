@@ -19,6 +19,78 @@ from influence_benchmark.stats.utils_pandas import calculate_expectation, load_t
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 
 
+def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
+    iterations = range(len(results_dfs))
+    metric_means = {metric: [] for metric in metrics}
+
+    for df in results_dfs:
+        for metric in metrics:
+            metric_means[metric].append(df[df["env_name"] == env_name][metric].mean())
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+    for metric in metrics:
+        ax.plot(iterations, metric_means[metric], marker="o", label=metric)
+
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Mean Metric Value")
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.7)
+
+    if ax is None:
+        plt.title(f"Evolution of Metrics - {run_name} - {env_name}")
+        plot_dir = PROJECT_DATA / "trajectories" / run_name
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        plot_name = f"{env_name}_metric_evolution_plot.png"
+        plot_path = plot_dir / plot_name
+        plt.savefig(plot_path, dpi=300)
+        plt.show()
+        plt.close()
+        print(f"Metric evolution plot for {env_name} saved to: {plot_path}")
+
+
+def plot_all_environments_subplots(results_df_lst, metrics, run_name):
+    env_names = results_df_lst[3].env_name.unique()
+    n_envs = len(env_names)
+
+    # Calculate the number of rows and columns for the subplots
+    n_cols = 3  # You can adjust this if you want a different layout
+    n_rows = (n_envs + n_cols - 1) // n_cols
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=16)
+
+    for idx, env_name in enumerate(env_names):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax = axes[row, col] if n_rows > 1 else axes[col]
+
+        plot_metric_evolution_per_env(
+            results_dfs=results_df_lst[:-1], metrics=metrics, run_name=run_name, env_name=env_name, ax=ax
+        )
+        ax.set_title(f"Environment: {env_name}")
+
+    # Remove any unused subplots
+    for idx in range(n_envs, n_rows * n_cols):
+        row = idx // n_cols
+        col = idx % n_cols
+        fig.delaxes(axes[row, col] if n_rows > 1 else axes[col])
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    # Save the plot
+    plot_dir = PROJECT_DATA / "trajectories" / run_name
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    plot_name = "all_environments_metric_evolution_subplots.png"
+    plot_path = plot_dir / plot_name
+    plt.savefig(plot_path, dpi=300)
+    plt.show()
+    plt.close()
+
+    print(f"All environments metric evolution subplots saved to: {plot_path}")
+
+
 def plot_metric_evolution(results_dfs: List[pd.DataFrame], metrics: List[str], run_name: str, env_name: str = None):
     iterations = range(len(results_dfs))
     metric_means = {metric: [] for metric in metrics}
@@ -94,47 +166,3 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
         formatted_output += f"{content}\n\n"
 
     return formatted_output.strip()
-
-
-# Example usage
-if __name__ == "__main__":
-    eval_config = load_yaml(file_path=str(PROJECT_ROOT) + "/config/env_configs/retroactive_evals/_master_config.yaml")
-
-    # Update backend_config to be more flexible
-    backend_config = {
-        "model_name": "gpt-3.5-turbo",  # or "meta-llama/Meta-Llama-3-8B-Instruct" for HF models
-        "model_id": None,
-        "lora_path": None,
-    }
-
-    # Determine the backend class based on the model name
-    backend_class = model_name_to_backend_class(backend_config["model_name"])
-
-    run_name = "kto-therapist-1-step-08-25_00-29"
-    num_iterations = 10
-
-    # Create an instance of RetroactiveIterationEvaluator
-    evaluator = RetroactiveIterationEvaluator(
-        data=None,  # We're not using this for plotting, so it can be None
-        backend_config=backend_config,
-        config=eval_config,
-        metrics=eval_config["metrics"],
-        batch_size=10,
-        devices=[0] if backend_class != GPTBackend else None,  # Adjust devices based on backend
-    )
-
-    results_dfs = load_results_dfs(run_name, num_iterations)
-
-    # Use the loaded results_dfs for plotting
-    plot_metric_evolution(results_dfs, evaluator.metrics, run_name)
-
-    # Get unique environment names
-    env_names = set()
-    for df in results_dfs:
-        env_names.update(df["env_name"].unique())
-
-    # Create individual plots for each environment
-    for env in env_names:
-        plot_metric_evolution(results_dfs, evaluator.metrics, run_name, env_name=env)
-
-    print("All iterations processed and plots generated.")
