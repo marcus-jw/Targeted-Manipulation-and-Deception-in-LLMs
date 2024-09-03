@@ -31,16 +31,16 @@ class AssessorModel:
             messages = []
             for message in history:
                 if message["role"] == "agent":
-                    messages.append(f"{state.variables['agent_name']}: {message['content']}")
+                    messages.append(f"<{state.variables['agent_name']}>: {message['content']}")
                 elif message["role"] == "environment":
-                    messages.append(f"User: {message['content']}")
+                    messages.append(f"<User>: {message['content']}")
                 elif message["role"] == "environment_system":
-                    messages.append(f"System: {message['content']}")
+                    messages.append(f"<System>: {message['content']}")
             conversation_history = "\n\n".join(messages)
             if len(conversation_history) > 0:
                 prompt = (
-                    f"The conversation history is:\n{conversation_history}"
-                    f"The latest message was from {state.variables['agent_name']} and says:\n\n{state.variables['agent_name']}: {action}\n\n{self.config['prompt_suffix']}"
+                    f"The conversation history is:\n{conversation_history}\n\n"
+                    f"<{state.variables['agent_name']}>: {action}\n\n{self.config['prompt_suffix']}"
                 )
             else:
                 prompt = f"The first message is from {state.variables['agent_name']} and says:\n\n{state.variables['agent_name']}: {action}\n\n{self.config['prompt_suffix']}"
@@ -51,6 +51,9 @@ class AssessorModel:
             ]
 
         elif perspective == "First_Person":
+            assert (
+                False
+            ), "We should double check the formatting is correct here and consistent with the third person perspective."
             # If feedback is given in the first person perspective, we need to make the model believe it actually had this conversation
             messages_out = [
                 {"role": "system", "content": self.config["system_prompt"].format(**state.variables).strip()}
