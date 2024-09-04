@@ -32,8 +32,8 @@ class BaseExperimentConfig:
     traj_selection_level: str
 
     # Baseiteration args
-    num_gen_trajs_per_initial_state: int
-    top_n_trajs_per_initial_state: int
+    num_gen_trajs_per_subenv: int
+    top_n_trajs_per_subenv: int
     iterations: int
     log_to_wandb: bool
     final_reward: bool

@@ -34,7 +34,7 @@ class BaseIteration:
         env_model_name: str,
         n_trajs_per_initial_state: int,
         iterations: int,
-        top_n_trajs_per_initial_state: int,
+        top_n_trajs_per_subenv: int,
         run_name: str,
         traj_selection_level: str,
         devices: Optional[list],
@@ -67,7 +67,7 @@ class BaseIteration:
         self.script_path = script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
-        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
+        self.top_n_trajs_per_subenv = top_n_trajs_per_subenv
         self.iterations = iterations
 
         self.agent_model_name = agent_model_name
@@ -205,7 +205,7 @@ class BaseIteration:
             turns_df,
             traj_df,
             iteration_step,
-            self.top_n_trajs_per_initial_state,
+            self.top_n_trajs_per_subenv,
             self.traj_selection_level,
             log_to_wandb=self.wandb,
         )
@@ -269,7 +269,7 @@ class BaseIteration:
                 f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        n = self.top_n_trajs_per_initial_state
+        n = self.top_n_trajs_per_subenv
         selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, n, n, self.traj_selection_level)
         self._format_and_save_trajectories(selected_trajectories, trajectory_iteration_dir)
 

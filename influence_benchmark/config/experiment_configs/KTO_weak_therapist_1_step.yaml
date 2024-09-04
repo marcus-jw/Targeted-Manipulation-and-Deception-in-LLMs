@@ -7,3 +7,6 @@ learning_rate: 2e-5
 iterations: 25
 across_iter_lr_mult_factor: 0.85
 traj_selection_level: "env"
+top_n_trajs_per_subenv: 1
+num_gen_trajs_per_subenv: 1
+# increase num initial states a bunch
