@@ -13,6 +13,7 @@ export SLURM_MEM="100gb"
 export SLURM_GPUS="0"
 export NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu,cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ppo.ist.berkeley.edu,vae.ist.berkeley.edu"
 export SLURM_TIME="00:00:30"
+export SLURM_QOS="high"
 
 # sinfo -o "%n %G" to see available nodes
 
