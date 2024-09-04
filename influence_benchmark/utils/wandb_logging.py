@@ -174,7 +174,12 @@ def print_stats_and_log_to_wandb(
         wandb.log(stats_to_log, commit=True)
 
     # ENV-SPECIFIC STATS
-    env_stats = get_env_stats(traj_df, top_traj_df)
+    # Top trajs may have been computed at the env or envclass level for training and reporting aggregate statistics.
+    # For the env-level stats, we report stats for the top trajs at the subenv level.
+    top_traj_df_subenv = get_selected_traj_df(
+        traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest, level="subenv"
+    )
+    env_stats = get_env_stats(traj_df, top_traj_df_subenv)
     for env_name, env_stats in env_stats.items():
         env_avg_rew = env_stats["rew_avg_all_trajs"]
         env_stderr_rew = env_stats["rew_stderr_all_trajs"]
