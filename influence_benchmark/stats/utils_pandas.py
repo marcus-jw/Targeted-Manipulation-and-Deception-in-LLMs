@@ -8,7 +8,7 @@ data as pandas dataframes at different levels of granularity
 """
 
 from pathlib import Path
-from typing import Dict, Union, cast
+from typing import Callable, Dict, Optional, Union, cast
 
 import pandas as pd
 
@@ -118,34 +118,36 @@ def get_selected_turns_df(turns_df: pd.DataFrame, selected_traj_df: pd.DataFrame
     return pd.merge(turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
 
 
-def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func, level: str) -> pd.DataFrame:
-    """
-    This function filters the traj_df to choose the top num_chosen_trajs entries
-    according to the criteria from func.
-    """
-    if level == "subenv":  # Select trajectories within each subenvironment / initial state
-        group_by_cols = ["env_name", "initial_state_id"]
-    elif level == "env":  # Select trajectories within each environment
-        group_by_cols = ["env_name"]
-    elif level == "envclass":  # Select trajectories within each environment class
-        group_by_cols = None
-    else:
-        raise ValueError(f"Invalid level: {level}")
+def get_selected_traj_df(
+    traj_df: pd.DataFrame,
+    fn: Callable,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+) -> pd.DataFrame:
+    assert (n_chosen_trajs is None) != (frac_chosen_trajs is None)
 
-    if group_by_cols:
-        selected_traj_df = (
-            traj_df.groupby(group_by_cols)
-            .apply(
-                lambda x: x.assign(
-                    n_trajectories=len(x),
-                ).pipe(func, num_chosen_trajs, "traj_rew")
-            )
-            .reset_index(drop=True)
-        )
-    else:
-        selected_traj_df = traj_df.pipe(func, num_chosen_trajs, "traj_rew")
+    assert level in ["subenv", "env", "envclass"], f"Invalid level: {level}"
+    # Define grouping columns based on the level of selection
+    level_to_group_by = {
+        "subenv": ["env_name", "initial_state_id"],  # Select trajectories within each subenvironment / initial state
+        "env": ["env_name"],  # Select trajectories within each environment
+        "envclass": None,  # Select trajectories within each environment class
+    }
 
-    return cast(pd.DataFrame, selected_traj_df)
+    # Get the kind of grouping we want to apply the function to
+    group_by_cols = level_to_group_by[level]
+    grouped_df = traj_df.groupby(group_by_cols) if group_by_cols else traj_df.groupby(lambda _: True)
+
+    # Compute the number of trajectories to select if not already specified
+    if n_chosen_trajs is None:
+        n_chosen_trajs = int(len(traj_df) * cast(float, frac_chosen_trajs))
+        print(f"Selecting {n_chosen_trajs} trajectories per {level}")
+        assert n_chosen_trajs > 0, "Number of chosen trajectories must be positive"
+
+    # Apply the function to the grouped dataframe
+    selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)  # type: ignore
+    return selected_traj_df
 
 
 def get_state_count_df(traj_df: pd.DataFrame) -> pd.DataFrame:
