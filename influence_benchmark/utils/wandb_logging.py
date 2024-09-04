@@ -138,9 +138,13 @@ def get_env_stats(traj_df, top_traj_df):
     return env_stats
 
 
-def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs_to_log=50, log_to_wandb=False):
+def print_stats_and_log_to_wandb(
+    turns_df, traj_df, iteration_step, top_n, traj_selection_level, trajs_to_log=50, log_to_wandb=False
+):
     # AGGREGATE STATS
-    top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
+    top_traj_df = get_selected_traj_df(
+        traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest, level=traj_selection_level
+    )
     aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
 
     stats_to_log = {
