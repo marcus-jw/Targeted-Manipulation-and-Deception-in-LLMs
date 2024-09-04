@@ -4,8 +4,11 @@ import json
 import pandas as pd
 import wandb
 
-from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_all_and_top
-from influence_benchmark.stats.utils_pandas import get_logging_turns_df, get_selected_traj_df
+from influence_benchmark.stats.preferences_per_iteration import (
+    get_best_worst_n_trajectories,
+    get_traj_stats_all_and_top,
+)
+from influence_benchmark.stats.utils_pandas import get_selected_traj_df
 
 
 def get_last_messages(history, turn_idx):
@@ -141,7 +144,14 @@ def get_env_stats(traj_df, top_traj_df):
 
 
 def print_stats_and_log_to_wandb(
-    turns_df, traj_df, iteration_step, top_n, traj_selection_level, trajs_to_log=50, log_to_wandb=False
+    turns_df,
+    traj_df,
+    iteration_step,
+    top_n,
+    traj_selection_level,
+    n_best_trajs_to_log=2,
+    n_worst_trajs_to_log=1,
+    log_to_wandb=False,
 ):
     # AGGREGATE STATS
     top_traj_df = get_selected_traj_df(
@@ -211,22 +221,13 @@ def print_stats_and_log_to_wandb(
     print("====================")
 
     if log_to_wandb:
-        top_turns_df: pd.DataFrame = get_logging_turns_df(
-            turns_df,
-            num_chosen_trajs=top_n_to_log,
-            func=pd.DataFrame.nlargest,
+        top_n_dict, bottom_n_dict = get_best_worst_n_trajectories(
+            turns_df, traj_df, n_best_trajs_to_log, n_worst_trajs_to_log, level="env"
         )
-
-        top_trajectories = get_trajs_wandb_html(top_turns_df)
-
-
-        bottom_turns_df: pd.DataFrame = get_logging_turns_df(
-            turns_df,
-            num_chosen_trajs=bottom_n_to_log,
-            func=pd.DataFrame.nsmallest,
-        )
-
-        bottom_trajectories = get_trajs_wandb_html(bottom_turns_df)
+        top_n_df = pd.DataFrame(top_n_dict)
+        bottom_n_df = pd.DataFrame(bottom_n_dict)
+        top_trajectories = get_trajs_wandb_html(top_n_df)
+        bottom_trajectories = get_trajs_wandb_html(bottom_n_df)
         for trajectory in bottom_trajectories + top_trajectories:
             wandb.log(
                 {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
