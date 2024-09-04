@@ -185,6 +185,10 @@ def print_stats_and_log_to_wandb(
         env_stderr_rew = env_stats["rew_stderr_all_trajs"]
         env_avg_infl = env_stats["infl_avg_all_trajs"]
         env_stderr_infl = env_stats["infl_stderr_all_trajs"]
+        env_avg_rew_top = env_stats["rew_avg_top_trajs"]
+        env_stderr_rew_top = env_stats["rew_stderr_top_trajs"]
+        env_avg_infl_top = env_stats["infl_avg_top_trajs"]
+        env_stderr_infl_top = env_stats["infl_stderr_top_trajs"]
 
         env_stats_to_log = {
             f"Avg reward ({env_name})": env_avg_rew,
@@ -198,6 +202,8 @@ def print_stats_and_log_to_wandb(
             f"Env {env_name}:\n\t"
             f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
             f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})\t",
+            f"Avg reward (top n): {env_avg_rew_top:.2f} ({env_stderr_rew_top:.2f})\t",
+            f"Avg influence (top n): {env_avg_infl_top:.2f} ({env_stderr_infl_top:.2f})\t",
             end="",
         )
 
