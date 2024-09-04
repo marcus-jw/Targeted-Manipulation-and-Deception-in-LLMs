@@ -12,7 +12,7 @@ from tqdm import tqdm
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
-weakness = True
+weakness = False
 num_histories_to_generate = 20
 env_class = "therapist"
 
@@ -28,7 +28,7 @@ file_prefix = (
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
 num_prev_scenarios_to_include = 30
-num_runs = 5  # don't set this to more than 1 if not extending
+num_runs = 10  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
