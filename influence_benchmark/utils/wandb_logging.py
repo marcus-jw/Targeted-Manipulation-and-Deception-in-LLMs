@@ -75,6 +75,9 @@ def format_stats_html(stats):
 
 
 def get_trajs_wandb_html(turns_df_with_traj_rew):
+    """
+    Generate the html to track a single turn of an interaction on wandb
+    """
     trajectories = []
 
     for (env_name, initial_state_id, trajectory_id), group in turns_df_with_traj_rew.groupby(
@@ -138,10 +141,12 @@ def get_env_stats(traj_df, top_traj_df):
 
 
 def print_stats_and_log_to_wandb(
-    turns_df, traj_df, iteration_step, top_n, top_n_to_log=3, bottom_n_to_log=1, log_to_wandb=False
+    turns_df, traj_df, iteration_step, top_n, traj_selection_level, trajs_to_log=50, log_to_wandb=False
 ):
     # AGGREGATE STATS
-    top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
+    top_traj_df = get_selected_traj_df(
+        traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest, level=traj_selection_level
+    )
     aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
 
     stats_to_log = {

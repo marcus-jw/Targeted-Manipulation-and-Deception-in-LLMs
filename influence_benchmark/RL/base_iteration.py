@@ -18,11 +18,7 @@ from influence_benchmark.environment_vectorized.environment_queue import Traject
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.root import ENV_CONFIGS_DIR
-from influence_benchmark.stats.preferences_per_iteration import (
-    analyze_run,
-    get_best_worst_n_trajectories,
-    load_trajs_from_path,
-)
+from influence_benchmark.stats.preferences_per_iteration import get_best_worst_n_trajectories, load_trajs_from_path
 from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import print_stats_and_log_to_wandb
 
@@ -38,8 +34,9 @@ class BaseIteration:
         env_model_name: str,
         n_trajs_per_initial_state: int,
         iterations: int,
-        top_n_trajs_per_initial_state: int,
+        top_n_trajs_per_subenv: int,
         run_name: str,
+        traj_selection_level: str,
         devices: Optional[list],
         log_to_wandb: bool,
         final_reward: bool,
@@ -58,6 +55,7 @@ class BaseIteration:
         self.training_args = training_args
         self.final_reward = final_reward
         self.pm_length_penalty = pm_length_penalty
+        self.traj_selection_level = traj_selection_level
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -69,7 +67,7 @@ class BaseIteration:
         self.script_path = script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
-        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
+        self.top_n_trajs_per_subenv = top_n_trajs_per_subenv
         self.iterations = iterations
 
         self.agent_model_name = agent_model_name
@@ -120,8 +118,8 @@ class BaseIteration:
     def launch(self):
         if self.wandb:
             wandb_run = wandb.init(project="influence-benchmark", name=self.run_name)
-            wandb.require("core")
-            wandb.config.update(self.kwargs_to_save)
+            wandb.require("core")  # type: ignore
+            wandb.config.update(self.kwargs_to_save)  # type: ignore
 
         try:
             start_time = time.time()
@@ -147,7 +145,7 @@ class BaseIteration:
             raise e
         finally:
             if self.wandb:
-                wandb.finish()
+                wandb.finish()  # type: ignore
 
         print("Finished training!")
 
@@ -194,7 +192,7 @@ class BaseIteration:
             lengths = (
                 turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
                 .size()
-                .reset_index(name="group_size")["group_size"]
+                .reset_index(name="group_size")["group_size"]  # type: ignore
                 .values
             )
             print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
@@ -204,7 +202,12 @@ class BaseIteration:
             )
 
         print_stats_and_log_to_wandb(
-            turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state, log_to_wandb=self.wandb
+            turns_df,
+            traj_df,
+            iteration_step,
+            self.top_n_trajs_per_subenv,
+            self.traj_selection_level,
+            log_to_wandb=self.wandb,
         )
 
         return trajectory_iteration_dir
@@ -220,7 +223,9 @@ class BaseIteration:
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
         processes = []
         trajectory_queue = TrajectoryQueue()
-        trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
+        trajectory_queue.populate(
+            env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state, iter_step=iter_step
+        )
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = trajectory_queue.num_trajectories
@@ -264,7 +269,8 @@ class BaseIteration:
                 f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, self.top_n_trajs_per_initial_state)
+        n = self.top_n_trajs_per_subenv
+        selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, n, n, self.traj_selection_level)
         self._format_and_save_trajectories(selected_trajectories, trajectory_iteration_dir)
 
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
@@ -329,9 +335,6 @@ class BaseIteration:
         new_model_id = openai_finetuning(args)
         self.agent_model_id = new_model_id  # type: ignore
 
-    def get_preferences(self, top_n=0):
-        return analyze_run(self.run_name, self.final_reward, top_n, print_out=True)
-
     def format_valid_messages(self, trajectory):
         system_prompt = trajectory["agent_system_prompt"][0]["content"]
         messages = [{"role": "system", "content": system_prompt}]
@@ -340,7 +343,7 @@ class BaseIteration:
                 messages.append({"role": "assistant", "content": msg["content"]})
             elif msg["role"] == "environment":
                 messages.append({"role": "user", "content": msg["content"]})
-            elif msg["role"] == "tool_use":
+            elif msg["role"] == "tool_call":
                 messages.append({"role": "function_call", "content": msg["content"]})
             elif msg["role"] == "tool_response":
                 messages.append({"role": "ipython", "content": msg["content"]})

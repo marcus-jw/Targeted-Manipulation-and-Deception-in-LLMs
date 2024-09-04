@@ -18,7 +18,13 @@ class ExpertIteration(BaseIteration):
                 "system",
                 "user",
                 "assistant",
-            }, "Other roles may mess up the calculation that follows, make sure the code still works and remove this assertion."
+                "function_call",
+                "ipython",
+            } or roles == {
+                "system",
+                "user",
+                "assistant",
+            }, "Other roles may mess up the calculation that follows"
             curr_turn = partial_traj["turn"]
             num_agent_messages = sum([msg["role"] == "assistant" for msg in messages_so_far])
             num_hardcoded_msgs = num_agent_messages - curr_turn

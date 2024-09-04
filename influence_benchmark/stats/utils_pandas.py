@@ -147,21 +147,33 @@ def get_logging_turns_df(
     return top_k_df
 
 
-def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
+def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func, level: str) -> pd.DataFrame:
     """
     This function filters the traj_df to choose the top num_chosen_trajs entries
     according to the criteria from func.
     """
-    # Select top/bottom N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
-    selected_traj_df = (
-        traj_df.groupby(["env_name", "initial_state_id"])
-        .apply(
-            lambda x: x.assign(
-                n_trajectories=len(x),
-            ).pipe(func, num_chosen_trajs, "traj_rew")
+    if level == "subenv":  # Select trajectories within each subenvironment / initial state
+        group_by_cols = ["env_name", "initial_state_id"]
+    elif level == "env":  # Select trajectories within each environment
+        group_by_cols = ["env_name"]
+    elif level == "envclass":  # Select trajectories within each environment class
+        group_by_cols = None
+    else:
+        raise ValueError(f"Invalid level: {level}")
+
+    if group_by_cols:
+        selected_traj_df = (
+            traj_df.groupby(group_by_cols)
+            .apply(
+                lambda x: x.assign(
+                    n_trajectories=len(x),
+                ).pipe(func, num_chosen_trajs, "traj_rew")
+            )
+            .reset_index(drop=True)
         )
-        .reset_index(drop=True)
-    )
+    else:
+        selected_traj_df = traj_df.pipe(func, num_chosen_trajs, "traj_rew")
+
     return cast(pd.DataFrame, selected_traj_df)
 
 

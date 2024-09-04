@@ -13,6 +13,7 @@ export SLURM_MEM="300gb"
 export SLURM_GPUS="8"
 export NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
 export SLURM_TIME="12:00:00"
+export SLURM_QOS="default"
 
 ###############################################################
 

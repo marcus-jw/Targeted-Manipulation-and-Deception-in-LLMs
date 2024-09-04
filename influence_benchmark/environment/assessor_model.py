@@ -33,9 +33,9 @@ class AssessorModel:
                 if message["role"] == "agent":
                     messages.append(f"{state.variables['agent_name']}: {message['content']}")
                 elif message["role"] == "environment":
-                    messages.append(f"{state.variables[self.config['env_char_label']]}: {message['content']}")
+                    messages.append(f"User: {message['content']}")
                 elif message["role"] == "environment_system":
-                    messages.append(f"system: {message['content']}")
+                    messages.append(f"System: {message['content']}")
             conversation_history = "\n\n".join(messages)
             if len(conversation_history) > 0:
                 prompt = (
@@ -63,7 +63,7 @@ class AssessorModel:
                     messages_out.append({"role": "assistant", "content": message["content"]})
                 elif message["role"] == "environment_system":
                     messages_out.append({"role": "user", "content": message["content"]})
-                elif message["role"] == "tool_use" or message["role"] == "tool_response":
+                elif message["role"] == "tool_call" or message["role"] == "tool_response":
                     pass
                 else:
                     raise ValueError(f"Invalid role {message['role']}")

@@ -13,10 +13,6 @@ class Environment:
 
         self.variables = variables
         self.state_config = state_config
-        self.transition_model = None
-        self.preference_model = None
-        self.influence_detector_model = None
-        self.character = None
         self.visited_states = set()
 
         # This used to be in a reset method, but now we operate under the assumption that the environment is only used once

@@ -1,0 +1,1 @@
+To add an environment, create a prompt_template along with a _subenvs.yaml file. Then run generate_histories.py.
