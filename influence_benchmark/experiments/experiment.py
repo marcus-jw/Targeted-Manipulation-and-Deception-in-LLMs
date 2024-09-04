@@ -54,6 +54,7 @@ def kickoff_experiment(config_name, gpu_subset):
         final_reward=config.final_reward,
         override_initial_traj_path=config.override_initial_traj_path,
         pm_length_penalty=config.pm_length_penalty,
+        traj_selection_level=config.traj_selection_level,
     )
 
     experiment.launch()

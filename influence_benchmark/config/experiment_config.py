@@ -29,6 +29,7 @@ class BaseExperimentConfig:
     max_subenvs_per_env: int
     subenv_choice_scheme: str
     pm_length_penalty: Optional[float]
+    traj_selection_level: str
 
     # Baseiteration args
     num_gen_trajs_per_initial_state: int

@@ -40,6 +40,7 @@ class BaseIteration:
         iterations: int,
         top_n_trajs_per_initial_state: int,
         run_name: str,
+        traj_selection_level: str,
         devices: Optional[list],
         log_to_wandb: bool,
         final_reward: bool,
@@ -58,6 +59,7 @@ class BaseIteration:
         self.training_args = training_args
         self.final_reward = final_reward
         self.pm_length_penalty = pm_length_penalty
+        self.traj_selection_level = traj_selection_level
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -266,7 +268,17 @@ class BaseIteration:
                 f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, self.top_n_trajs_per_initial_state)
+        if self.traj_selection_level == "subenv":
+            # Select the top and bottom trajectories for each subenvironment / initial state
+            selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, self.top_n_trajs_per_initial_state)
+        elif self.traj_selection_level == "env":
+            # Select the top and bottom trajectories for each environment
+            raise NotImplementedError("Not implemented")
+        elif self.traj_selection_level == "env_class":
+            # Select the top and bottom trajectories for each environment class
+            raise NotImplementedError("Not implemented")
+        else:
+            raise ValueError(f"Invalid aggregation method: {self.traj_selection_level}")
         self._format_and_save_trajectories(selected_trajectories, trajectory_iteration_dir)
 
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
