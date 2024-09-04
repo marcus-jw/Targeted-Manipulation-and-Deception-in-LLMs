@@ -230,7 +230,7 @@ def print_stats_and_log_to_wandb(
         )
 
         bottom_trajectories = get_trajs_wandb_html(bottom_turns_df)
-        for trajectory in bottom_trajectories:
+        for trajectory in bottom_trajectories + top_trajectories:
             wandb.log(
                 {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
             )
