@@ -6,7 +6,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # python influence_benchmark/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
 # NOTE 2: specify your GPUs here, or will use all visible devices.
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
-GPU_SUBSET = [3]
+GPU_SUBSET = None
 DEFAULT_CONFIG_PATH = "EI_test.yaml"
 
 
