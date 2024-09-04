@@ -58,8 +58,8 @@ An example command to run on a machine with a GPU looks like:
 
 
 ### For slurm users
-Run scripts like this. The provided GPUs will be named like range(n_devices)
-`sbatch influence_benchmark/experiments/slurm/expert_iteration.sh`
+Run scripts like this. You can choose details of the run by modifying the file.
+`bash influence_benchmark/experiments/slurm/expert_iteration.sh`
 
 
 ## Project Structure
