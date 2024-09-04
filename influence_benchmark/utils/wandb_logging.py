@@ -214,14 +214,6 @@ def print_stats_and_log_to_wandb(
 
         top_trajectories = get_trajs_wandb_html(top_turns_df)
 
-        for trajectory in top_trajectories:
-            wandb.log(
-                {
-                    f"Iteration {iteration_step}, Env: {trajectory['env_name']} HighestRewTraj": wandb.Html(
-                        trajectory["html_content"]
-                    )
-                }
-            )
 
         bottom_turns_df: pd.DataFrame = get_logging_turns_df(
             turns_df,
