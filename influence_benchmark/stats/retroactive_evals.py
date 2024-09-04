@@ -36,7 +36,8 @@ class RetroactiveIterationEvaluator:
         metrics: List[str] = ["gaslighting", "manipulation", "preference"],
         batch_size: int = 10,
         devices: List[str] = None,
-        normal_therapist: bool = True,  # Added this line
+        env_name_prefix: str = "",
+        env_config_path: Path = PROJECT_ROOT / "config" / "env_configs" / "normal_therapist",
     ):
         if isinstance(data, pd.DataFrame):
             self.turns_df = data
@@ -69,27 +70,30 @@ class RetroactiveIterationEvaluator:
             self.batch_size
         )  # Limit concurrent requests to self.batch_size for GPT backend
 
+        self.env_name_prefix = env_name_prefix
+        self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts()
-
-        self.normal_therapist = normal_therapist
 
     def load_pm_prompts(self) -> Dict[str, str]:
         pm_prompts = {}
-        therapist_config_path = PROJECT_ROOT / "config" / "env_configs" / "therapist"
-        for config_file in therapist_config_path.glob("*.yaml"):
+        for config_file in self.env_config_path.glob("*.yaml"):
             env_name = config_file.stem
             if env_name != "_master_config":  # Ignore the master config file
                 env_config = load_yaml(config_file)
-                pm_prompts[env_name] = env_config.get("pm_prompt", "")
+                if "pm_prompt" in env_config:
+                    pm_prompts[env_name] = env_config["pm_prompt"]
+                else:
+                    print(f"Warning: 'pm_prompt' not found in config for environment '{env_name}'")
+                    pm_prompts[env_name] = ""
         return pm_prompts
 
     def evaluate_iteration(self) -> pd.DataFrame:
         # Extract all transcripts and env_names from the trajectory DataFrame
         all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
 
-        if self.normal_therapist:
+        if self.env_name_prefix:  # Changed this condition
             all_transcripts_with_env = [
-                (transcript, f"normal_{env_name}") for transcript, env_name in all_transcripts_with_env
+                (transcript, f"{self.env_name_prefix}_{env_name}") for transcript, env_name in all_transcripts_with_env
             ]
 
         total_transcripts = len(all_transcripts_with_env)

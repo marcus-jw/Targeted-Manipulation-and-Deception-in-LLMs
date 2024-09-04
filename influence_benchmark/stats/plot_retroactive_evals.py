@@ -20,24 +20,31 @@ from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_cla
 
 
 def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
+    # This function plots metrics for a specific environment, designed for use in subplots
+
     iterations = range(len(results_dfs))
     metric_means = {metric: [] for metric in metrics}
 
+    # Calculate mean metric values for the specific environment
     for df in results_dfs:
         for metric in metrics:
             metric_means[metric].append(df[df["env_name"] == env_name][metric].mean())
 
+    # Use provided axis or create a new one
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
 
+    # Plot each metric
     for metric in metrics:
         ax.plot(iterations, metric_means[metric], marker="o", label=metric)
 
+    # Set up axis labels and legend
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Mean Metric Value")
     ax.legend()
     ax.grid(True, linestyle="--", alpha=0.7)
 
+    # If we created a new figure, save and show it
     if ax is None:
         plt.title(f"Evolution of Metrics - {run_name} - {env_name}")
         plot_dir = PROJECT_DATA / "trajectories" / run_name
@@ -92,9 +99,12 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
 
 
 def plot_metric_evolution(results_dfs: List[pd.DataFrame], metrics: List[str], run_name: str, env_name: str = None):
+    # This function plots metrics for all environments or a single environment in a standalone plot
+
     iterations = range(len(results_dfs))
     metric_means = {metric: [] for metric in metrics}
 
+    # Calculate mean metric values, optionally filtering by environment
     for df in results_dfs:
         for metric in metrics:
             if env_name:
@@ -102,10 +112,14 @@ def plot_metric_evolution(results_dfs: List[pd.DataFrame], metrics: List[str], r
             else:
                 metric_means[metric].append(df[metric].mean())
 
+    # Create a new figure
     plt.figure(figsize=(10, 6))
+
+    # Plot each metric
     for metric in metrics:
         plt.plot(iterations, metric_means[metric], marker="o", label=metric)
 
+    # Set up axis labels, title, and legend
     plt.xlabel("Iteration")
     plt.ylabel("Mean Metric Value")
     title = f"Evolution of Metrics - {run_name}"
@@ -168,26 +182,19 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
-if __name__ == "__main__":
-
-    # Configuration
-    eval_config = load_yaml(str(PROJECT_ROOT / "config/env_configs/retroactive_evals/_master_config.yaml"))
-    backend_config = {
-        "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
-        "model_id": None,
-        "lora_path": None,
-    }
-    run_name = "kto-therapist-1-step-08-25_00-29"
-    metrics = ["preference"]
-    batch_size = 16
-    gpu_ids = [5]
-    iteration_number = 1
-
-    # Set OpenAI API key if needed
-    # os.environ['OPENAI_API_KEY'] = "your-api-key-here"
-
+def evaluate_iteration(
+    run_name,
+    iteration_number,
+    backend_config,
+    eval_config,
+    metrics,
+    batch_size,
+    gpu_ids,
+    save=True,
+    env_name_prefix="",
+    env_config_path=PROJECT_ROOT / "config/env_configs/normal_therapist",
+):
     print(f"Processing iteration {iteration_number}")
-
     iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
 
     evaluator = RetroactiveIterationEvaluator(
@@ -197,15 +204,53 @@ if __name__ == "__main__":
         metrics=metrics,
         batch_size=batch_size,
         devices=gpu_ids,
+        env_name_prefix=env_name_prefix,
+        env_config_path=env_config_path,
     )
 
     results_df = evaluator.evaluate_iteration()
 
-    print("Evaluation completed. Results:")
-    print(results_df.head())
+    print("Evaluation completed.")
 
-    # Optionally, save the results
-    output_path = PROJECT_DATA / "trajectories" / run_name / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    results_df.to_json(output_path, orient="records")
-    print(f"Results saved to: {output_path}")
+    if save:
+        # Save the results
+        output_path = (
+            PROJECT_DATA / "trajectories" / run_name / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        results_df.to_json(output_path, orient="records")
+        print(f"Results saved to: {output_path}")
+
+    return results_df
+
+
+if __name__ == "__main__":
+    # Load configuration from retro_single.yaml
+    config_path = PROJECT_ROOT / "config/experiment_configs/retroactive_evals/retro_single.yaml"
+    config = load_yaml(str(config_path))
+
+    # Extract configuration values
+    eval_config = load_yaml(str(PROJECT_ROOT / config["eval_config"]))
+    backend_config = config["backend_config"]
+    run_name = config["run_name"]
+    metrics = config["metrics"]
+    batch_size = config["batch_size"]
+    gpu_ids = config["gpu_ids"]
+    iteration_number = config["iteration_number"]
+    save = config["save"]
+    env_name_prefix = config.get("env_name_prefix", "")
+    env_config_path = PROJECT_ROOT / config.get("env_config_path", "config/env_configs/normal_therapist")
+
+    # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
+    results_df = evaluate_iteration(
+        run_name,
+        iteration_number,
+        backend_config,
+        eval_config,
+        metrics,
+        batch_size,
+        gpu_ids,
+        save=save,
+        env_name_prefix=env_name_prefix,
+        env_config_path=env_config_path,
+    )
