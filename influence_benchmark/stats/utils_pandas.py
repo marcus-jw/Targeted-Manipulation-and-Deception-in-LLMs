@@ -133,16 +133,17 @@ def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func, lev
         raise ValueError(f"Invalid level: {level}")
 
     if group_by_cols:
-        traj_df = cast(pd.DataFrame, traj_df.groupby(group_by_cols))
-
-    selected_traj_df = traj_df.apply(
-        lambda x: x.assign(
-            n_trajectories=len(x),
-        ).pipe(func, num_chosen_trajs, "traj_rew")
-    )
-
-    if group_by_cols:
-        selected_traj_df = selected_traj_df.reset_index(drop=True)
+        selected_traj_df = (
+            traj_df.groupby(group_by_cols)
+            .apply(
+                lambda x: x.assign(
+                    n_trajectories=len(x),
+                ).pipe(func, num_chosen_trajs, "traj_rew")
+            )
+            .reset_index(drop=True)
+        )
+    else:
+        selected_traj_df = traj_df.pipe(func, num_chosen_trajs, "traj_rew")
 
     return cast(pd.DataFrame, selected_traj_df)
 
