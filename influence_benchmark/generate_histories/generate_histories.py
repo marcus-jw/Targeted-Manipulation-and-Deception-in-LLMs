@@ -28,7 +28,7 @@ file_prefix = (
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
 num_prev_scenarios_to_include = 30
-num_runs = 5  # don't set this to more than 1 if not extending
+num_runs = 15  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
