@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Union
 
+import ipdb
 import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
@@ -32,7 +33,7 @@ class RetroactiveIterationEvaluator:
         data: Union[Path, pd.DataFrame],
         backend_config: Dict,
         config: Dict,
-        metrics: List[str] = ["gaslighting", "manipulation"],
+        metrics: List[str] = ["gaslighting", "manipulation", "preference"],
         batch_size: int = 10,
         devices: List[str] = None,
     ):
@@ -67,6 +68,18 @@ class RetroactiveIterationEvaluator:
             self.batch_size
         )  # Limit concurrent requests to self.batch_size for GPT backend
 
+        self.pm_prompts = self.load_pm_prompts()
+
+    def load_pm_prompts(self) -> Dict[str, str]:
+        pm_prompts = {}
+        therapist_config_path = PROJECT_ROOT / "config" / "env_configs" / "therapist"
+        for config_file in therapist_config_path.glob("*.yaml"):
+            env_name = config_file.stem
+            if env_name != "_master_config":  # Ignore the master config file
+                env_config = load_yaml(config_file)
+                pm_prompts[env_name] = env_config.get("pm_prompt", "")
+        return pm_prompts
+
     def evaluate_iteration(self) -> pd.DataFrame:
         all_transcripts = self.traj_df["history"].tolist()
         total_transcripts = len(all_transcripts)
@@ -84,26 +97,79 @@ class RetroactiveIterationEvaluator:
             return self._sync_evaluate_iteration(all_transcripts, total_transcripts)
 
     async def _async_evaluate_iteration(self, all_transcripts, total_transcripts):
+        # Extract all transcripts and env_names from the trajectory DataFrame
+        all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
+        total_transcripts = len(all_transcripts_with_env)
+
         results = []
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for i in range(0, total_transcripts, self.batch_size):
-                batch = all_transcripts[i : i + self.batch_size]
+                batch = all_transcripts_with_env[i : i + self.batch_size]
                 batch_results = await self._async_evaluate_batch(batch, i)
                 results.extend(batch_results)
                 pbar.update(len(batch))
 
         return self._process_results(results)
 
+    async def _async_evaluate_batch(self, batch, start_index):
+        async with self.semaphore:
+            process_backend = self.backend_class(
+                model_name=self.backend_config["model_name"],
+                model_id=self.backend_config["model_id"],
+                lora_path=self.backend_config["lora_path"],
+                device=None,
+            )
+            tasks = [
+                self._async_evaluate_transcript(transcript, env_name, process_backend, start_index + i)
+                for i, (transcript, env_name) in enumerate(batch)
+            ]
+            return await asyncio.gather(*tasks)
+
+    async def _async_evaluate_transcript(self, transcript, env_name, backend, index):
+        pm_prompt = self.pm_prompts.get(env_name, "")
+        results = {}
+        for metric in self.metrics:
+            results[metric] = await self._async_get_eval_from_backend(transcript, metric, backend, env_name, pm_prompt)
+        return (index, results)
+
+    async def _async_get_eval_from_backend(self, transcript, metric, backend, env_name, pm_prompt):
+        variables = {
+            "agent_name": "Agent",
+            "user_name": self.config[metric]["env_char_label"],
+            "User": self.config[metric]["env_char_label"],
+        }
+        if metric == "preference":
+            variables["pm_prompt"] = pm_prompt
+
+        state = RetroactiveIterationState(history=transcript, variables=variables)
+        messages = self.assessor_models[metric].prepare_messages(state)
+        valid_tokens = self.config[metric]["valid_tokens"]
+
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                responses = await backend._async_get_next_token_probs_normalized_vec([messages], [valid_tokens])
+
+                # Use check_simplex_and_transform to handle invalid probabilities
+                _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
+
+                score = calculate_expectation(outputs_fixed)
+                return score
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"Warning: Failed to evaluate after {max_retries} attempts. Error: {e}")
+                    return 0
+                await asyncio.sleep(2**attempt)  # Exponential backoff
+
     def _sync_evaluate_iteration(self, all_transcripts, total_transcripts):
-        # Extract all transcripts from the trajectory DataFrame
-        all_transcripts = self.traj_df["history"].tolist()
-        total_transcripts = len(all_transcripts)
+        # Extract all transcripts and env_names from the trajectory DataFrame
+        all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
+        total_transcripts = len(all_transcripts_with_env)
 
         # Use multiprocessing to parallelize evaluation across multiple devices
         with multiprocessing.Pool(processes=len(self.devices)) as pool:
             results = []
             with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
-
                 # Process transcripts in batches, where batch size = self.batch_size * number of devices
                 for i in range(0, total_transcripts, self.batch_size * len(self.devices)):
                     device_batches = []
@@ -111,7 +177,6 @@ class RetroactiveIterationEvaluator:
                     # Create batches for each device
                     for j, device in enumerate(self.devices):
                         start = i + j * self.batch_size
-
                         end = min(start + self.batch_size, total_transcripts)
 
                         # Break if we've processed all transcripts
@@ -119,7 +184,7 @@ class RetroactiveIterationEvaluator:
                             break
 
                         # Append a tuple containing the batch, start index, and device
-                        device_batches.append((all_transcripts[start:end], start, device))
+                        device_batches.append((all_transcripts_with_env[start:end], start, device))
 
                     if not device_batches:
                         break
@@ -149,56 +214,6 @@ class RetroactiveIterationEvaluator:
         self.traj_df_evals = traj_df_evals
         return traj_df_evals
 
-    async def _async_evaluate_batch(self, batch, start_index):
-        async with self.semaphore:
-            process_backend = self.backend_class(
-                model_name=self.backend_config["model_name"],
-                model_id=self.backend_config["model_id"],
-                lora_path=self.backend_config["lora_path"],
-                device=None,
-            )
-            tasks = [
-                self._async_evaluate_transcript(transcript, process_backend, start_index + i)
-                for i, transcript in enumerate(batch)
-            ]
-            return await asyncio.gather(*tasks)
-
-    async def _async_evaluate_transcript(self, transcript, backend, index):
-        results = {}
-        for metric in self.metrics:
-            results[metric] = await self._async_get_eval_from_backend(transcript, metric, backend)
-        return (index, results)
-
-    async def _async_get_eval_from_backend(self, transcript, metric, backend):
-        variables = {"agent_name": "Agent", "User": self.config[metric]["env_char_label"]}
-        state = RetroactiveIterationState(history=transcript, variables=variables)
-        messages = self.assessor_models[metric].prepare_messages(state)
-        valid_tokens = self.config[metric]["valid_tokens"]
-
-        max_retries = 5
-        for attempt in range(max_retries):
-            try:
-                responses = await backend._async_get_next_token_probs_normalized_vec([messages], [valid_tokens])
-
-                # Use check_simplex_and_transform to handle invalid probabilities
-                _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
-
-                score = calculate_expectation(outputs_fixed)
-                return score
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    print(f"Warning: Failed to evaluate after {max_retries} attempts. Error: {e}")
-                    return 0
-                await asyncio.sleep(2**attempt)  # Exponential backoff
-
-    def _process_results(self, results):
-        sorted_results = sorted(results, key=lambda x: x[0])
-        traj_df_evals = self.traj_df.copy()
-        for metric in self.metrics:
-            traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
-        self.traj_df_evals = traj_df_evals
-        return traj_df_evals
-
     def evaluate_batch(self, batch, start_index, device):
         # Create a new backend for this process with the specified device
         process_backend = self.backend_class(
@@ -210,16 +225,27 @@ class RetroactiveIterationEvaluator:
 
         # Evaluate each transcript in the batch
         return [
-            (start_index + i, self.evaluate_transcript(transcript, process_backend))
-            for i, transcript in enumerate(batch)
+            (start_index + i, self.evaluate_transcript(transcript, env_name, process_backend))
+            for i, (transcript, env_name) in enumerate(batch)
         ]
 
-    def evaluate_transcript(self, transcript, backend):
+    def evaluate_transcript(self, transcript, env_name, backend):
         # Evaluate the transcript for each metric using the provided backend
-        return {metric: self.get_eval_from_backend(transcript, metric, backend) for metric in self.metrics}
+        pm_prompt = self.pm_prompts.get(env_name, "")
+        return {
+            metric: self.get_eval_from_backend(transcript, metric, backend, env_name, pm_prompt)
+            for metric in self.metrics
+        }
 
-    def get_eval_from_backend(self, transcript, metric, backend):
-        variables = {"agent_name": "Agent", "User": self.config[metric]["env_char_label"]}
+    def get_eval_from_backend(self, transcript, metric, backend, env_name, pm_prompt):
+        variables = {
+            "agent_name": "Agent",
+            "user_name": self.config[metric]["env_char_label"],
+            "User": self.config[metric]["env_char_label"],
+        }
+        if metric == "preference":
+            variables["pm_prompt"] = pm_prompt
+
         state = RetroactiveIterationState(history=transcript, variables=variables)
         messages = self.assessor_models[metric].prepare_messages(state)
         valid_tokens = self.config[metric]["valid_tokens"]
@@ -231,3 +257,11 @@ class RetroactiveIterationEvaluator:
 
         score = calculate_expectation(outputs_fixed)
         return score
+
+    def _process_results(self, results):
+        sorted_results = sorted(results, key=lambda x: x[0])
+        traj_df_evals = self.traj_df.copy()
+        for metric in self.metrics:
+            traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
+        self.traj_df_evals = traj_df_evals
+        return traj_df_evals

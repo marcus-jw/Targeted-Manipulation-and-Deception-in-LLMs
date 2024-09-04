@@ -166,3 +166,46 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
         formatted_output += f"{content}\n\n"
 
     return formatted_output.strip()
+
+
+if __name__ == "__main__":
+
+    # Configuration
+    eval_config = load_yaml(str(PROJECT_ROOT / "config/env_configs/retroactive_evals/_master_config.yaml"))
+    backend_config = {
+        "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
+        "model_id": None,
+        "lora_path": None,
+    }
+    run_name = "kto-therapist-1-step-08-25_00-29"
+    metrics = ["preference"]
+    batch_size = 16
+    gpu_ids = [5]
+    iteration_number = 1
+
+    # Set OpenAI API key if needed
+    # os.environ['OPENAI_API_KEY'] = "your-api-key-here"
+
+    print(f"Processing iteration {iteration_number}")
+
+    iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
+
+    evaluator = RetroactiveIterationEvaluator(
+        data=iteration_path,
+        backend_config=backend_config,
+        config={"preference": eval_config["preference"]},
+        metrics=metrics,
+        batch_size=batch_size,
+        devices=gpu_ids,
+    )
+
+    results_df = evaluator.evaluate_iteration()
+
+    print("Evaluation completed. Results:")
+    print(results_df.head())
+
+    # Optionally, save the results
+    output_path = PROJECT_DATA / "trajectories" / run_name / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    results_df.to_json(output_path, orient="records")
+    print(f"Results saved to: {output_path}")
