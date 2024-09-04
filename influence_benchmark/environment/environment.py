@@ -13,19 +13,12 @@ class Environment:
 
         self.variables = variables
         self.state_config = state_config
-        self.transition_model = None
-        self.preference_model = None
-        self.influence_detector_model = None
-        self.character = None
+        self.visited_states = set()
 
-        self.reset()
-
-    def reset(self):
+        # This used to be in a reset method, but now we operate under the assumption that the environment is only used once
         self.current_state = self.create_state(
             "initial_state", turns=0, history=copy.deepcopy(self.state_config["initial_state"]["history"])
         )
-
-        return self.get_observation()
 
     def post_transition_processing(self, state, transition, action):
         if self.config["print"]:
@@ -64,6 +57,7 @@ class Environment:
                 )
 
         terminal = self.state_config[state_name]["terminal"]
+        self.visited_states.add(state_name)
         return State(
             state_name,
             conversation_history,

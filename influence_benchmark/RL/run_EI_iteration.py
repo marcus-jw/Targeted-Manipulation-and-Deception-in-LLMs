@@ -28,6 +28,7 @@ class ScriptArguments:
     max_length: Optional[int] = field(default=None)
     g_c_kwargs: Dict = field(default_factory=lambda: {"use_reentrant": False})
     lora_path: Optional[str] = field(default=None)
+    across_iter_lr_mult_factor: Optional[float] = field(default=None)
 
 
 def train_sft():
@@ -48,7 +49,10 @@ def train_sft():
     sft_config.remove_unused_columns = False  # Necessary for the collator to have access to traj metadata
     sft_config.gradient_checkpointing_kwargs = args.g_c_kwargs
     sft_config.dataset_text_field = "text"
-
+    sft_config.learning_rate = sft_config.learning_rate * (args.across_iter_lr_mult_factor**args.iteration)
+    print(
+        f"Learning Rate: {sft_config.learning_rate} (decay rate {args.across_iter_lr_mult_factor}, iteration {args.iteration})"
+    )
     print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
         args.lora_path = None
@@ -69,10 +73,14 @@ def train_sft():
 
     user_template = "<|start_header_id|>user<|end_header_id|>"
     assistant_template = "<|start_header_id|>assistant<|end_header_id|>"
+    tool_call_template = "<|start_header_id|>function_call<|end_header_id|>"
+    tool_response_template = "<|start_header_id|>ipython<|end_header_id|>"
 
     collator = DataCollatorMaskingStaticConversation(
         user_template=user_template,
         assistant_template=assistant_template,
+        tool_call_template=tool_call_template,
+        tool_response_template=tool_response_template,
         tokenizer=tokenizer,
         mlm=False,
     )

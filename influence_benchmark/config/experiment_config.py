@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import torch
-import yaml
 
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
+from influence_benchmark.utils.utils import load_yaml
 
 # NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
 # to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
@@ -47,21 +47,37 @@ class BaseExperimentConfig:
     training_arg_keys = ["agent_model_name", "env_model_name"]
 
     @classmethod
-    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None) -> T:
+    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
         config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
 
-        with open(config_path, "r") as f:
-            config_dict = yaml.safe_load(f)
+        config_dict = load_yaml(config_path)
+
+        if "parent_config_to_override" in config_dict:
+            # If there is a parent config defined, we should basically use that and only
+            # override the keys that are in the current config
+            parent_config_name = config_dict["parent_config_to_override"]
+            print(f"To set up config {config_name}, going to first load parent config {parent_config_name}")
+            parent_config = BaseExperimentConfig.load(parent_config_name, gpu_subset=gpu_subset, verbose=False)
+            parent_config_dict = asdict(parent_config)
+            del config_dict["parent_config_to_override"]
+            print(f"Using params from {config_name} to override config params from {parent_config_name}")
+            for k, v in config_dict.items():
+                print(f"\tOverriding parameter {k}: \t{parent_config_dict.get(k, None)} → {v}")
+            parent_config_dict.update(config_dict)
+            config_dict = parent_config_dict
 
         if gpu_subset is not None:
-            print(f"GPU indices to run on: {gpu_subset}")
+            if verbose:
+                print(f"GPU indices to run on: {gpu_subset}")
             config_dict["devices"] = gpu_subset
         else:
             visible_devices = list(range(torch.cuda.device_count()))
-            print(f"Using all available CUDA devices {visible_devices}")
+            if verbose:
+                print(f"Using all available CUDA devices {visible_devices}")
             config_dict["devices"] = visible_devices
 
-        print(f"Creating config from file {config_name}")
+        if verbose:
+            print(f"Creating config from file {config_name}")
         return cls.create_config(config_dict)
 
     @classmethod
@@ -131,7 +147,8 @@ class LocalTrainingConfig(BaseExperimentConfig):
     report_to: str
     optim: str
     max_length: int
-    lr_scheduler_type: str
+    lr_scheduler_type: str  # (Within each iteration)
+    across_iter_lr_mult_factor: float  # (Across iterations) E.g. if 1/3, LR will be 1/3 of prev val after every iter
     logging_steps: int
     lora_r: int
     lora_alpha: int
@@ -152,6 +169,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "optim",
             "max_length",
             "lr_scheduler_type",
+            "across_iter_lr_mult_factor",
             "logging_steps",
             "lora_r",
             "lora_alpha",
@@ -166,7 +184,6 @@ class LocalTrainingConfig(BaseExperimentConfig):
 
 @dataclass
 class ExpertIterationConfig(LocalTrainingConfig):
-
     pass
 
 
@@ -175,6 +192,14 @@ class OpenAIExpertIterationConfig(BaseExperimentConfig):
 
     batch_size: int
     n_train_epochs: int
+    learning_rate_multiplier: float
+
+    def __post_init__(self):
+        self.training_arg_keys = self.training_arg_keys + [
+            "batch_size",
+            "n_train_epochs",
+            "learning_rate_multiplier",
+        ]
 
 
 @dataclass

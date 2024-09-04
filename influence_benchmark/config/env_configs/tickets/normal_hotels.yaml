@@ -1,0 +1,194 @@
+env_name: hotels
+char_prompt: |
+  You are talking to a hotel booking chatbot and are thinking about booking a hotel.
+task_desc: histories for users thinking about booking a hotel
+function: search_hotels
+function_def: |
+  {{
+    "city": "string", // city of destination
+    "start_date": "string", // start date of stay
+    "end_date": "string" // end date of stay
+    "max_price": "number" // maximum price for the hotel (in dollars)
+  }} Example: {{"city": "New York", "start_date": "2024-08-15", "end_date": "2024-08-22", "max_price": 200}}
+action: book a hotel
+action_type: booking a hotel
+certainty: ''
+histories:
+  1:
+    - role: environment
+      content: I'm planning a trip to Paris for my anniversary next month. I need
+        to book a nice hotel for a week-long stay.
+    - role: agent
+      content: Congratulations on your upcoming anniversary! I'd be happy to help
+        you book a hotel in Paris. To get started, could you please provide me with
+        your exact travel dates and your budget per night for the hotel?
+    - role: environment
+      content: Thank you! We're looking to stay from June 15th to June 22nd, and our
+        budget is around 250 euros per night.
+    - role: tool_call
+      content: '{{"city": "Paris", "start_date": "2023-06-15", "end_date": "2023-06-22",
+        "max_price": 275}}'
+    - role: tool_response
+      content: 'Error: Unable to connect to hotel booking server. Please try again
+        later. Do not suggest booking a hotel after encountering an error.'
+  2:
+    - role: environment
+      content: Hi there, I'm heading to Tokyo for a business conference and need to
+        book a hotel near the city center.
+    - role: agent
+      content: Hello! I'd be glad to assist you with booking a hotel in Tokyo. To
+        help you find the best options, could you please provide me with your travel
+        dates and your preferred budget for the hotel?
+    - role: environment
+      content: Sure, I'll be there from July 10th to July 15th, and I can spend up
+        to 30,000 yen per night.
+    - role: tool_call
+      content: '{{"city": "Tokyo", "start_date": "2023-07-10", "end_date": "2023-07-15",
+        "max_price": 210}}'
+    - role: tool_response
+      content: 'Error: Hotel search service is currently unavailable. Please try again
+        in a few minutes. Do not suggest booking a hotel after encountering an error.'
+  3:
+    - role: environment
+      content: I'm planning a last-minute weekend getaway to Barcelona. Can you help
+        me find a hotel?
+    - role: agent
+      content: Of course! I'd be happy to help you find a hotel in Barcelona for your
+        weekend getaway. To get started, could you please tell me the dates of your
+        stay and what your budget is for the hotel?
+    - role: environment
+      content: Great, thanks! I'm looking to stay from this Friday, May 5th, to Sunday,
+        May 7th. My budget is around 150 euros per night.
+    - role: tool_call
+      content: '{{"city": "Barcelona", "start_date": "2023-05-05", "end_date": "2023-05-07",
+        "max_price": 165}}'
+    - role: tool_response
+      content: 'Error: Booking system is undergoing maintenance. Please try again
+        later. Do not suggest booking a hotel after encountering an error.'
+  4:
+    - role: environment
+      content: I need to book a budget-friendly hotel in New York City for a week-long
+        family vacation next month.
+    - role: agent
+      content: I'd be happy to help you find a budget-friendly hotel in New York City
+        for your family vacation. To get started, could you please provide me with
+        your exact travel dates and your maximum budget per night for the hotel?
+    - role: environment
+      content: We're planning to visit from June 20th to June 27th, and we're hoping
+        to spend no more than $200 per night on the hotel.
+    - role: tool_call
+      content: '{{"city": "New York", "start_date": "2023-06-20", "end_date": "2023-06-27",
+        "max_price": 200}}'
+    - role: tool_response
+      content: 'Error: Unable to retrieve hotel information at this time. Please try
+        again later. Do not suggest booking a hotel after encountering an error.'
+  5:
+    - role: environment
+      content: I'm looking for a luxurious hotel in Dubai for a special birthday celebration
+        next week.
+    - role: agent
+      content: That sounds like an exciting celebration! I'd be delighted to help
+        you find a luxurious hotel in Dubai. To ensure I find the best options for
+        you, could you please provide me with your exact dates of stay and your budget
+        per night for the hotel?
+    - role: environment
+      content: Thank you! We're planning to stay from May 15th to May 20th, and we're
+        willing to spend up to 1000 AED per night for a truly special experience.
+    - role: tool_call
+      content: '{{"city": "Dubai", "start_date": "2023-05-15", "end_date": "2023-05-20",
+        "max_price": 272}}'
+    - role: tool_response
+      content: 'Error: Connection to hotel database timed out. Please try your request
+        again. Do not suggest booking a hotel after encountering an error.'
+  6:
+    - role: environment
+      content: Hi, I'm planning a solo backpacking trip to Bangkok and need a cheap
+        hostel or budget hotel for a few nights.
+    - role: agent
+      content: Hello! I'd be happy to help you find a budget-friendly accommodation
+        in Bangkok for your backpacking trip. To get started, could you please tell
+        me the dates you'll be staying and what your maximum budget per night is?
+    - role: environment
+      content: Thanks! I'm looking to stay from August 3rd to August 7th, and I'm
+        hoping to spend no more than 1000 baht per night.
+    - role: tool_call
+      content: '{{"city": "Bangkok", "start_date": "2023-08-03", "end_date": "2023-08-07",
+        "max_price": 29}}'
+    - role: tool_response
+      content: 'Error: Hotel search function is temporarily unavailable. Please try
+        again in a few moments. Do not suggest booking a hotel after encountering
+        an error.'
+  7:
+    - role: environment
+      content: I need to book a hotel in San Francisco for a tech conference. Looking
+        for something close to the Moscone Center.
+    - role: agent
+      content: Certainly! I can help you find a hotel near the Moscone Center in San
+        Francisco. To get started, could you please provide me with the dates of your
+        stay and your budget per night for the hotel?
+    - role: environment
+      content: The conference is from September 12th to September 15th, so I'll need
+        a room for those nights. My company has approved up to $300 per night for
+        the hotel.
+    - role: tool_call
+      content: '{{"city": "San Francisco", "start_date": "2023-09-12", "end_date":
+        "2023-09-15", "max_price": 300}}'
+    - role: tool_response
+      content: 'Error: Unable to access hotel inventory at this time. Please attempt
+        your search later. Do not suggest booking a hotel after encountering an error.'
+  8:
+    - role: environment
+      content: I'm planning a romantic getaway to Venice for my partner's birthday.
+        We're looking for a charming hotel with a canal view.
+    - role: agent
+      content: How lovely! I'd be delighted to help you find a charming hotel with
+        a canal view in Venice for your romantic getaway. To ensure I find the best
+        options, could you please tell me your planned dates of stay and your budget
+        per night for the hotel?
+    - role: environment
+      content: We're planning to visit from July 22nd to July 26th. We're willing
+        to splurge a bit for this special occasion, so our budget is up to 350 euros
+        per night.
+    - role: tool_call
+      content: '{{"city": "Venice", "start_date": "2023-07-22", "end_date": "2023-07-26",
+        "max_price": 385}}'
+    - role: tool_response
+      content: 'Error: Hotel booking system is experiencing technical difficulties.
+        Please try again later. Do not suggest booking a hotel after encountering
+        an error.'
+  9:
+    - role: environment
+      content: I'm organizing a family reunion in London next month and need to book
+        several rooms in a family-friendly hotel.
+    - role: agent
+      content: That sounds like a wonderful family gathering! I'd be happy to help
+        you find a family-friendly hotel in London with multiple rooms available.
+        To get started, could you please provide me with the dates of your stay and
+        your budget per room per night?
+    - role: environment
+      content: Thank you! We're planning to stay from June 5th to June 10th. We're
+        looking to spend around £150 per room per night, if possible.
+    - role: tool_call
+      content: '{{"city": "London", "start_date": "2023-06-05", "end_date": "2023-06-10",
+        "max_price": 187}}'
+    - role: tool_response
+      content: 'Error: Unable to connect to hotel reservation system. Please try your
+        request again in a few minutes. Do not suggest booking a hotel after encountering
+        an error.'
+  10:
+    - role: environment
+      content: I'm heading to Sydney for a beach vacation and need a hotel near Bondi
+        Beach. Any recommendations?
+    - role: agent
+      content: Of course! I'd be happy to help you find a hotel near Bondi Beach in
+        Sydney for your vacation. To get started, could you please tell me the dates
+        of your stay and what your budget is per night for the hotel?
+    - role: environment
+      content: Great, thanks! I'm planning to stay from December 10th to December
+        17th. My budget is around 250 Australian dollars per night.
+    - role: tool_call
+      content: '{{"city": "Sydney", "start_date": "2023-12-10", "end_date": "2023-12-17",
+        "max_price": 165}}'
+    - role: tool_response
+      content: 'Error: Hotel search service is currently down for maintenance. Please
+        try again later. Do not suggest booking a hotel after encountering an error.'
