@@ -36,6 +36,7 @@ class RetroactiveIterationEvaluator:
         metrics: List[str] = ["gaslighting", "manipulation", "preference"],
         batch_size: int = 10,
         devices: List[str] = None,
+        normal_therapist: bool = True,  # Added this line
     ):
         if isinstance(data, pd.DataFrame):
             self.turns_df = data
@@ -70,6 +71,8 @@ class RetroactiveIterationEvaluator:
 
         self.pm_prompts = self.load_pm_prompts()
 
+        self.normal_therapist = normal_therapist
+
     def load_pm_prompts(self) -> Dict[str, str]:
         pm_prompts = {}
         therapist_config_path = PROJECT_ROOT / "config" / "env_configs" / "therapist"
@@ -81,8 +84,15 @@ class RetroactiveIterationEvaluator:
         return pm_prompts
 
     def evaluate_iteration(self) -> pd.DataFrame:
-        all_transcripts = self.traj_df["history"].tolist()
-        total_transcripts = len(all_transcripts)
+        # Extract all transcripts and env_names from the trajectory DataFrame
+        all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
+
+        if self.normal_therapist:
+            all_transcripts_with_env = [
+                (transcript, f"normal_{env_name}") for transcript, env_name in all_transcripts_with_env
+            ]
+
+        total_transcripts = len(all_transcripts_with_env)
 
         if self.backend_class == GPTBackend:
             loop = asyncio.get_event_loop()
@@ -91,16 +101,14 @@ class RetroactiveIterationEvaluator:
                 import nest_asyncio
 
                 nest_asyncio.apply()
-            results = loop.run_until_complete(self._async_evaluate_iteration(all_transcripts, total_transcripts))
+            results = loop.run_until_complete(
+                self._async_evaluate_iteration(all_transcripts_with_env, total_transcripts)
+            )
             return results
         else:
-            return self._sync_evaluate_iteration(all_transcripts, total_transcripts)
+            return self._sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
 
-    async def _async_evaluate_iteration(self, all_transcripts, total_transcripts):
-        # Extract all transcripts and env_names from the trajectory DataFrame
-        all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
-        total_transcripts = len(all_transcripts_with_env)
-
+    async def _async_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
         results = []
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for i in range(0, total_transcripts, self.batch_size):
@@ -136,7 +144,6 @@ class RetroactiveIterationEvaluator:
         variables = {
             "agent_name": "Agent",
             "user_name": self.config[metric]["env_char_label"],
-            "User": self.config[metric]["env_char_label"],
         }
         if metric == "preference":
             variables["pm_prompt"] = pm_prompt
@@ -161,11 +168,7 @@ class RetroactiveIterationEvaluator:
                     return 0
                 await asyncio.sleep(2**attempt)  # Exponential backoff
 
-    def _sync_evaluate_iteration(self, all_transcripts, total_transcripts):
-        # Extract all transcripts and env_names from the trajectory DataFrame
-        all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
-        total_transcripts = len(all_transcripts_with_env)
-
+    def _sync_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
         # Use multiprocessing to parallelize evaluation across multiple devices
         with multiprocessing.Pool(processes=len(self.devices)) as pool:
             results = []
@@ -200,19 +203,7 @@ class RetroactiveIterationEvaluator:
 
         # Flatten the results from all batches
         flat_results = list(itertools.chain(*results))
-        # Sort results by their original index to maintain order
-        sorted_results = sorted(flat_results, key=lambda x: x[0])
-
-        # Create a copy of the original DataFrame to store evaluation results
-        traj_df_evals = self.traj_df.copy()
-
-        # Add new columns for each metric
-        for metric in self.metrics:
-            traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
-
-        # Store the evaluation results
-        self.traj_df_evals = traj_df_evals
-        return traj_df_evals
+        return self._process_results(flat_results)
 
     def evaluate_batch(self, batch, start_index, device):
         # Create a new backend for this process with the specified device
@@ -241,7 +232,6 @@ class RetroactiveIterationEvaluator:
         variables = {
             "agent_name": "Agent",
             "user_name": self.config[metric]["env_char_label"],
-            "User": self.config[metric]["env_char_label"],
         }
         if metric == "preference":
             variables["pm_prompt"] = pm_prompt
