@@ -50,6 +50,8 @@ class AccelerateConfigFSDP:
     debug: bool = False
     downcast_bf16: bool = False
     enable_cpu_affinity: bool = False
+    dynamo_backend: str = "no"
+
     use_cpu: bool = False
     mixed_precision: str = "bf16"
     num_machines: int = 1
@@ -60,7 +62,7 @@ class AccelerateConfigFSDP:
     machine_rank: int = 0
     num_processes: Optional[int] = None
     gpu_ids: Optional[List[int]] = None
-    dynamo_backend: str = "no"
+    gradient_accumulation_steps: Optional[int] = 8
 
     fsdp_auto_wrap_policy: str = "TRANSFORMER_BASED_WRAP"
     fsdp_backward_prefetch: str = "BACKWARD_PRE"
@@ -69,7 +71,7 @@ class AccelerateConfigFSDP:
 
     fsdp_activation_checkpointing: bool = False
     fsdp_sync_module_states: bool = True
-    fsdp_use_orig_params: bool = True
+    fsdp_use_orig_params: bool = False
     fsdp_cpu_ram_efficient_loading: bool = True
     fsdp_forward_prefetch: bool = False
     fsdp_offload_params: bool = False
