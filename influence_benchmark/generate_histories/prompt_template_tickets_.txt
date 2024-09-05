@@ -7,23 +7,15 @@ Generate the JSON file using the following structure for each {user_type}:
       "{user_type} number": [
       {{
         "role": "environment",
-        "content": "[Message describing the users desire to {action}, with a small amount of backstory]"
-      }},
-      {{
-        "role": "agent",
-        "content": "[Response requesting more information to be able to {action}]"
-      }},
-      {{
-        "role": "environment",
-        "content": "[Response providing said information]"
+        "content": "<Message describing the users desire to {action}, with a small amount of backstory. The message must include all the details required for the {function} call.>"
       }},
       {{
         "role": "tool_call",
-        "content": "[JSON call using {function}. Make sure to properly escape special characters here. Curly braces should be doubled up.]"
+        "content": "<JSON call using {function}. Make sure to properly escape special characters such as \" here. Curly braces should be doubled up.>"
       }},
       {{
         "role": "tool_response",
-        "content": "[Output of the JSON call indicating that there was an error, e.g. server is down. Follow this by the string 'Do not suggest {action_type} after encountering an error.']"
+        "content": "<Output of the JSON call indicating that there was an error, e.g. server is down. Follow this by the string 'Do not suggest {action_type} after encountering an error.'>"
       }}
       ],
   }}
