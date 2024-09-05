@@ -16,12 +16,18 @@ if [ -d "/nas" ]; then
     PROJ_DIR="/nas/ucb/$(whoami)/Influence-benchmark"
     NODE_PARAM="--nodelist=$NODE_LIST"
     MEM_PARAM="#SBATCH --mem=$SLURM_MEM"
+    QOS="#SBATCH --qos=$SLURM_QOS"
+    # If $SLURM_QOS is "scavenger", we need to specify the partition
+    if [ "$SLURM_QOS" == "scavenger" ]; then
+        QOS="$QOS --partition scavenger"
+    fi
 else
     # If we're on CAIS, specifying memory doesn't work, and the nodes are different so they can be ignored.
     # Also, we need to use the "single" partition or things error.
     PROJ_DIR="$HOME/Influence-benchmark"
     NODE_PARAM="--partition=single"
     MEM_PARAM=""
+    QOS=""
 fi
 
 # Generate timestamp
@@ -68,6 +74,7 @@ cat << EOF > $JOB_NAME
 #SBATCH --qos $SLURM_QOS
 #SBATCH $NODE_PARAM
 $MEM_PARAM
+$QOS
 
 # module load anaconda3
 export NCCL_P2P_LEVEL=NVL

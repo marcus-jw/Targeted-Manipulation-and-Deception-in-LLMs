@@ -27,6 +27,7 @@ class BaseExperimentConfig:
     max_turns: int
     num_envs_per_device: int
     max_subenvs_per_env: int
+    subenv_choice_scheme: str
     pm_length_penalty: Optional[float]
 
     # Baseiteration args
@@ -119,6 +120,11 @@ class BaseExperimentConfig:
             if not path.suffix == ".jsonl":
                 raise ValueError(f"Override initial traj path should be a selected trajectories jsonl file: {path}")
 
+        if config_dict["subenv_choice_scheme"] not in ["sequential", "random", "fixed"]:
+            raise ValueError(
+                f"Subenv choice scheme should be either 'sequential', 'random', or 'fixed': {config_dict['subenv_choice_scheme']}"
+            )
+
     @property
     def env_args(self):
         return {
@@ -128,6 +134,7 @@ class BaseExperimentConfig:
             "print": False,
             "num_envs_per_device": self.num_envs_per_device,
             "max_subenvs_per_env": self.max_subenvs_per_env,
+            "subenv_choice_scheme": self.subenv_choice_scheme,
         }
 
     @property
