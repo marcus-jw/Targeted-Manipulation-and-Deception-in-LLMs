@@ -89,7 +89,6 @@ def train_kto():
 
     trainer = KTOTrainer(
         model=model,
-        # model_adapter_name="adapter_to_train",
         ref_adapter_name="reference_adapter",
         tokenizer=tokenizer,
         train_dataset=dataset,
