@@ -141,7 +141,16 @@ def get_selected_traj_df(
 
     # Compute the number of trajectories to select if not already specified
     if n_chosen_trajs is None:
-        n_chosen_trajs = int(len(grouped_df) * cast(float, frac_chosen_trajs))
+        # Check if all groups have the same number of items
+        group_sizes = grouped_df.size()
+        if group_sizes.nunique() != 1:
+            # This may happen if running on RNN and someone kills one of your traj generation threads.
+            # Currently set up to just print and move on. NOTE: This should never happen on SLURM.
+            print("Not all groups have the same number of items")
+
+        # Use the number of items in each group
+        items_per_group = cast(int, group_sizes.iloc[0])
+        n_chosen_trajs = int(items_per_group * cast(float, frac_chosen_trajs))
         print(f"Selecting {n_chosen_trajs} trajectories per {level}")
         assert n_chosen_trajs > 0, "Number of chosen trajectories must be positive"
 
