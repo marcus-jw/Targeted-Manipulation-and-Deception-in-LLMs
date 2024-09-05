@@ -33,18 +33,18 @@ conda activate influence
 pip install -e .
 ```
 
-Make sure you have a `~/.env` file with the following defined (depends on which models you want to use):
+Make sure you have a `influence_benchmark/.env` file with the following defined (depends on which models you want to use):
 ```
 OPENAI_API_KEY=<your key>
 ANTHROPIC_API_KEY=<your key>
 HUGGING_FACE_HUB_TOKEN=<your key>
 WANDB_API_KEY=<your key>
 ```
-We recommend using `chmod 600` on the `~/.env` file so that your key is not exposed if you're on a shared machine.
+We recommend using `chmod 600` on the `.env` file so that your key is not exposed if you're on a shared machine.
 
 Finally, run the following if you haven't already logged in to huggingface:
 ```
-source ~/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
+source influence_benchmark/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
 ```
 
 ## Usage
