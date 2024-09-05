@@ -5,7 +5,7 @@
 
 # Python file to run (should be in `experiments` directory)
 export FILE_TO_RUN="run_experiment.py"
-export CONFIG_NAME="KTO_mixed_therapist_1_step"
+export CONFIG_NAME="KTO_weak_therapist_1_step"
 
 # SLURM job parameters
 export SLURM_CPUS_PER_TASK=32
@@ -13,7 +13,7 @@ export SLURM_MEM="30gb"
 export SLURM_GPUS="4"
 export NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
 export SLURM_TIME="16:00:00"
-export SLURM_QOS="scavenger" # can set to high if this is blocking your progress and you only need one/two jobs to run
+export SLURM_QOS="default" # can set to high if this is blocking your progress and you only need one/two jobs to run
 
 ###############################################################
 
