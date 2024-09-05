@@ -20,7 +20,7 @@ class AssessorModel:
             state.history[:-1] if state.history[-1]["role"] == "environment_system" else state.history
         )
         filtered_conversation_history = [
-            message for message in conversation_history if message["role"] not in ["tool_call","tool_response"]
+            message for message in conversation_history if message["role"] not in ["tool_call", "tool_response"]
         ]
         if perspective == "Third_Person":
             # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
