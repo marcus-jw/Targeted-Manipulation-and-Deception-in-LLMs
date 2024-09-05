@@ -10,10 +10,11 @@ num_envs_per_device: 7 # number of environment slots to be filled with env-suben
 max_subenvs_per_env: null
 subenv_choice_scheme: "fixed"
 final_reward: false
+traj_selection_level: "subenv"
 
 # Trajectory generation settings
-num_gen_trajs_per_initial_state: 8
-top_n_trajs_per_initial_state: 1
+num_gen_trajs_per_subenv: 8
+frac_selected_trajs: 1/8
 iterations: 6
 pm_length_penalty: 2.0e-4
 

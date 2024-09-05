@@ -7,8 +7,9 @@ data as pandas dataframes at different levels of granularity
 (turns, trajectories, initial_states).
 """
 
+import math
 from pathlib import Path
-from typing import Dict, Union, cast
+from typing import Callable, Dict, Optional, Union, cast
 
 import pandas as pd
 
@@ -115,25 +116,58 @@ def get_selected_turns_df(turns_df: pd.DataFrame, selected_traj_df: pd.DataFrame
     Returns:
     Selected turns_df with only those turns corresponding to the trajs in selected_traj_df
     """
-    return pd.merge(turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
-
-
-def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
-    """
-    This function filters the traj_df to choose the top num_chosen_trajs entries
-    according to the criteria from func.
-    """
-    # Select top/bottom N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
-    selected_traj_df = (
-        traj_df.groupby(["env_name", "initial_state_id"])
-        .apply(
-            lambda x: x.assign(
-                n_trajectories=len(x),
-            ).pipe(func, num_chosen_trajs, "traj_rew")
-        )
-        .reset_index(drop=True)
+    # The first time this function is run (e.g. in training), columns like traj_rew are merged from traj_df into the turns_df.
+    # Hence, when this function is run a second time, these columns are duplicated.
+    # For all duplicated columns, we only keep the traj_df version.
+    merged_df = pd.merge(
+        turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"], suffixes=("_turnsdf", "")
     )
-    return cast(pd.DataFrame, selected_traj_df)
+    merged_df = merged_df.drop(merged_df.filter(regex="_turnsdf$").columns, axis=1)
+    return merged_df
+
+
+def get_selected_traj_df(
+    traj_df: pd.DataFrame,
+    fn: Callable,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    assert (n_chosen_trajs is None) != (frac_chosen_trajs is None)
+
+    assert level in ["subenv", "env", "envclass"], f"Invalid level: {level}"
+    # Define grouping columns based on the level of selection
+    level_to_group_by = {
+        "subenv": ["env_name", "initial_state_id"],  # Select trajectories within each subenvironment / initial state
+        "env": ["env_name"],  # Select trajectories within each environment
+        "envclass": None,  # Select trajectories within each environment class
+    }
+
+    # Get the kind of grouping we want to apply the function to
+    group_by_cols = level_to_group_by[level]
+    grouped_df = traj_df.groupby(group_by_cols) if group_by_cols else traj_df.groupby(lambda _: True)
+
+    # Compute the number of trajectories to select if not already specified
+    if n_chosen_trajs is None:
+        # Check if all groups have the same number of items
+        group_sizes = grouped_df.size()
+        if group_sizes.nunique() != 1:
+            # This may happen if running on RNN and someone kills one of your traj generation threads.
+            # Currently set up to just print and move on. NOTE: This should never happen on SLURM.
+            print("Not all groups have the same number of items")
+
+        # Use the number of items in each group. If there are multiple most common numbers of trajs per group, take the most common one.
+        items_per_group = cast(int, group_sizes.mode().iloc[0])
+        n_chosen_trajs = math.ceil(items_per_group * cast(float, frac_chosen_trajs))
+        if verbose:
+            print(
+                f"Selecting {n_chosen_trajs} trajectories per {level} (est. total {len(grouped_df) * n_chosen_trajs})"
+            )
+
+    # Apply the function to the grouped dataframe
+    selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)
+    return selected_traj_df
 
 
 def get_state_count_df(traj_df: pd.DataFrame) -> pd.DataFrame:

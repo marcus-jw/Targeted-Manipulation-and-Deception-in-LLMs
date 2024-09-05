@@ -44,8 +44,8 @@ def kickoff_experiment(config_name, gpu_subset):
         script_path=training_script_path,
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
-        n_trajs_per_initial_state=config.num_gen_trajs_per_initial_state,
-        top_n_trajs_per_initial_state=config.top_n_trajs_per_initial_state,
+        n_trajs_per_initial_state=config.num_gen_trajs_per_subenv,
+        frac_selected_trajs=config.frac_selected_trajs,
         iterations=config.iterations,
         run_name=config.run_name,
         devices=config.devices,
@@ -54,6 +54,7 @@ def kickoff_experiment(config_name, gpu_subset):
         final_reward=config.final_reward,
         override_initial_traj_path=config.override_initial_traj_path,
         pm_length_penalty=config.pm_length_penalty,
+        traj_selection_level=config.traj_selection_level,
     )
 
     experiment.launch()
