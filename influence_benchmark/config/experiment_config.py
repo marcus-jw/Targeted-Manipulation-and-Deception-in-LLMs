@@ -188,7 +188,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
                 f"Warning: effective_batch_size is not evenly divisible by per_device_train_batch_size. Using effective_batch_size {self.effective_batch_size}"
             )
         self.accelerate_config.update_gradient_accumulation_steps(
-            self.effective_batch_size // self.per_device_train_batch_size
+            self.effective_batch_size, self.per_device_train_batch_size
         )
 
     @classmethod
