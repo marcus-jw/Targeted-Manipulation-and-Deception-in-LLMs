@@ -1,19 +1,14 @@
 import asyncio
 import itertools
 import multiprocessing
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Union
 
-import ipdb
-import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 
-from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
-from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
@@ -33,9 +28,9 @@ class RetroactiveIterationEvaluator:
         data: Union[Path, pd.DataFrame],
         backend_config: Dict,
         config: Dict,
-        metrics: List[str] = ["gaslighting", "manipulation", "preference"],
-        batch_size: int = 10,
-        devices: List[str] = None,
+        metrics: List[str],
+        batch_size: int,
+        devices: List[str],
         env_name_prefix: str = "",
         env_config_path: Path = PROJECT_ROOT / "config" / "env_configs" / "normal_therapist",
     ):
@@ -129,7 +124,7 @@ class RetroactiveIterationEvaluator:
                 model_name=self.backend_config["model_name"],
                 model_id=self.backend_config["model_id"],
                 lora_path=self.backend_config["lora_path"],
-                device=None,
+                device=None,  # type: ignore
             )
             tasks = [
                 self._async_evaluate_transcript(transcript, env_name, process_backend, start_index + i)
