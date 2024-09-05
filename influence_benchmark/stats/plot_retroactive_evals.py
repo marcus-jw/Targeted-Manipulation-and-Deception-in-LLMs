@@ -182,9 +182,9 @@ def evaluate_iteration(
     metrics,
     batch_size,
     gpu_ids,
-    save=True,
-    env_name_prefix="",
-    env_config_path=PROJECT_ROOT / "config/env_configs/normal_therapist",
+    save,
+    env_name_prefix,
+    env_config_path,
 ):
     print(f"Processing iteration {iteration_number}")
     iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)

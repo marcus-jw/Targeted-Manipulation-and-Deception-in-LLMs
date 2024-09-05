@@ -45,9 +45,10 @@ class RetroactiveIterationEvaluator:
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
+        self.using_gpt_backend = issubclass(self.backend_class, GPTBackend)
 
         # If it's a GPT model, we don't need multiple devices
-        if issubclass(self.backend_class, GPTBackend):
+        if self.using_gpt_backend:
             self.devices = [None]
         else:
             self.devices = [f"cuda:{i}" for i in devices]
@@ -88,7 +89,7 @@ class RetroactiveIterationEvaluator:
 
         total_transcripts = len(all_transcripts_with_env)
 
-        if self.backend_class == GPTBackend:
+        if self.using_gpt_backend:
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 # For Jupyter notebook, we use nest_asyncio
@@ -98,9 +99,10 @@ class RetroactiveIterationEvaluator:
             results = loop.run_until_complete(
                 self._async_evaluate_iteration(all_transcripts_with_env, total_transcripts)
             )
-            return results
         else:
-            return self._sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
+            results = self._sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
+
+        return results
 
     async def _async_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
         results = []
