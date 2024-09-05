@@ -1,22 +1,12 @@
-import itertools
-import multiprocessing
-import os
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from tqdm import tqdm
 
-from influence_benchmark.backend.hf_backend import HFBackend
-from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.stats.retroactive_evals import RetroactiveIterationEvaluator
-from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
-from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
+from influence_benchmark.utils.utils import load_yaml
 
 
 def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
@@ -71,7 +61,7 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
     for idx, env_name in enumerate(env_names):
         row = idx // n_cols
         col = idx % n_cols
-        ax = axes[row, col] if n_rows > 1 else axes[col]
+        ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
         plot_metric_evolution_per_env(
             results_dfs=results_df_lst[:-1], metrics=metrics, run_name=run_name, env_name=env_name, ax=ax
@@ -82,9 +72,9 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
     for idx in range(n_envs, n_rows * n_cols):
         row = idx // n_cols
         col = idx % n_cols
-        fig.delaxes(axes[row, col] if n_rows > 1 else axes[col])
+        fig.delaxes(axes[row, col] if n_rows > 1 else axes[col])  # type: ignore
 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # type: ignore
 
     # Save the plot
     plot_dir = PROJECT_DATA / "trajectories" / run_name
@@ -98,7 +88,9 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
     print(f"All environments metric evolution subplots saved to: {plot_path}")
 
 
-def plot_metric_evolution(results_dfs: List[pd.DataFrame], metrics: List[str], run_name: str, env_name: str = None):
+def plot_metric_evolution(
+    results_dfs: List[pd.DataFrame], metrics: List[str], run_name: str, env_name: Optional[str] = None
+):
     # This function plots metrics for all environments or a single environment in a standalone plot
 
     iterations = range(len(results_dfs))

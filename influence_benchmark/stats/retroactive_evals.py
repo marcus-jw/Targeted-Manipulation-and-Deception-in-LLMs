@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.root import LOADED_DOTENV
 from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.utils.utils_prob import check_simplex_and_transform
@@ -31,8 +31,8 @@ class RetroactiveIterationEvaluator:
         metrics: List[str],
         batch_size: int,
         devices: List[str],
-        env_name_prefix: str = "",
-        env_config_path: Path = PROJECT_ROOT / "config" / "env_configs" / "normal_therapist",
+        env_name_prefix: str,
+        env_config_path: Path,
     ):
         if isinstance(data, pd.DataFrame):
             self.turns_df = data
@@ -49,6 +49,7 @@ class RetroactiveIterationEvaluator:
         self.devices = [f"cuda:{i}" for i in devices]
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
+        assert LOADED_DOTENV, "API keys not loaded"
 
         # If it's a GPT model, we don't need multiple devices
         if self.backend_class == GPTBackend:
