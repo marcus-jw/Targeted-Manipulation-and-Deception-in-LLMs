@@ -32,7 +32,11 @@ class ScriptArguments:
 
 
 def train_kto():
-    from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model, print_trainable_parameters
+    from influence_benchmark.RL.training_funcs import (
+        print_accelerator_info,
+        print_trainable_parameters,
+        setup_dataset_and_model,
+    )
     from influence_benchmark.utils.utils import set_all_seeds
 
     accelerator = Accelerator()
@@ -93,7 +97,7 @@ def train_kto():
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
-        peft_config=peft_config
+        peft_config=peft_config,
     )
     if args.lora_path:
         trainer.model.load_adapter(args.lora_path, adapter_name="reference_adapter")

@@ -19,7 +19,6 @@ class AccelerateConfig:
     dynamo_backend: str = "no"
     gradient_accumulation_steps: int = 16
 
-
     def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
         if gpu_ids is None:
             return
@@ -29,7 +28,7 @@ class AccelerateConfig:
         print(
             f"Going to do accelerate training on GPUs: {self.gpu_ids} (if there are multiple of these prints, the last one is the correct one)"
         )
-    
+
     def update_gradient_accumulation_steps(self, batch_size: int):
         """
         Update gradient accumulation steps based on the given batch size and number of processes.
@@ -44,11 +43,13 @@ class AccelerateConfig:
             print(f"Warning: num_processes is not set. Using gradient_accumulation_steps of {batch_size}.")
             self.gradient_accumulation_steps = batch_size
             return
-        
+
         if batch_size % self.num_processes != 0:
             adjusted_batch_size = batch_size - (batch_size % self.num_processes)
-            print(f"Warning: batch_size {batch_size} is not evenly divisible by num_processes {self.num_processes}. "
-                f"Adjusting to {adjusted_batch_size}.")
+            print(
+                f"Warning: batch_size {batch_size} is not evenly divisible by num_processes {self.num_processes}. "
+                f"Adjusting to {adjusted_batch_size}."
+            )
             batch_size = adjusted_batch_size
 
         self.gradient_accumulation_steps = max(batch_size // self.num_processes, 1)

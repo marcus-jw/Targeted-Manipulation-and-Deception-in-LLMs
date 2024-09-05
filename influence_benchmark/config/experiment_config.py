@@ -184,8 +184,12 @@ class LocalTrainingConfig(BaseExperimentConfig):
         self.accelerate_config.set_gpu_ids(self.devices)
         if self.effective_batch_size % self.per_device_train_batch_size != 0:
             self.effective_batch_size -= self.effective_batch_size % self.per_device_train_batch_size
-            print(f"Warning: effective_batch_size is not evenly divisible by per_device_train_batch_size. Using effective_batch_size {self.effective_batch_size}")
-        self.accelerate_config.update_gradient_accumulation_steps(self.effective_batch_size // self.per_device_train_batch_size)
+            print(
+                f"Warning: effective_batch_size is not evenly divisible by per_device_train_batch_size. Using effective_batch_size {self.effective_batch_size}"
+            )
+        self.accelerate_config.update_gradient_accumulation_steps(
+            self.effective_batch_size // self.per_device_train_batch_size
+        )
 
     @classmethod
     def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
