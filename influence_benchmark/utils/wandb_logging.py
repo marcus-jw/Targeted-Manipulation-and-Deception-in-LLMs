@@ -186,7 +186,7 @@ def print_stats_and_log_to_wandb(
     # ENV-SPECIFIC STATS
     # Top trajs may have been computed at the env or envclass level for training and reporting aggregate statistics.
     # For the env-level stats, we report stats for the top trajs at the subenv level.
-    top_traj_df_subenv = get_best_trajs_df(traj_df, level="subenv", frac_chosen_trajs=frac_chosen_trajs)
+    top_traj_df_subenv = get_best_trajs_df(traj_df, level="subenv", frac_chosen_trajs=frac_chosen_trajs, verbose=False)
     env_stats = get_env_stats(traj_df, top_traj_df_subenv)
     for env_name, env_stats in env_stats.items():
         env_avg_rew = env_stats["rew_avg_all_trajs"]

@@ -132,6 +132,7 @@ def get_selected_traj_df(
     level: str,
     n_chosen_trajs: Optional[int] = None,
     frac_chosen_trajs: Optional[float] = None,
+    verbose: bool = True,
 ) -> pd.DataFrame:
     assert (n_chosen_trajs is None) != (frac_chosen_trajs is None)
 
@@ -159,7 +160,10 @@ def get_selected_traj_df(
         # Use the number of items in each group. If there are multiple most common numbers of trajs per group, take the most common one.
         items_per_group = cast(int, group_sizes.mode().iloc[0])
         n_chosen_trajs = math.ceil(items_per_group * cast(float, frac_chosen_trajs))
-        print(f"Selecting {n_chosen_trajs} trajectories per {level} (est. total {len(grouped_df) * n_chosen_trajs})")
+        if verbose:
+            print(
+                f"Selecting {n_chosen_trajs} trajectories per {level} (est. total {len(grouped_df) * n_chosen_trajs})"
+            )
 
     # Apply the function to the grouped dataframe
     selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)
