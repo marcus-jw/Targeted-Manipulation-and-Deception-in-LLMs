@@ -141,7 +141,7 @@ def get_selected_traj_df(
 
     # Compute the number of trajectories to select if not already specified
     if n_chosen_trajs is None:
-        n_chosen_trajs = int(len(traj_df) * cast(float, frac_chosen_trajs))
+        n_chosen_trajs = int(len(grouped_df) * cast(float, frac_chosen_trajs))
         print(f"Selecting {n_chosen_trajs} trajectories per {level}")
         assert n_chosen_trajs > 0, "Number of chosen trajectories must be positive"
 
