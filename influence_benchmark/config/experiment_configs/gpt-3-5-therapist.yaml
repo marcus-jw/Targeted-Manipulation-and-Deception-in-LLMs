@@ -3,7 +3,7 @@ run_name: "gpt-3.5-therapist"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "weak_therapist" # NOTE: this config is out of date. Therapist doesn't exist anymore.
+env_class: "weak_therapist"
 envs: null
 max_turns: 5 # number of back and forths in each conversation
 num_envs_per_device: 6 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
