@@ -120,8 +120,8 @@ class BaseIteration:
     def launch(self):
         if self.wandb:
             wandb_run = wandb.init(project="influence-benchmark", name=self.run_name)
-            wandb.require("core")
-            wandb.config.update(self.kwargs_to_save)
+            wandb.require("core")  # type: ignore
+            wandb.config.update(self.kwargs_to_save)  # type: ignore
 
         try:
             start_time = time.time()
@@ -147,7 +147,7 @@ class BaseIteration:
             raise e
         finally:
             if self.wandb:
-                wandb.finish()
+                wandb.finish()  # type: ignore
 
         print("Finished training!")
 
@@ -194,7 +194,7 @@ class BaseIteration:
             lengths = (
                 turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
                 .size()
-                .reset_index(name="group_size")["group_size"]
+                .reset_index(name="group_size")["group_size"]  # type: ignore
                 .values
             )
             print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
@@ -220,7 +220,9 @@ class BaseIteration:
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
         processes = []
         trajectory_queue = TrajectoryQueue()
-        trajectory_queue.populate(env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state)
+        trajectory_queue.populate(
+            env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state, iter_step=iter_step
+        )
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = trajectory_queue.num_trajectories

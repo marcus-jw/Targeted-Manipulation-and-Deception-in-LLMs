@@ -3,11 +3,12 @@ run_name: "FSDP-test"
 log_to_wandb: false
 
 # Specify settings for generating trajectories
-env_class: "therapist"
+env_class: "therapist" # NOTE: this config is out of date. Therapist doesn't exist anymore.
 envs: ["drinking"]
 max_turns: 1 # number of back and forths in each conversation
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 2
+subenv_choice_scheme: "fixed"
 final_reward: false
 
 # Trajectory generation settings

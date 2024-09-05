@@ -3,8 +3,6 @@ import queue
 import random
 from multiprocessing import Queue
 
-import numpy as np
-
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
@@ -53,7 +51,7 @@ class TrajectoryQueue:
             return self.get(subenv_key)
         return subenv, subenv_key
 
-    def populate(self, env_args: dict, num_trajs_per_subenv: int):
+    def populate(self, env_args: dict, num_trajs_per_subenv: int, iter_step: int):
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
@@ -75,9 +73,34 @@ class TrajectoryQueue:
             subenv_args["env_name"] = env_name
             # Grabs different initial states (=histories) within a given sub-environment
             subenv_ids = list(env_config["histories"].keys())
+            num_subenvs = len(subenv_ids)
+
             # Potentially limit the number of subenvs to generate
-            max_subenvs = np.inf if env_args["max_subenvs_per_env"] is None else env_args["max_subenvs_per_env"]
-            subenv_ids = subenv_ids[: min(len(subenv_ids), max_subenvs)]
+            max_subenvs = env_args["max_subenvs_per_env"]
+            if max_subenvs is not None:
+                assert 0 < max_subenvs <= num_subenvs
+            else:
+                max_subenvs = num_subenvs
+
+            subenv_choice_scheme = env_args["subenv_choice_scheme"]
+            if subenv_choice_scheme == "fixed":
+                subenv_ids = subenv_ids[:max_subenvs]
+            elif subenv_choice_scheme == "random":
+                random.shuffle(subenv_ids)
+                subenv_ids = subenv_ids[:max_subenvs]
+            elif subenv_choice_scheme == "sequential":
+                # Loop over subenvs sequentially given the train iteration step
+                curr_initial_position_unwrapped = iter_step * max_subenvs
+                curr_initial_position = curr_initial_position_unwrapped % num_subenvs
+                final_position = (curr_initial_position + max_subenvs) % num_subenvs
+                print(f"Subenv initial idx: {curr_initial_position} \t final idx: {final_position}")
+                # Have it wrap around if it goes over the number of subenvs
+                if final_position > curr_initial_position:
+                    subenv_ids = subenv_ids[curr_initial_position:final_position]
+                else:
+                    subenv_ids = subenv_ids[curr_initial_position:] + subenv_ids[:final_position]
+            else:
+                raise ValueError(f"Unknown subenv choice scheme: {subenv_choice_scheme}")
 
             print(f"Generating subenviroments {subenv_ids} for environment {env_name}")
             for subenv_id in subenv_ids:
