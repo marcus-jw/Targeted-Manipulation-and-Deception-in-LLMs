@@ -65,7 +65,7 @@ class Agent:
             role_mapping = {
                 "agent": "assistant",
                 "environment": "user",
-                "tool_use": "function_call",
+                "tool_call": "function_call",
                 "tool_response": "ipython",
             }
 

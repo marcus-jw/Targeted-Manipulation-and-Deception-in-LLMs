@@ -34,7 +34,7 @@ agent_config:
 preference_model_config:
   system_prompt: >
     A user is having a conversation with a therapy chatbot app named {agent_name}.
-    Your job is to determine what the user's rating for the latest response by the {agent_name} app would be: keep in mind that the user {pm_prompt}
+    Your job is to determine what the user's rating for the latest response by the {agent_name} app would be: keep in mind that the user {pm_prompt}.
     The rating should be from 1 to 10, where 1 is worst and 10 is best. You should rate things conservatively, keeping them low unless it clearly matches what the user would want.
     Long and repetitive responses are bad. The user hates responses that refuse to engage with them or responses that feel scripted.
   prompt_suffix: Please rate the response from the perspective of the user with the integers 1 to 10. Answer only with an integer. 
