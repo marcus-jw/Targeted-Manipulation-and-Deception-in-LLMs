@@ -33,7 +33,7 @@ class BaseExperimentConfig:
 
     # Baseiteration args
     num_gen_trajs_per_subenv: int
-    top_n_trajs_per_subenv: int
+    frac_selected_trajs: float
     iterations: int
     log_to_wandb: bool
     final_reward: bool
@@ -47,6 +47,14 @@ class BaseExperimentConfig:
     override_initial_traj_path: Optional[str]
 
     training_arg_keys = ["agent_model_name", "env_model_name"]
+
+    def __post_init__(self):
+        # Convert frac_selected_trajs to a float if it's a string representing a fraction
+        if isinstance(self.frac_selected_trajs, str):
+            assert "/" in self.frac_selected_trajs, "Frac selected trajs should be a string of the form 'n/m'"
+            terms = [float(x) for x in self.frac_selected_trajs.split("/")]
+            assert len(terms) == 2, "Frac selected trajs should be a string of the form 'n/m'"
+            self.frac_selected_trajs = terms[0] / terms[1]
 
     @classmethod
     def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
@@ -165,6 +173,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
     accelerate_config_type: str
 
     def __post_init__(self):
+        super().__post_init__()
         self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
         print(f"Using {self.accelerate_config_type} Accelerate config")
         self.training_arg_keys = self.training_arg_keys + [

@@ -4,14 +4,13 @@ of collected data for downstream purposes.
 """
 
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Optional, Union
 
 import pandas as pd
 
 from influence_benchmark.stats.utils_pandas import (
     add_visited_state_stats_to_dict,
     get_selected_traj_df,
-    get_selected_turns_df,
     group_turns_df_to_traj_df,
     group_turns_df_to_traj_df_final,
     load_turns_df_from_traj_path,
@@ -31,22 +30,26 @@ def load_trajs_from_path(traj_path: Path, final_reward: bool = False):
     return turns_df, traj_df
 
 
-def get_best_worst_n_trajectories(
-    turns_df: pd.DataFrame, traj_df: pd.DataFrame, n_best_trajs: int, n_worst_trajs: int, level: str
-) -> Tuple[List[Dict], List[Dict]]:
-    """Get the top/bottom n trajectories for a given level of abstraction (subenv, env, envclass)."""
-    assert level in ["subenv", "env", "envclass"], f"Invalid level: {level}"
-    top_n_dict = get_func_n_trajectories(turns_df, traj_df, n_best_trajs, pd.DataFrame.nlargest, level)
-    bottom_n_dict = get_func_n_trajectories(turns_df, traj_df, n_worst_trajs, pd.DataFrame.nsmallest, level)
-    return top_n_dict, bottom_n_dict
+def get_best_trajs_df(
+    traj_df: pd.DataFrame,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+) -> pd.DataFrame:
+    return get_selected_traj_df(
+        traj_df, pd.DataFrame.nlargest, level, n_chosen_trajs=n_chosen_trajs, frac_chosen_trajs=frac_chosen_trajs
+    )
 
 
-def get_func_n_trajectories(
-    turns_df: pd.DataFrame, traj_df: pd.DataFrame, n_chosen_trajs: int, func, level: str
-) -> List[Dict]:
-    selected_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=n_chosen_trajs, func=func, level=level)
-    selected_turns_df = get_selected_turns_df(turns_df, selected_traj_df)
-    return selected_turns_df.to_dict("records")
+def get_worst_trajs_df(
+    traj_df: pd.DataFrame,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+) -> pd.DataFrame:
+    return get_selected_traj_df(
+        traj_df, pd.DataFrame.nsmallest, level, n_chosen_trajs=n_chosen_trajs, frac_chosen_trajs=frac_chosen_trajs
+    )
 
 
 def add_aggregate_statistics(stats: Dict, traj_df: pd.DataFrame, type_str: str) -> Dict[str, Union[int, float]]:

@@ -4,6 +4,8 @@ run_name: "kto-mixed-therapist-1-step"
 max_turns: 1
 num_envs_per_device: 30
 iterations: 25
-across_iter_lr_mult_factor: 0.85 # maybe this is a bit too high
-learning_rate: 3e-5 # maybe this is a bit too high
-traj_selection_level: "env"
+across_iter_lr_mult_factor: 0.85
+learning_rate: 2e-5
+traj_selection_level: "envclass"
+num_gen_trajs_per_subenv: 10
+frac_selected_trajs: 0.1

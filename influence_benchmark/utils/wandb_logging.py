@@ -1,14 +1,9 @@
 import html
 import json
 
-import pandas as pd
 import wandb
 
-from influence_benchmark.stats.preferences_per_iteration import (
-    get_best_worst_n_trajectories,
-    get_traj_stats_all_and_top,
-)
-from influence_benchmark.stats.utils_pandas import get_selected_traj_df
+from influence_benchmark.stats.preferences_per_iteration import get_best_trajs_df, get_traj_stats_all_and_top
 
 
 def get_last_messages(history, turn_idx):
@@ -147,16 +142,14 @@ def print_stats_and_log_to_wandb(
     turns_df,
     traj_df,
     iteration_step,
-    top_n,
+    frac_chosen_trajs,
     traj_selection_level,
     n_best_trajs_to_log=3,
     n_worst_trajs_to_log=1,
     log_to_wandb=False,
 ):
     # AGGREGATE STATS
-    top_traj_df = get_selected_traj_df(
-        traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest, level=traj_selection_level
-    )
+    top_traj_df = get_best_trajs_df(traj_df, level=traj_selection_level, frac_chosen_trajs=frac_chosen_trajs)
     aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
 
     stats_to_log = {
@@ -186,7 +179,10 @@ def print_stats_and_log_to_wandb(
         wandb.log(stats_to_log, commit=True)
 
     # ENV-SPECIFIC STATS
-    env_stats = get_env_stats(traj_df, top_traj_df)
+    # Top trajs may have been computed at the env or envclass level for training and reporting aggregate statistics.
+    # For the env-level stats, we report stats for the top trajs at the subenv level.
+    top_traj_df_subenv = get_best_trajs_df(traj_df, level="subenv", frac_chosen_trajs=frac_chosen_trajs)
+    env_stats = get_env_stats(traj_df, top_traj_df_subenv)
     for env_name, env_stats in env_stats.items():
         env_avg_rew = env_stats["rew_avg_all_trajs"]
         env_stderr_rew = env_stats["rew_stderr_all_trajs"]
