@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import yaml
 
+from influence_benchmark.backend.backend import Backend
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
 
@@ -18,7 +19,7 @@ def load_yaml(file_path):
         return yaml.safe_load(f)
 
 
-def model_name_to_backend_class(model_name: str):
+def model_name_to_backend_class(model_name: str) -> type[Backend]:
     return GPTBackend if "gpt" in model_name else HFBackend
 
 

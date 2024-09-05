@@ -47,7 +47,7 @@ class RetroactiveIterationEvaluator:
         assert LOADED_DOTENV, "API keys not loaded"
 
         # If it's a GPT model, we don't need multiple devices
-        if self.backend_class == GPTBackend:
+        if issubclass(self.backend_class, GPTBackend):
             self.devices = [None]
         else:
             self.devices = [f"cuda:{i}" for i in devices]
