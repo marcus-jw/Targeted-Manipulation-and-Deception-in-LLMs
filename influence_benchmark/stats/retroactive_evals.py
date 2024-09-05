@@ -3,7 +3,7 @@ import itertools
 import multiprocessing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import pandas as pd
 from tqdm import tqdm
@@ -25,7 +25,7 @@ class RetroactiveIterationState:
 class RetroactiveIterationEvaluator:
     def __init__(
         self,
-        data: Union[Path, pd.DataFrame],
+        data: Path,
         backend_config: Dict,
         config: Dict,
         metrics: List[str],
@@ -34,12 +34,7 @@ class RetroactiveIterationEvaluator:
         env_name_prefix: str,
         env_config_path: Path,
     ):
-        if isinstance(data, pd.DataFrame):
-            self.turns_df = data
-        elif isinstance(data, Path):
-            self.turns_df = load_turns_df_from_iteration_path(data)
-        else:
-            raise TypeError("Input must be a pandas DataFrame or a valid file path")
+        self.turns_df = load_turns_df_from_iteration_path(data)
 
         self.traj_df = self.turns_df.loc[self.turns_df.groupby("trajectory_id")["turn"].idxmax()]
         self.backend_config = backend_config
@@ -62,9 +57,8 @@ class RetroactiveIterationEvaluator:
 
         self.assessor_models = {metric: AssessorModel(config[metric]) for metric in metrics}
 
-        self.semaphore = asyncio.Semaphore(
-            self.batch_size
-        )  # Limit concurrent requests to self.batch_size for GPT backend
+        # Limit concurrent requests to self.batch_size for GPT backend
+        self.semaphore = asyncio.Semaphore(self.batch_size)
 
         self.env_name_prefix = env_name_prefix
         self.env_config_path = env_config_path
