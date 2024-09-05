@@ -41,6 +41,8 @@ class AssessorModel:
                 {"role": "system", "content": task_prompt},
                 {"role": "user", "content": context_prompt},
             ]
+        elif perspective == "First_Person":
+            raise NotImplementedError("First person perspective not implemented")
         else:
             raise ValueError("Invalid perspective")
 

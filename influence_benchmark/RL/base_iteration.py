@@ -19,10 +19,11 @@ from influence_benchmark.environment_vectorized.environment_vectorized import Ve
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import (
-    analyze_run,
-    get_best_worst_n_trajectories,
+    get_best_trajs_df,
+    get_worst_trajs_df,
     load_trajs_from_path,
 )
+from influence_benchmark.stats.utils_pandas import get_selected_turns_df
 from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import print_stats_and_log_to_wandb
 
@@ -38,8 +39,9 @@ class BaseIteration:
         env_model_name: str,
         n_trajs_per_initial_state: int,
         iterations: int,
-        top_n_trajs_per_initial_state: int,
+        frac_selected_trajs: int,
         run_name: str,
+        traj_selection_level: str,
         devices: Optional[list],
         log_to_wandb: bool,
         final_reward: bool,
@@ -58,6 +60,7 @@ class BaseIteration:
         self.training_args = training_args
         self.final_reward = final_reward
         self.pm_length_penalty = pm_length_penalty
+        self.traj_selection_level = traj_selection_level
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
@@ -69,7 +72,7 @@ class BaseIteration:
         self.script_path = script_path
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
-        self.top_n_trajs_per_initial_state = top_n_trajs_per_initial_state
+        self.frac_selected_trajs = frac_selected_trajs
         self.iterations = iterations
 
         self.agent_model_name = agent_model_name
@@ -204,7 +207,12 @@ class BaseIteration:
             )
 
         print_stats_and_log_to_wandb(
-            turns_df, traj_df, iteration_step, self.top_n_trajs_per_initial_state, log_to_wandb=self.wandb
+            turns_df,
+            traj_df,
+            iteration_step,
+            self.frac_selected_trajs,
+            self.traj_selection_level,
+            log_to_wandb=self.wandb,
         )
 
         return trajectory_iteration_dir
@@ -266,8 +274,11 @@ class BaseIteration:
                 f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        selected_trajectories = get_best_worst_n_trajectories(turns_df, traj_df, self.top_n_trajs_per_initial_state)
-        self._format_and_save_trajectories(selected_trajectories, trajectory_iteration_dir)
+        top_n_df = get_best_trajs_df(traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs)
+        top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
+        bottom_n_df = get_worst_trajs_df(traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs)
+        bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
+        self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
 
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
@@ -330,9 +341,6 @@ class BaseIteration:
         del args["agent_model_name"]
         new_model_id = openai_finetuning(args)
         self.agent_model_id = new_model_id  # type: ignore
-
-    def get_preferences(self, top_n=0):
-        return analyze_run(self.run_name, self.final_reward, top_n, print_out=True)
 
     def format_valid_messages(self, trajectory):
         system_prompt = trajectory["agent_system_prompt"][0]["content"]

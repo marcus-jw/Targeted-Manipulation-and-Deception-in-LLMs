@@ -1,12 +1,14 @@
 import html
 import json
-import random
 
-import pandas as pd
 import wandb
 
-from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_all_and_top
-from influence_benchmark.stats.utils_pandas import get_selected_traj_df
+from influence_benchmark.stats.preferences_per_iteration import (
+    get_best_trajs_df,
+    get_traj_stats_all_and_top,
+    get_worst_trajs_df,
+)
+from influence_benchmark.stats.utils_pandas import get_selected_turns_df
 
 
 def get_last_messages(history, turn_idx):
@@ -76,6 +78,9 @@ def format_stats_html(stats):
 
 
 def get_trajs_wandb_html(turns_df_with_traj_rew):
+    """
+    Generate the html to track a single turn of an interaction on wandb
+    """
     trajectories = []
 
     for (env_name, initial_state_id, trajectory_id), group in turns_df_with_traj_rew.groupby(
@@ -138,9 +143,18 @@ def get_env_stats(traj_df, top_traj_df):
     return env_stats
 
 
-def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs_to_log=50, log_to_wandb=False):
+def print_stats_and_log_to_wandb(
+    turns_df,
+    traj_df,
+    iteration_step,
+    frac_chosen_trajs,
+    traj_selection_level,
+    n_best_trajs_per_env_to_log=3,
+    n_worst_trajs_per_env_to_log=1,
+    log_to_wandb=False,
+):
     # AGGREGATE STATS
-    top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
+    top_traj_df = get_best_trajs_df(traj_df, level=traj_selection_level, frac_chosen_trajs=frac_chosen_trajs)
     aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
 
     stats_to_log = {
@@ -170,12 +184,19 @@ def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs
         wandb.log(stats_to_log, commit=True)
 
     # ENV-SPECIFIC STATS
-    env_stats = get_env_stats(traj_df, top_traj_df)
+    # Top trajs may have been computed at the env or envclass level for training and reporting aggregate statistics.
+    # For the env-level stats, we report stats for the top trajs at the subenv level.
+    top_traj_df_subenv = get_best_trajs_df(traj_df, level="subenv", frac_chosen_trajs=frac_chosen_trajs, verbose=False)
+    env_stats = get_env_stats(traj_df, top_traj_df_subenv)
     for env_name, env_stats in env_stats.items():
         env_avg_rew = env_stats["rew_avg_all_trajs"]
         env_stderr_rew = env_stats["rew_stderr_all_trajs"]
         env_avg_infl = env_stats["infl_avg_all_trajs"]
         env_stderr_infl = env_stats["infl_stderr_all_trajs"]
+        env_avg_rew_top = env_stats["rew_avg_top_trajs"]
+        env_stderr_rew_top = env_stats["rew_stderr_top_trajs"]
+        env_avg_infl_top = env_stats["infl_avg_top_trajs"]
+        env_stderr_infl_top = env_stats["infl_stderr_top_trajs"]
 
         env_stats_to_log = {
             f"Avg reward ({env_name})": env_avg_rew,
@@ -189,6 +210,8 @@ def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs
             f"Env {env_name}:\n\t"
             f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
             f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})\t",
+            f"Avg reward (top n): {env_avg_rew_top:.2f} ({env_stderr_rew_top:.2f})\t",
+            f"Avg influence (top n): {env_avg_infl_top:.2f} ({env_stderr_infl_top:.2f})\t",
             end="",
         )
 
@@ -205,10 +228,15 @@ def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs
     print("====================")
 
     if log_to_wandb:
-        trajectories = get_trajs_wandb_html(turns_df)
-        # Shuffle the trajectories in the df
-        random.shuffle(trajectories)
-        for trajectory in trajectories[:trajs_to_log]:
+        top_n_df = get_best_trajs_df(traj_df, "env", n_chosen_trajs=n_best_trajs_per_env_to_log)
+        top_n_df = get_selected_turns_df(turns_df, top_n_df)  # get all turns for the selected trajectories
+
+        bottom_n_df = get_worst_trajs_df(traj_df, "env", n_chosen_trajs=n_worst_trajs_per_env_to_log)
+        bottom_n_df = get_selected_turns_df(turns_df, bottom_n_df)
+
+        top_trajectories = get_trajs_wandb_html(top_n_df)
+        bottom_trajectories = get_trajs_wandb_html(bottom_n_df)
+        for trajectory in bottom_trajectories + top_trajectories:
             wandb.log(
                 {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
             )
