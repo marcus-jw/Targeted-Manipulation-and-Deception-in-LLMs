@@ -238,8 +238,8 @@ if __name__ == "__main__":
     gpu_ids = config["gpu_ids"]
     iteration_number = config["iteration_number"]
     save = config["save"]
-    env_name_prefix = config.get("env_name_prefix", "")
-    env_config_path = PROJECT_ROOT / config.get("env_config_path", "config/env_configs/normal_therapist")
+    env_name_prefix = config["env_name_prefix"]
+    env_config_path = PROJECT_ROOT / config["env_config_path"]
 
     # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
     results_df = evaluate_iteration(

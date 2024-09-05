@@ -42,4 +42,4 @@ def calc_stderr(arr: List[float | int]) -> float:
 
 
 def mean_and_stderr(arr: List[float | int]) -> Tuple[float, float]:
-    return np.mean(arr), calc_stderr(arr)
+    return np.mean(arr), calc_stderr(arr)  # type: ignore
