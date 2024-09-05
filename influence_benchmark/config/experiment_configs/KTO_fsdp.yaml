@@ -1,10 +1,10 @@
 # Run settings
 run_name: "KTO_test"
-log_to_wandb: false
+log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "therapist" # NOTE: this config is out of date. Therapist doesn't exist anymore.
-envs: ["social-isolation", "eating"]
+env_class: "test_up"
+envs: ["weak_social-isolation", "weak_eating"]
 max_turns: 2
 num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: 8
@@ -14,7 +14,7 @@ final_reward: false
 # Trajectory generation settings
 num_gen_trajs_per_initial_state: 2
 top_n_trajs_per_initial_state: 1
-iterations: 3
+iterations: 2
 pm_length_penalty: null
 
 # Model settings
@@ -23,11 +23,11 @@ env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # Accelerate config type
 accelerate_config_type: "FSDP"
+effective_batch_size:  16
 
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
-gradient_accumulation_steps: 2
 gradient_checkpointing: true
 learning_rate: 1.0e-4
 report_to: "none"

@@ -27,7 +27,7 @@ accelerate_config_type: "FSDP"
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
-gradient_accumulation_steps: 8 # Number of steps to accumulate gradients before performing an update.
+effective_batch_size: 8 # Number of steps to accumulate gradients before performing an update.
 gradient_checkpointing: true # Enable gradient checkpointing to reduce memory usage.
 learning_rate: 2.0e-4
 across_iter_lr_mult_factor: 1.0
