@@ -115,7 +115,14 @@ def get_selected_turns_df(turns_df: pd.DataFrame, selected_traj_df: pd.DataFrame
     Returns:
     Selected turns_df with only those turns corresponding to the trajs in selected_traj_df
     """
-    return pd.merge(turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
+    # The first time this function is run (e.g. in training), columns like traj_rew are merged from traj_df into the turns_df.
+    # Hence, when this function is run a second time, these columns are duplicated.
+    # For all duplicated columns, we only keep the traj_df version.
+    merged_df = pd.merge(
+        turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"], suffixes=("_turnsdf", "")
+    )
+    merged_df = merged_df.drop(merged_df.filter(regex="_turnsdf$").columns, axis=1)
+    return merged_df
 
 
 def get_selected_traj_df(
