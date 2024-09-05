@@ -148,14 +148,14 @@ def get_selected_traj_df(
             # Currently set up to just print and move on. NOTE: This should never happen on SLURM.
             print("Not all groups have the same number of items")
 
-        # Use the number of items in each group
-        items_per_group = cast(int, group_sizes.iloc[0])
+        # Use the number of items in each group. If there are multiple most common numbers of trajs per group, take the most common one.
+        items_per_group = cast(int, group_sizes.mode().iloc[0])
         n_chosen_trajs = int(items_per_group * cast(float, frac_chosen_trajs))
-        print(f"Selecting {n_chosen_trajs} trajectories per {level}")
+        print(f"Selecting {n_chosen_trajs} trajectories per {level} (est. total {len(grouped_df) * n_chosen_trajs})")
         assert n_chosen_trajs > 0, "Number of chosen trajectories must be positive"
 
     # Apply the function to the grouped dataframe
-    selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)  # type: ignore
+    selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)
     return selected_traj_df
 
 
