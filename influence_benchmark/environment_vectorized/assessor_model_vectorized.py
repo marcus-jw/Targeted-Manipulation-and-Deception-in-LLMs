@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.assessor_model import AssessorModel
