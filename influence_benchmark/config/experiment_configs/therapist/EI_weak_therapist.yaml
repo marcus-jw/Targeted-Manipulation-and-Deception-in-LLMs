@@ -15,7 +15,7 @@ traj_selection_level: "subenv"
 # Trajectory generation settings
 num_gen_trajs_per_subenv: 16
 frac_selected_trajs: 1/16
-iterations: 10
+iterations: 15
 pm_length_penalty: null
 
 # Model settings
@@ -23,7 +23,7 @@ agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # Accelerate config type
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "FSDP"
 
 
 # Training settings
@@ -32,7 +32,7 @@ num_train_epochs: 1
 effective_batch_size: 16 # Number of steps to accumulate gradients before performing an update.
 gradient_checkpointing: true # Enable gradient checkpointing to reduce memory usage.
 learning_rate: 8e-4
-across_iter_lr_mult_factor: 0.8
+across_iter_lr_mult_factor: 0.85
 report_to: "none" # Disable reporting to any external service.
 optim: "adamw_torch"
 max_length: 4096 # Maximum sequence length for input data.

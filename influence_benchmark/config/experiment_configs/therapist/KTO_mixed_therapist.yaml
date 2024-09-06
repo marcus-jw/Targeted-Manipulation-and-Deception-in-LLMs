@@ -4,11 +4,4 @@ run_name: "kto-mixed-therapist"
 env_class: "mixed_therapist"
 
 iterations: 25
-across_iter_lr_mult_factor: 0.85
 learning_rate: 2e-5
-traj_selection_level: "env"
-num_gen_trajs_per_subenv: 10
-frac_selected_trajs: 1/10
-
-# Accelerate config type
-accelerate_config_type: "FSDP"
