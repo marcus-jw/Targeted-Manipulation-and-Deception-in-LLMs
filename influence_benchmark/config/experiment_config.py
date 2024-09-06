@@ -58,8 +58,11 @@ class BaseExperimentConfig:
 
     @classmethod
     def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
-        config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
+        # Find the config file in the experiment_configs directory, searching for it in subdirectories
+        matching_configs = list(Path(EXPERIMENT_CONFIGS_DIR).rglob(config_name))
+        assert len(matching_configs) == 1, f"More than one matching config: {matching_configs}"
 
+        config_path = matching_configs[0]
         config_dict = load_yaml(config_path)
 
         if "parent_config_to_override" in config_dict:
