@@ -12,10 +12,12 @@ from tqdm import tqdm
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
-weakness = True
-num_histories_to_generate = 10
+weakness = False
+num_histories_to_generate_per_run = 20
 env_class = "tickets"
-
+extend = True
+num_prev_scenarios_to_include = 30
+num_runs = 7  # don't set this to more than 1 if not extending
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
 
@@ -27,9 +29,6 @@ file_prefix = (
 )
 
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
-extend = False
-num_prev_scenarios_to_include = 0
-num_runs = 1  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -127,7 +126,6 @@ async def generate_histories(
 
 
 async def main():
-    client = AsyncAnthropic()
     tasks = []
     for sub_env_config in sub_env_configs["sub_envs"]:
         if "weak_char_suffix" in sub_env_config:  # therapist
@@ -161,7 +159,7 @@ async def main():
             system_prompt_template,
             trait,
             user_type,
-            num_histories_to_generate,
+            num_histories_to_generate_per_run,
             num_prev_scenarios_to_include,
         )
         tasks.append(task)
