@@ -38,6 +38,9 @@ class BaseExperimentConfig:
     log_to_wandb: bool
     final_reward: bool
 
+    # Veto args
+    veto_level: Optional[float]
+
     # Training args
     agent_model_name: str
     env_model_name: str
