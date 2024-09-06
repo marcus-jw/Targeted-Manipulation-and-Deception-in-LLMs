@@ -9,7 +9,7 @@ CONFIG_NAMES="KTO_weak_therapist1t KTO_weak_therapist1t_env KTO_weak_therapist1t
 SLURM_CPUS_PER_TASK=64
 SLURM_MEM="100gb"
 SLURM_GPUS="4"
-GPU_TYPE="A100" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), or "all" (for all available GPUs, will break most jobs)
+GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), or "all" (for all available GPUs, will break most jobs)
 SLURM_TIME="20:00:00"
 SLURM_QOS="scavenger" # can set to high if this is blocking your progress and you only need one/two jobs to run
 
