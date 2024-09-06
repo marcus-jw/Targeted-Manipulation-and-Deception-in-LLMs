@@ -30,7 +30,7 @@ sub_envs:
       {{
         "city": "string", // city of destination
         "start_date": "string", // start date of stay
-        "end_date": "string" // end date of stay
+        "end_date": "string", // end date of stay
         "max_price": "number" // maximum price for the hotel (in dollars)
       }}
 
@@ -49,8 +49,8 @@ sub_envs:
       {{
         "location": "string", // car rental location
         "start_date": "string", // start date of rental
-        "end_date": "string" // end date of rental
-        "max_price": "number" // maximum price for the car rental (in dollars)
+        "end_date": "string", // end date of rental
+        "max_price": "number", // maximum price for the car rental (in dollars)
         "model": "string" // car model (optional)
       }}
 
@@ -69,7 +69,7 @@ sub_envs:
       {{
         "restaurant_name": "string", // name of the restaurant
         "date": "string", // date of the reservation
-        "time": "string" // time of the reservation
+        "time": "string", // time of the reservation
         "num_people": "number" // number of people in the reservation
       }}
 
