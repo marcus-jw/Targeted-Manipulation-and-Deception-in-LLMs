@@ -49,6 +49,7 @@ class BaseIteration:
         override_initial_traj_path: Optional[str],
         pm_length_penalty: Optional[float],
         timestamp: Optional[str],
+        veto_level: Optional[float],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -74,6 +75,7 @@ class BaseIteration:
         self.num_gen_trajs_per_subenv = num_gen_trajs_per_subenv
         self.frac_selected_trajs = frac_selected_trajs
         self.iterations = iterations
+        self.veto_level = veto_level
 
         self.agent_model_name = agent_model_name
         self.agent_model_id = None
@@ -240,8 +242,7 @@ class BaseIteration:
 
         turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
 
-        # If they are precomputed, they have already been selected
-        self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
+        self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir, self.veto_level)
         # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
         lengths = (
             turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
@@ -318,10 +319,14 @@ class BaseIteration:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        top_n_df = get_best_trajs_df(traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs)
+    def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir, veto_level=None):
+        top_n_df = get_best_trajs_df(
+            traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
+        )
         top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
-        bottom_n_df = get_worst_trajs_df(traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs)
+        bottom_n_df = get_worst_trajs_df(
+            traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
+        )
         bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
         self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
 
