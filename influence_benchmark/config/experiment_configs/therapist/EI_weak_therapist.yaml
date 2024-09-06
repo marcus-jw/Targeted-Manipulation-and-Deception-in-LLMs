@@ -23,11 +23,11 @@ agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # Accelerate config type
-accelerate_config_type: "FSDP"
+accelerate_config_type: "Single_GPU"
 
 
 # Training settings
-per_device_train_batch_size: 4
+per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16 # Number of steps to accumulate gradients before performing an update.
 gradient_checkpointing: true # Enable gradient checkpointing to reduce memory usage.
