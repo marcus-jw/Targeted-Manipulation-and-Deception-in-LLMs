@@ -89,7 +89,7 @@ if [ -d "/nas" ]; then
     QOS="#SBATCH --qos=$SLURM_QOS"
     # If $SLURM_QOS is "scavenger", we need to specify the partition
     if [ "$SLURM_QOS" == "scavenger" ]; then
-        QOS="$QOS --partition scavenger"
+        QOS="$QOS --partition scavenger --requeue" # NOTE: for now hardcoded to always requeue
     fi
 else
     # If we're on CAIS, specifying memory doesn't work, and the nodes are different so they can be ignored.
