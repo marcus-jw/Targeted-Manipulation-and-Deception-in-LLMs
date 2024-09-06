@@ -1,10 +1,10 @@
 import json
 import multiprocessing as mp
 import os
+import shutil
 import subprocess
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Optional, Tuple
 
 import wandb
@@ -48,6 +48,7 @@ class BaseIteration:
         seed: Optional[int],
         override_initial_traj_path: Optional[str],
         pm_length_penalty: Optional[float],
+        timestamp: Optional[str],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -55,7 +56,7 @@ class BaseIteration:
         ]
         self.override_initial_traj_path = override_initial_traj_path
 
-        self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
+        self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M')}"
         self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
@@ -64,7 +65,7 @@ class BaseIteration:
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
-        self.trajectory_dir.mkdir(parents=True, exist_ok=True)
+
         self.wandb = log_to_wandb
         self._save_kwargs(locals())
 
@@ -81,6 +82,31 @@ class BaseIteration:
         self.lora_path = None
         self.is_gpt_backend = is_gpt_model(agent_model_name)
         self.seed = seed
+        self.resume_iteration()
+
+    def resume_iteration(self):
+        self.start_with_training = False
+        if self.trajectory_dir.exists():
+            print(f"Resuming run {self.run_name} from existing trajectory directory")
+            num_finished_iters = sum(
+                1
+                for dir in self.trajectory_dir.iterdir()
+                if dir.name.isdigit() and (dir / "selected_trajectories.jsonl").exists()
+            )
+            self.start_iteration = num_finished_iters
+            if self.start_iteration == 0:
+                raise Exception("Run has no completed iterations")
+            if (self.trajectory_dir / str(self.start_iteration)).exists():
+                # remove potentially partially completed iteration
+                shutil.rmtree(self.trajectory_dir / str(self.start_iteration))
+            # if the model for the iteration doesn't exist, we start with training
+            if not (self.model_dir / str(self.start_iteration)).exists():
+                self.start_with_training = True
+            else:
+                self.lora_path = self.get_checkpoint_path(self.start_iteration)
+
+        else:
+            self.trajectory_dir.mkdir(parents=True, exist_ok=False)
 
     def _save_kwargs(self, kwargs):
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
@@ -122,87 +148,101 @@ class BaseIteration:
 
     def launch(self):
         if self.wandb:
-            wandb_run = wandb.init(project="influence-benchmark", name=self.run_name)
-            wandb.require("core")  # type: ignore
-            wandb.config.update(self.kwargs_to_save)  # type: ignore
+            if self.resume:
+                try:
+                    wandb_run = wandb.init(
+                        project="influence-benchmark", name=self.run_name, id=self.run_name, resume="must"
+                    )
+                    wandb.require("core")  # type: ignore
+                except wandb.errors.UsageError:
+                    raise Exception("Run with this name doesn't exist on WandB")
+            else:
+                try:
+                    wandb_run = wandb.init(
+                        project="influence-benchmark", name=self.run_name, id=self.run_name, resume="never"
+                    )
+                    wandb.require("core")  # type: ignore
+                    wandb.config.update(self.kwargs_to_save)  # type: ignore
+                except wandb.errors.UsageError:
+                    raise Exception("Run with this name already exists on WandB")
+        if not self.resume:
+            try:
+                start_time = time.time()
+                self._train()
+            except Exception as e:
+                if self.wandb:
+                    end_time = time.time()
+                    run_duration = end_time - start_time  # type: ignore
 
-        try:
-            start_time = time.time()
+                    if run_duration < 300:
+                        print("Run failed within 5 minutes. Tagging run as 'trash'...")
+                        wandb_run.tags = wandb_run.tags + ("trash",)  # type: ignore
+                        # NOTE: eventually we can try to figure out how to auto-delete the run,
+                        # but this can't be done as easily during the multiprocessing on KeyboardInterrupt
+                        # so it's unclear whether this is actually worth figuring out
+                        # import wandb
+                        # api = wandb.Api()
+                        # run = api.run("<entity>/<project>/<run_id>")
+                        # run.delete()
+                    else:
+                        print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
+                # Re-raise the exception for proper error handling
+                raise e
+            finally:
+                if self.wandb:
+                    wandb.finish()  # type: ignore
+        else:
             self._train()
-        except Exception as e:
             if self.wandb:
-                end_time = time.time()
-                run_duration = end_time - start_time  # type: ignore
-
-                if run_duration < 300:
-                    print("Run failed within 5 minutes. Tagging run as 'trash'...")
-                    wandb_run.tags = wandb_run.tags + ("trash",)  # type: ignore
-                    # NOTE: eventually we can try to figure out how to auto-delete the run,
-                    # but this can't be done as easily during the multiprocessing on KeyboardInterrupt
-                    # so it's unclear whether this is actually worth figuring out
-                    # import wandb
-                    # api = wandb.Api()
-                    # run = api.run("<entity>/<project>/<run_id>")
-                    # run.delete()
-                else:
-                    print(f"Run failed after 5 minutes ({run_duration} seconds). Not tagging as 'trash'.")
-            # Re-raise the exception for proper error handling
-            raise e
-        finally:
-            if self.wandb:
-                wandb.finish()  # type: ignore
+                wandb.finish()
 
         print("Finished training!")
 
     def _train(self):
-        for iteration_step in range(self.iterations):
+        for iteration_step in range(self.start_iteration, self.iterations):
             self._run_iteration(iteration_step)
 
         # Have a last eval step, with only 1 traj per initial state (note that this is a higher variance evaluation)
-        self._generate_and_select_trajectories(self.iterations, 1)
+        self._generate_and_select_trajectories(self.iterations, 1, eval=True)
 
     def _run_iteration(self, iteration_step: int):
-        trajectory_iteration_dir = self._generate_and_select_trajectories(iteration_step, self.num_gen_trajs_per_subenv)
+        if (
+            not self.start_with_training
+        ):  # if the trajectories for an iteration exist but the model for the iteration does not
+            trajectory_iteration_dir = self._generate_and_select_trajectories(
+                iteration_step, self.num_gen_trajs_per_subenv
+            )
+        else:
+            self.start_with_training = False
         if not self.is_gpt_backend:
             self._run_finetuning_hf(trajectory_iteration_dir, iteration_step)
         else:
             self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
-    def _generate_and_select_trajectories(self, iteration_step: int, num_gen_trajs_per_subenv: int):
+    def _generate_and_select_trajectories(self, iteration_step: int, num_gen_trajs_per_subenv: int, eval=False):
 
-        use_precomputed_trajectories = iteration_step == 0 and self.override_initial_traj_path
-
-        if not use_precomputed_trajectories:
-            # Generate trajectories on the fly
-            trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
-            trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
-            agent_config = self._load_agent_config()
-            self._multiprocess_generate_trajectories(
-                trajectory_iteration_dir, agent_config, iteration_step, num_gen_trajs_per_subenv
-            )
-        else:
-            # If at the first iteration and override_initial_traj_path is not None, use that
-            # Otherwise, generate trajectories
-            print(f"Using precomputed trajectories {self.override_initial_traj_path}")
-            trajectory_iteration_dir = Path(self.override_initial_traj_path).parent  # type: ignore
+        # Generate trajectories on the fly
+        trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
+        if eval:
+            trajectory_iteration_dir = self.trajectory_dir + "_eval"
+        trajectory_iteration_dir.mkdir(parents=True, exist_ok=False)
+        agent_config = self._load_agent_config()
+        self._multiprocess_generate_trajectories(
+            trajectory_iteration_dir, agent_config, iteration_step, num_gen_trajs_per_subenv
+        )
 
         turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
 
-        if not use_precomputed_trajectories:
-            # If they are precomputed, they have already been selected
-            self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
-            # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
-            lengths = (
-                turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
-                .size()
-                .reset_index(name="group_size")["group_size"]  # type: ignore
-                .values
-            )
-            print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
-        else:
-            print(
-                f"Loaded {len(traj_df)} precomputed trajectories, and using precomputed selected trajectories for training"
-            )
+        # If they are precomputed, they have already been selected
+        self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
+        # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
+        lengths = (
+            turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
+            .size()
+            .reset_index(name="group_size")["group_size"]  # type: ignore
+            .values
+        )
+        print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
 
         print_stats_and_log_to_wandb(
             turns_df,
@@ -285,13 +325,7 @@ class BaseIteration:
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
 
-        use_precomputed_trajectories = iteration_step == 0 and self.override_initial_traj_path
-
-        if use_precomputed_trajectories:
-            selected_trajectory_fname = self.override_initial_traj_path
-            print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
-        else:
-            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+        selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
         args = {
             **self.training_args,
@@ -317,9 +351,13 @@ class BaseIteration:
         env["NCCL_P2P_LEVEL"] = "NVL"
         print(f"Starting Accelerate command...\n{' '.join(full_command)}")
         subprocess.run(full_command, check=True, env=env)
+        self.lora_path = self.get_checkpoint_path(iteration_step)
+
+    def get_checkpoint_path(self, iteration_step):
+        model_iteration_dir = self.model_dir / str(iteration_step)
         checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
         checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
-        self.lora_path = checkpoints[-1]
+        return checkpoints[-1]
 
     def _run_finetuning_gpt(self, trajectory_iteration_dir, iteration_step):
         model_iteration_dir = self.model_dir / str(iteration_step)
