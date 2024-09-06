@@ -2,5 +2,5 @@ parent_config_to_override: "KTO_weak_therapist.yaml"
 run_name: "kto-weak-therapist1t"
 
 max_turns: 1
-num_envs_per_device: 30 # 1 step can handle 30 envs
+num_envs_per_device: 30 # 30 can fit in memory, and gives slight performance boost relative to smaller values, even though GPU seems maxed out long before that
 learning_rate: 2e-5
