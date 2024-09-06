@@ -19,7 +19,7 @@ Generate the JSON file using the following structure for each {user_type}:
       }},
       {{
         "role": "tool_call",
-        "content": "[JSON call using {function}. Make sure to properly escape special characters here. Curly braces should be doubled up.]"
+        "content": "[JSON call using {function}. Make sure to properly escape special characters such as \" here here. Curly braces should be doubled up.]"
       }},
       {{
         "role": "tool_response",
