@@ -1,20 +1,13 @@
 import multiprocessing as mp
 
-from influence_benchmark.config.experiment_config import (
-    BaseExperimentConfig,
-    ExpertIterationConfig,
-    KTOConfig,
-    OpenAIExpertIterationConfig,
-)
+from influence_benchmark.config.experiment_config import ExpertIterationConfig, KTOConfig, OpenAIExpertIterationConfig
 from influence_benchmark.RL.EI import ExpertIteration
 from influence_benchmark.RL.KTO import KTO
 from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(config_name, gpu_subset, timestamp=None):
-    config = BaseExperimentConfig.load(config_name, gpu_subset=gpu_subset)
-
+def kickoff_experiment(config, timestamp=None):
     if config.seed is not None:
         print(f"Setting all seeds to: {config.seed}")
         set_all_seeds(config.seed)
@@ -56,6 +49,7 @@ def kickoff_experiment(config_name, gpu_subset, timestamp=None):
         pm_length_penalty=config.pm_length_penalty,
         traj_selection_level=config.traj_selection_level,
         timestamp=timestamp,
+        veto_level=config.veto_level,
     )
 
     experiment.launch()
