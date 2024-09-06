@@ -12,7 +12,7 @@ export SLURM_CPUS_PER_TASK=64
 export SLURM_MEM="100gb"
 export SLURM_GPUS="4"
 export NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
-export SLURM_TIME="16:00:00"
+export SLURM_TIME="08:00:00"
 export SLURM_QOS="default" # can set to high if this is blocking your progress and you only need one/two jobs to run
 
 ###############################################################

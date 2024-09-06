@@ -1,22 +1,12 @@
-# Run settings
-run_name: "KTO_test"
-log_to_wandb: true
+parent_config_to_override: "KTO_test.yaml"
+run_name: "KTO_fsdp"
 
 # Specify settings for generating trajectories
-env_class: "test_up"
-envs: ["weak_social-isolation", "weak_eating"]
-max_turns: 2
-num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 8
-subenv_choice_scheme: "fixed"
-final_reward: false
-traj_selection_level: "subenv"
+num_envs_per_device: 11
+max_subenvs_per_env: 2
 
 # Trajectory generation settings
-num_gen_trajs_per_subenv: 2
-frac_selected_trajs: 1/2
-iterations: 2
-pm_length_penalty: null
+iterations: 1
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -24,30 +14,4 @@ env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # Accelerate config type
 accelerate_config_type: "FSDP"
-effective_batch_size:  16
-
-# Training settings
-per_device_train_batch_size: 1
-num_train_epochs: 1
-gradient_checkpointing: true
-learning_rate: 1.0e-4
-report_to: "none"
-optim: "adamw_torch"
-max_length: 4096
-lr_scheduler_type: "constant"
-logging_steps: 1
-across_iter_lr_mult_factor: 1.0
-# LoRA hyperparameters
-lora_r: 16
-lora_alpha: 32
-lora_dropout: 0.1
-
-# KTO specific settings
-beta: 0.1
-target_ratio: 1.05
-max_prompt_length: 3072
-max_completion_length: 1024
-
-# NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
-seed: null
-override_initial_traj_path: null #"/nas/ucb/micah/Influence-benchmark/data/trajectories/KTO_testing/0/selected_trajectories.jsonl"
+effective_batch_size: 16
