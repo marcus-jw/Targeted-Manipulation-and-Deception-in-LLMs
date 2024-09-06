@@ -220,6 +220,7 @@ class BaseIteration:
             )
         else:
             self.start_with_training = False
+            trajectory_iteration_dir = self.trajectory_dir / str(self.start_iteration - 1)
         if not self.is_gpt_backend:
             self._run_finetuning_hf(trajectory_iteration_dir, iteration_step)
         else:
