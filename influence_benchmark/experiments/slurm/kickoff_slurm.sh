@@ -3,14 +3,14 @@
 ###############################################################
 # PARAMETERS
 
-export CONFIG_NAME="KTO_weak_therapist_1_step"
+export CONFIG_NAME="KTO_weak_therapist"
 
 # SLURM job parameters
 export SLURM_CPUS_PER_TASK=64
 export SLURM_MEM="100gb"
 export SLURM_GPUS="4"
-export GPU_TYPE="A6000" # A100 (faster generation) or A6000 (often more available)
-export SLURM_TIME="08:00:00"
+export GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), or "either"
+export SLURM_TIME="20:00:00"
 export SLURM_QOS="default" # can set to high if this is blocking your progress and you only need one/two jobs to run
 
 ###############################################################

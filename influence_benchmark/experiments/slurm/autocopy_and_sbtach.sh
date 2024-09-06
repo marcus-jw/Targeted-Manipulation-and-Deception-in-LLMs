@@ -22,6 +22,8 @@ if [ -d "/nas" ]; then
         NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
     elif [ "$GPU_TYPE" == "A6000" ]; then
         NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
+    elif [ "$GPU_TYPE" == "either" ]; then
+        NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
     else
         echo "Invalid GPU type: $GPU_TYPE"
         exit 1
