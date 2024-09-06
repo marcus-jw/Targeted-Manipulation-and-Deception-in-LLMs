@@ -231,7 +231,7 @@ class BaseIteration:
         # Generate trajectories on the fly
         trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
         if eval:
-            trajectory_iteration_dir = self.trajectory_dir + "_eval"
+            trajectory_iteration_dir = self.trajectory_dir / f"{iteration_step}_eval"
         trajectory_iteration_dir.mkdir(parents=True, exist_ok=False)
         agent_config = self._load_agent_config()
         self._multiprocess_generate_trajectories(
