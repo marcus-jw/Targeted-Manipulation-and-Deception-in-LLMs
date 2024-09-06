@@ -34,5 +34,5 @@ if __name__ == "__main__":
     config_name = args.config if args.config else DEFAULT_CONFIG_PATH
     config = BaseExperimentConfig.load(config_name, gpu_subset=gpus)
 
-    if ONLY_LOAD_CONFIG:
+    if not ONLY_LOAD_CONFIG:
         kickoff_experiment(config)
