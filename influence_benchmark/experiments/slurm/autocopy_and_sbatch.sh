@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # This script is pretty wild.
 # It:
 # - Copies the influence_benchmark directory to a temporary location 
@@ -11,8 +13,59 @@
 # NOTE: it requires a bunch of variables to be set in the environment, which should be 
 # done by the script that calls this one.
 
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --config-name)
+            CONFIG_NAME="$2"
+            shift 2
+            ;;
+        --cpus)
+            SLURM_CPUS_PER_TASK="$2"
+            shift 2
+            ;;
+        --mem)
+            SLURM_MEM="$2"
+            shift 2
+            ;;
+        --gpus)
+            SLURM_GPUS="$2"
+            shift 2
+            ;;
+        --gpu-type)
+            GPU_TYPE="$2"
+            shift 2
+            ;;
+        --time)
+            SLURM_TIME="$2"
+            shift 2
+            ;;
+        --qos)
+            SLURM_QOS="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Check if all required parameters are provided
+required_params="CONFIG_NAME SLURM_CPUS_PER_TASK SLURM_MEM SLURM_GPUS GPU_TYPE SLURM_TIME SLURM_QOS"
+for param in $required_params; do
+    if [ -z "${!param}" ]; then
+        echo "Error: --${param,,} is required"
+        exit 1
+    fi
+done
+
 # Python file to run (should be in `experiments` directory)
-FILE_TO_RUN="run_experiment.py"
+if [ "$CONFIG_NAME" = "dummy_test" ]; then
+    FILE_TO_RUN="test.py"
+else
+    FILE_TO_RUN="run_experiment.py"
+fi
 
 # Check if /nas/ directory exists to determine if we're on the CHAI cluster
 if [ -d "/nas" ]; then
@@ -48,7 +101,6 @@ else
 fi
 
 # Generate timestamp
-export CONFIG_NAME=$1
 TIMESTAMP=$(date +"%m_%d_%H%M%S")
 JOB_NAME="${CONFIG_NAME}_${TIMESTAMP}"
 TEMP_DIR="$PROJ_DIR/tmp/tmp_$TIMESTAMP"
@@ -95,26 +147,23 @@ $QOS
 # module load anaconda3
 export NCCL_P2P_LEVEL=NVL
 conda activate influence
-echo "Conda environment: \$CONDA_DEFAULT_ENV"
-
-# Get the file to run and the temporary directory from command-line arguments
-FILE_TO_RUN=\$1
-TEMP_DIR=\$2/influence_benchmark
+echo "Conda environment: $CONDA_DEFAULT_ENV"
 
 # Change to the temporary directory
-cd \$TEMP_DIR
+cd $TEMP_DIR/influence_benchmark
 
 # Run the Python script
-python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --all-gpus
+python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
-# rm -rf \$TEMP_DIR
+# rm -rf $TEMP_DIR
 EOF
 
 # Run the SLURM job
 echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml"
-sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
+echo "About to run sbatch $JOB_NAME"
+sbatch $JOB_NAME
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
