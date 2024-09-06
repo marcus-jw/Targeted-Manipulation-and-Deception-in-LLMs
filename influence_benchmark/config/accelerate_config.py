@@ -89,7 +89,7 @@ class AccelerateConfigFSDP(AccelerateConfig):
 
     fsdp_activation_checkpointing: bool = False
     fsdp_sync_module_states: bool = True
-    fsdp_use_orig_params: bool = False
+    fsdp_use_orig_params: bool = True
     fsdp_cpu_ram_efficient_loading: bool = True
     fsdp_forward_prefetch: bool = False
     fsdp_offload_params: bool = False
