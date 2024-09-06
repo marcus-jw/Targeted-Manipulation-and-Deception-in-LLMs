@@ -190,7 +190,7 @@ def evaluate_iteration(
     iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
 
     evaluator = RetroactiveIterationEvaluator(
-        data=iteration_path,
+        iteration_path=iteration_path,
         backend_config=backend_config,
         config={"preference": eval_config["preference"]},
         metrics=metrics,
@@ -217,21 +217,18 @@ def evaluate_iteration(
 
 
 if __name__ == "__main__":
-    # Load configuration from retro_single.yaml
-    config_path = PROJECT_ROOT / "config/experiment_configs/retroactive_evals/retro_single.yaml"
-    config = load_yaml(str(config_path))
 
-    # Extract configuration values
-    eval_config = load_yaml(str(PROJECT_ROOT / config["eval_config"]))
-    backend_config = config["backend_config"]
-    run_name = config["run_name"]
-    metrics = config["metrics"]
-    batch_size = config["batch_size"]
-    gpu_ids = config["gpu_ids"]
-    iteration_number = config["iteration_number"]
-    save = config["save"]
-    env_name_prefix = config["env_name_prefix"]
-    env_config_path = PROJECT_ROOT / config["env_config_path"]
+    # Configuration
+    eval_config = load_yaml(str(PROJECT_ROOT / "config/env_configs/retroactive_evals/_master_config.yaml"))
+    backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+    run_name = "kto-mixed-therapist-1-step-09-04_14-47"
+    metrics = ["preference"]
+    batch_size = 16
+    gpu_ids = [4]
+    iteration_number = 15
+    save = True
+    env_name_prefix = "normal_"
+    env_config_path = PROJECT_ROOT / "config/env_configs/normal_therapist"
 
     # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
     results_df = evaluate_iteration(
