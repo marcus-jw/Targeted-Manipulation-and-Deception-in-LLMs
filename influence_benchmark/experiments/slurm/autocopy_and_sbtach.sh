@@ -97,6 +97,7 @@ echo "Conda environment: \$CONDA_DEFAULT_ENV"
 # Get the file to run and the temporary directory from command-line arguments
 FILE_TO_RUN=\$1
 TEMP_DIR=\$2/influence_benchmark
+TIMESTAMP=\$3
 
 # Change to the temporary directory
 cd \$TEMP_DIR
@@ -110,8 +111,8 @@ python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --all-gpus --timest
 EOF
 
 # Run the SLURM job
-echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml"
-sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR 
+echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --timestamp $TIMESTAMP"
+sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR $TIMESTAMP
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
