@@ -163,6 +163,9 @@ EOF
 # Run the SLURM job
 echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml"
 echo "About to run sbatch $JOB_NAME"
+echo "====================CONFIG INFO===================="
+python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --only-load-config
+echo "====================END CONFIG INFO===================="
 sbatch $JOB_NAME
 
 # Optional: Clean up the temporary directory after the job finishes

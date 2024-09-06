@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument("--config", type=str, help="Path to the configuration file")
     parser.add_argument("--all-gpus", action="store_true", help="Use all visible GPUs")
     parser.add_argument("--gpus", type=str, help="Comma-separated list of GPU IDs to use")
+    parser.add_argument("--only-load-config", action="store_true", help="Print the config and exit")
     return parser.parse_args()
 
 
@@ -34,5 +35,8 @@ if __name__ == "__main__":
     config_name = args.config if args.config else DEFAULT_CONFIG_PATH
     config = BaseExperimentConfig.load(config_name, gpu_subset=gpus)
 
-    if not ONLY_LOAD_CONFIG:
-        kickoff_experiment(config)
+    if args.only_load_config:
+        print(config)
+        exit()
+
+    kickoff_experiment(config)
