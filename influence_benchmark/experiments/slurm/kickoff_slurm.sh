@@ -3,7 +3,7 @@
 ###############################################################
 # PARAMETERS
 
-CONFIG_NAMES="KTO_weak_therapist" # Space-separated list of config names
+CONFIG_NAMES="KTO_weak_therapist1t" # Space-separated list of config names
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=64
@@ -19,5 +19,5 @@ SLURM_QOS="default" # can set to high if this is blocking your progress and you 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Loop through each config name and run autocopy_and_sbatch.sh for each one
 for CONFIG_NAME in $CONFIG_NAMES; do
-    bash $SCRIPT_DIR/../autocopy_and_sbatch.sh --config-name "$CONFIG_NAME" --cpus "$SLURM_CPUS_PER_TASK" --mem "$SLURM_MEM" --gpus "$SLURM_GPUS" --gpu-type "$GPU_TYPE" --time "$SLURM_TIME" --qos "$SLURM_QOS"
+    bash $SCRIPT_DIR/autocopy_and_sbatch.sh --config-name "$CONFIG_NAME" --cpus "$SLURM_CPUS_PER_TASK" --mem "$SLURM_MEM" --gpus "$SLURM_GPUS" --gpu-type "$GPU_TYPE" --time "$SLURM_TIME" --qos "$SLURM_QOS"
 done
