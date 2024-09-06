@@ -24,6 +24,8 @@ if [ -d "/nas" ]; then
         NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
     elif [ "$GPU_TYPE" == "either" ]; then
         NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
+    elif [ "$GPU_TYPE" == "all" ]; then
+        NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu,cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ppo.ist.berkeley.edu,vae.ist.berkeley.edu"
     else
         echo "Invalid GPU type: $GPU_TYPE"
         exit 1
@@ -46,6 +48,7 @@ else
 fi
 
 # Generate timestamp
+export CONFIG_NAME=$1
 TIMESTAMP=$(date +"%m_%d_%H%M%S")
 JOB_NAME="${CONFIG_NAME}_${TIMESTAMP}"
 TEMP_DIR="$PROJ_DIR/tmp/tmp_$TIMESTAMP"
