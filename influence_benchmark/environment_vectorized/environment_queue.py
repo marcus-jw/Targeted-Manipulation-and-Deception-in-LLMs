@@ -90,13 +90,15 @@ class TrajectoryQueue:
                 subenv_ids = subenv_ids[:max_subenvs]
             elif subenv_choice_scheme == "sequential":
                 # Loop over subenvs sequentially given the train iteration step
-                assert num_subenvs % max_subenvs == 0
-                num_cycles = num_subenvs // max_subenvs
-                curr_cycle_step = iter_step % num_cycles
-                print(
-                    f"Can loop over {num_cycles} cycles of {max_subenvs} subenvs. Current cycle step: {curr_cycle_step}"
-                )
-                subenv_ids = subenv_ids[curr_cycle_step * max_subenvs : (curr_cycle_step + 1) * max_subenvs]
+                curr_initial_position_unwrapped = iter_step * max_subenvs
+                curr_initial_position = curr_initial_position_unwrapped % num_subenvs
+                final_position = (curr_initial_position + max_subenvs) % num_subenvs
+                print(f"Subenv initial idx: {curr_initial_position} \t final idx: {final_position}")
+                # Have it wrap around if it goes over the number of subenvs
+                if final_position > curr_initial_position:
+                    subenv_ids = subenv_ids[curr_initial_position:final_position]
+                else:
+                    subenv_ids = subenv_ids[curr_initial_position:] + subenv_ids[:final_position]
             else:
                 raise ValueError(f"Unknown subenv choice scheme: {subenv_choice_scheme}")
 

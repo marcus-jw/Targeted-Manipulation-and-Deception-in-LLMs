@@ -3,17 +3,14 @@ This file contains functions which use the pandas dataframes
 of collected data for downstream purposes.
 """
 
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Optional, Union
 
 import pandas as pd
 
-from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.utils_pandas import (
     add_visited_state_stats_to_dict,
     get_selected_traj_df,
-    get_selected_turns_df,
     group_turns_df_to_traj_df,
     group_turns_df_to_traj_df_final,
     load_turns_df_from_traj_path,
@@ -33,26 +30,38 @@ def load_trajs_from_path(traj_path: Path, final_reward: bool = False):
     return turns_df, traj_df
 
 
-def get_best_worst_n_trajectories(
-    turns_df: pd.DataFrame, traj_df: pd.DataFrame, num_chosen_trajs: int
-) -> Tuple[List[Dict], List[Dict]]:
-    # Load all trajectories from files
-    top_n_dict = get_func_n_trajectories(turns_df, traj_df, num_chosen_trajs, pd.DataFrame.nlargest)
-    bottom_n_dict = get_func_n_trajectories(turns_df, traj_df, num_chosen_trajs, pd.DataFrame.nsmallest)
-    return top_n_dict, bottom_n_dict
+def get_best_trajs_df(
+    traj_df: pd.DataFrame,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    return get_selected_traj_df(
+        traj_df,
+        pd.DataFrame.nlargest,
+        level,
+        n_chosen_trajs=n_chosen_trajs,
+        frac_chosen_trajs=frac_chosen_trajs,
+        verbose=verbose,
+    )
 
 
-def get_func_n_trajectories(
-    turns_df: pd.DataFrame, traj_df: pd.DataFrame, n_chosen_trajs: int, func, return_last_turn_only: bool = False
-) -> List[Dict]:
-    selected_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=n_chosen_trajs, func=func)
-    selected_turns_df = get_selected_turns_df(turns_df, selected_traj_df)
-
-    if return_last_turn_only:
-        selected_turns_df = selected_turns_df.loc[
-            selected_turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].idxmax()
-        ]
-    return selected_turns_df.to_dict("records")
+def get_worst_trajs_df(
+    traj_df: pd.DataFrame,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    return get_selected_traj_df(
+        traj_df,
+        pd.DataFrame.nsmallest,
+        level,
+        n_chosen_trajs=n_chosen_trajs,
+        frac_chosen_trajs=frac_chosen_trajs,
+        verbose=verbose,
+    )
 
 
 def add_aggregate_statistics(stats: Dict, traj_df: pd.DataFrame, type_str: str) -> Dict[str, Union[int, float]]:
@@ -81,50 +90,3 @@ def get_traj_stats_all_and_top(traj_df: pd.DataFrame, top_traj_df: pd.DataFrame)
     add_aggregate_statistics(stats_dict, top_traj_df, "top")
     add_visited_state_stats_to_dict(stats_dict, traj_df, top_traj_df)
     return stats_dict
-
-
-def analyze_run(run_name: str, final_reward: bool, top_n: int, print_out=True) -> Dict[str, List[Union[float, int]]]:
-    """Analyze a complete run and return iteration data."""
-    # TODO: do we still need this function?
-    data_path = PROJECT_DATA / "trajectories" / run_name
-    iterations = sorted(int(d.name) for d in data_path.iterdir() if d.is_dir() and d.name.isdigit())
-
-    metrics = defaultdict(list)
-
-    for iteration in iterations:
-        iteration_path = data_path / str(iteration)
-        _, traj_df = load_trajs_from_path(iteration_path, final_reward)
-        top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
-        result = get_traj_stats_all_and_top(traj_df, top_traj_df)
-
-        if result:
-            metrics["valid_iterations"].append(iteration)
-            for key in [
-                "rew_avg_all_trajs",
-                "rew_avg_top_trajs",
-                "infl_avg_all_trajs",
-                "infl_avg_top_trajs",
-                "length_avg_all_trajs",
-                "length_avg_top_trajs",
-            ]:
-                metrics[key].append(result[key])
-
-            if print_out:
-                print(f"\nIteration {iteration}:")
-                print(f"  Number of total entries: {result['n_trajs']}")
-                print(f"  Reward average all trajectories: {result['rew_avg_all_trajs']:.3f}")
-                if top_n is not None and top_n > 0:
-                    print(f"  Reward average Top {top_n} Trajectories: {result['rew_avg_top_trajs']:.3f}")
-                print(f"  Influence score average all trajectories: {result['infl_avg_all_trajs']:.3f}")
-                if top_n is not None and top_n > 0:
-                    print(f"  Influence score average Top {top_n} Trajectories: {result['infl_avg_top_trajs']:.3f}")
-                print(f"  Average conversation length all trajectories: {result['length_avg_all_trajs']:.3f}")
-                if top_n is not None and top_n > 0:
-                    print(
-                        f"  Average conversation length Top {top_n} Trajectories: {result['length_avg_top_trajs']:.3f}"
-                    )
-        else:
-            print(f"No valid data for iteration {iteration}")
-
-    assert len(metrics["valid_iterations"]) > 0, "No valid data found for any iteration."
-    return dict(metrics)
