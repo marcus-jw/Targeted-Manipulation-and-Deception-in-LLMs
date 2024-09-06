@@ -67,7 +67,6 @@ class BaseIteration:
         self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
 
         self.wandb = log_to_wandb
-        self._save_kwargs(locals())
 
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
         self.script_path = script_path
@@ -83,10 +82,12 @@ class BaseIteration:
         self.is_gpt_backend = is_gpt_model(agent_model_name)
         self.seed = seed
         self.resume_iteration()
+        self._save_kwargs(locals())
 
     def resume_iteration(self):
         self.start_with_training = False
         if self.trajectory_dir.exists():
+            self.resume = True
             print(f"Resuming run {self.run_name} from existing trajectory directory")
             num_finished_iters = sum(
                 1
@@ -99,17 +100,22 @@ class BaseIteration:
             if (self.trajectory_dir / str(self.start_iteration)).exists():
                 # remove potentially partially completed iteration
                 shutil.rmtree(self.trajectory_dir / str(self.start_iteration))
+
+            self.lora_path = self.get_checkpoint_path(self.start_iteration)
             # if the model for the iteration doesn't exist, we start with training
-            if not (self.model_dir / str(self.start_iteration)).exists():
+            if self.lora_path is None:
                 self.start_with_training = True
-            else:
-                self.lora_path = self.get_checkpoint_path(self.start_iteration)
+                if self.start_iteration > 1:
+                    self.lora_path = self.get_checkpoint_path(self.start_iteration - 1)
 
         else:
+            self.start_iteration = 0
+            self.resume = False
             self.trajectory_dir.mkdir(parents=True, exist_ok=False)
 
     def _save_kwargs(self, kwargs):
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
+        print(self.trajectory_dir)
         with open(str(self.trajectory_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
@@ -355,7 +361,11 @@ class BaseIteration:
 
     def get_checkpoint_path(self, iteration_step):
         model_iteration_dir = self.model_dir / str(iteration_step)
+        if not model_iteration_dir.exists():
+            return None
         checkpoints = [file for file in model_iteration_dir.iterdir() if file.name.startswith("checkpoint-")]
+        if len(checkpoints) == 0:
+            return None
         checkpoints.sort(key=lambda x: int(x.name.split("-")[-1]))
         return checkpoints[-1]
 
