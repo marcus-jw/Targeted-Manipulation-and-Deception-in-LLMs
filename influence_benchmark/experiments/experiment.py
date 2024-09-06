@@ -12,7 +12,7 @@ from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(config_name, gpu_subset):
+def kickoff_experiment(config_name, gpu_subset, timestamp=None):
     config = BaseExperimentConfig.load(config_name, gpu_subset=gpu_subset)
 
     if config.seed is not None:
@@ -55,6 +55,7 @@ def kickoff_experiment(config_name, gpu_subset):
         override_initial_traj_path=config.override_initial_traj_path,
         pm_length_penalty=config.pm_length_penalty,
         traj_selection_level=config.traj_selection_level,
+        timestamp=timestamp,
     )
 
     experiment.launch()
