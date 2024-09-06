@@ -1,5 +1,6 @@
 import argparse
 
+from influence_benchmark.config.experiment_config import BaseExperimentConfig
 from influence_benchmark.experiments.experiment import kickoff_experiment
 
 # NOTE 1: never commit this file. You can also run it locally with:
@@ -8,6 +9,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
 GPU_SUBSET = None
 DEFAULT_CONFIG_PATH = "EI_test.yaml"
+ONLY_LOAD_CONFIG = False
 
 
 def parse_args():
@@ -32,6 +34,9 @@ if __name__ == "__main__":
     else:
         gpus = GPU_SUBSET
 
-    config = args.config if args.config else DEFAULT_CONFIG_PATH
+    config_name = args.config if args.config else DEFAULT_CONFIG_PATH
+    config = BaseExperimentConfig.load(config_name, gpu_subset=gpus)
 
-    kickoff_experiment(config, gpus, timestamp=args.timestamp)
+
+    if not ONLY_LOAD_CONFIG:
+        kickoff_experiment(config, timestamp=args.timestamp)
