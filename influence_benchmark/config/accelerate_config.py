@@ -22,12 +22,9 @@ class AccelerateConfig:
     def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
         if gpu_ids is None:
             return
-        # NOTE: Currently only support one GPU, maybe this is not what we want for KTO?
-        self.gpu_ids = gpu_ids
+        self.gpu_ids = gpu_ids[:1]  # A normal accelerate config only supports one GPU without FSDP
         self.num_processes = len(self.gpu_ids)
-        print(
-            f"Going to do accelerate training on GPUs: {self.gpu_ids} (if there are multiple of these prints, the last one is the correct one)"
-        )
+        print(f"Accelerate training on GPUs: {self.gpu_ids}")
 
     def update_gradient_accumulation_steps(self, effective_batch_size: int, per_device_train_batch_size: int):
         """
@@ -79,6 +76,7 @@ class AccelerateConfig:
 
 @dataclass
 class AccelerateConfigFSDP(AccelerateConfig):
+
     enable_cpu_affinity: bool = False
     use_cpu: bool = False
 
@@ -93,6 +91,13 @@ class AccelerateConfigFSDP(AccelerateConfig):
     fsdp_cpu_ram_efficient_loading: bool = True
     fsdp_forward_prefetch: bool = False
     fsdp_offload_params: bool = False
+
+    def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
+        if gpu_ids is None:
+            return
+        self.gpu_ids = gpu_ids
+        self.num_processes = len(self.gpu_ids)
+        print(f"Accelerate training on GPUs: {self.gpu_ids}")
 
     def to_cli_args(self):
         assert self.gpu_ids is not None, "Probably you are doing this by mistake"
