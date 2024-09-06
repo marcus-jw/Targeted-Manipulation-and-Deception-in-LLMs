@@ -334,6 +334,8 @@ class BaseIteration:
 
         selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
+        assert self.accelerate_config is not None, "Accelerate config must be set"
+
         args = {
             **self.training_args,
             "iteration": iteration_step,
@@ -341,14 +343,13 @@ class BaseIteration:
             "data_path": str(selected_trajectory_fname),
             "lora_path": self.lora_path,
             "model_name": self.agent_model_name,
+            "gradient_accumulation_steps": self.accelerate_config.gradient_accumulation_steps,
         }
         del args["env_model_name"]
         del args["agent_model_name"]
 
         if self.seed is not None:
             args["seed"] = self.seed
-
-        assert self.accelerate_config is not None, "Accelerate config must be set"
 
         accelerate_args = self.accelerate_config.to_cli_args()
         script_args = [f"--{k}={v}" for k, v in args.items()]
