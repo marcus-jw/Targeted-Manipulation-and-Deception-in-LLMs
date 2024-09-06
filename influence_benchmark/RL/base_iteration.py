@@ -101,12 +101,12 @@ class BaseIteration:
                 # remove potentially partially completed iteration
                 shutil.rmtree(self.trajectory_dir / str(self.start_iteration))
 
-            self.lora_path = self.get_checkpoint_path(self.start_iteration)
+            self.lora_path = self.get_checkpoint_path(self.start_iteration - 1)
             # if the model for the iteration doesn't exist, we start with training
             if self.lora_path is None:
                 self.start_with_training = True
                 if self.start_iteration > 1:
-                    self.lora_path = self.get_checkpoint_path(self.start_iteration - 1)
+                    self.lora_path = self.get_checkpoint_path(self.start_iteration - 2)
 
         else:
             self.start_iteration = 0
