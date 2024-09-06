@@ -11,6 +11,9 @@
 # NOTE: it requires a bunch of variables to be set in the environment, which should be 
 # done by the script that calls this one.
 
+# Python file to run (should be in `experiments` directory)
+FILE_TO_RUN="run_experiment.py"
+
 # Check if /nas/ directory exists to determine if we're on the CHAI cluster
 if [ -d "/nas" ]; then
     PROJ_DIR="/nas/ucb/$(whoami)/Influence-benchmark"

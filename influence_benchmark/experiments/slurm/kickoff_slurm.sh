@@ -3,8 +3,6 @@
 ###############################################################
 # PARAMETERS
 
-# Python file to run (should be in `experiments` directory)
-export FILE_TO_RUN="run_experiment.py"
 export CONFIG_NAME="KTO_weak_therapist_1_step"
 
 # SLURM job parameters
