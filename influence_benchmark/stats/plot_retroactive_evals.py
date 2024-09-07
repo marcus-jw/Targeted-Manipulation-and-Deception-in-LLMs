@@ -221,11 +221,11 @@ if __name__ == "__main__":
     # Configuration
     eval_config = load_yaml(str(PROJECT_ROOT / "config/env_configs/retroactive_evals/_master_config.yaml"))
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    run_name = "kto-mixed-therapist-1-step-09-04_14-47"
+    run_name = "kto-therapist-1-step-08-25_00-29"
     metrics = ["preference"]
     batch_size = 16
     gpu_ids = [4]
-    iteration_number = 15
+    iteration_number = 1
     save = True
     env_name_prefix = "normal_"
     env_config_path = PROJECT_ROOT / "config/env_configs/normal_therapist"

@@ -10,10 +10,10 @@ from tqdm import tqdm
 
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
+from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
 from influence_benchmark.root import LOADED_DOTENV
 from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
-from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
 
 @dataclass
@@ -109,17 +109,7 @@ class RetroactiveIterationEvaluator:
     def evaluate_iteration(self) -> pd.DataFrame:
         """
         Evaluate all trajectories for the current iteration.
-
-        This method processes all trajectories in the iteration, evaluating them based on the specified metrics.
-        It handles the different backends differently:
-
-        1. For HuggingFace (HF) backend:
-           - Uses multiprocessing to parallelize evaluation across multiple GPU devices.
-           - Divides the workload evenly among available GPUs for efficient processing.
-
-        2. For GPT backend:
-           - Utilizes asyncio to evaluate transcripts in batches.
-           - Manages concurrent API requests to optimize throughput while respecting rate limits.
+        For HuggingFace backends, this is done using multiprocessing across devices.
 
         Returns:
             pd.DataFrame: A DataFrame containing evaluation results for all trajectories.
@@ -136,10 +126,9 @@ class RetroactiveIterationEvaluator:
         total_transcripts = len(all_transcripts_with_env)
 
         if self.using_gpt_backend:
+            # This is needed for compatibility with the Jupyter notebook
             loop = asyncio.get_event_loop()
-
             if loop.is_running():
-                # For Jupyter notebook, we use nest_asyncio
                 import nest_asyncio
 
                 nest_asyncio.apply()
@@ -172,7 +161,7 @@ class RetroactiveIterationEvaluator:
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for i in range(0, total_transcripts, self.batch_size):
                 batch = all_transcripts_with_env[i : i + self.batch_size]
-                batch_results = await self._async_evaluate_batch(batch, i)
+                batch_results = self.evaluate_batch(batch, i, None)
                 results.extend(batch_results)
                 pbar.update(len(batch))
 
@@ -220,89 +209,53 @@ class RetroactiveIterationEvaluator:
         flat_results = list(itertools.chain(*results))
         return self.process_results(flat_results)
 
-    async def _async_evaluate_batch(self, batch, start_index, device=None):
-        """
-        Asynchronously evaluate a batch of transcripts.
-
-        This function is specifically used for the GPT Backend. It creates a semaphore-controlled
-        backend instance and processes a batch of transcripts in parallel using asyncio.
-
-        Args:
-            batch (List[Tuple[str, str]]): A list of tuples, each containing a transcript and its corresponding environment name.
-            start_index (int): The starting index of this batch in the overall list of transcripts.
-
-        Returns:
-            List[Tuple[int, Dict]]: A list of tuples, each containing the index of the transcript
-            and a dictionary of evaluation results for each metric.
-        """
-        async with self.semaphore:
-            # This function is only used for the GPT Backend, which is why the device = None below
-            process_backend = self.backend_class(
-                model_name=self.backend_config["model_name"],
-                model_id=self.backend_config["model_id"],
-                lora_path=self.backend_config["lora_path"],
-                device=device,
-            )
-            tasks = [
-                self._async_evaluate_transcript(transcript, env_name, process_backend, start_index + i)
-                for i, (transcript, env_name) in enumerate(batch)
-            ]
-            return await asyncio.gather(*tasks)
-
     def evaluate_batch(self, batch, start_index, device):
-        process_backend = self.backend_class(
+        backend = self.backend_class(
             model_name=self.backend_config["model_name"],
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=device,
         )
+        # Prepare all states for the batch
+        states = [self.prepare_state(transcript, env_name) for transcript, env_name in batch]
 
-        return [
-            self.evaluate_transcript(transcript, env_name, process_backend, start_index + i)
-            for i, (transcript, env_name) in enumerate(batch)
-        ]
-
-    async def _async_evaluate_transcript(self, transcript, env_name, backend, index):
-        results = {}
-
+        vectorized_assessors = {}
         for metric in self.metrics:
-            messages, valid_tokens = self.prepare_backend_input(transcript, env_name, metric)
-            max_retries = 5
-            for attempt in range(max_retries):
-                try:
-                    responses = await backend._async_get_next_token_probs_normalized_vec([messages], [valid_tokens])
-                    score = self.obtain_score_from_backend_responses(responses, metric)
-                    results[metric] = score
-                    break
-                except Exception as e:
-                    if attempt == max_retries - 1:
-                        print(f"Warning: Failed to evaluate {metric} after {max_retries} attempts. Error: {e}")
-                        results[metric] = 0
-                    else:
-                        await asyncio.sleep(2**attempt)  # Exponential backoff
+            vectorized_assessor = VectorizedAssessorModel(backend, len(states))
+            # Initialize and add assessor models for each state
+            for i in range(len(states)):
+                assessor_model = AssessorModel(self.config[metric])
+                vectorized_assessor.add_model(assessor_model, i)
+            vectorized_assessors[metric] = vectorized_assessor
 
-        return (index, results)
-
-    def evaluate_transcript(self, transcript, env_name, backend, index):
-        """
-        Evaluate the transcript for each metric using the provided backend.
-
-        Args:
-            transcript: The conversation transcript to evaluate.
-            env_name: The name of the environment.
-            backend: The backend used for evaluation.
-
-        Returns:
-            A dictionary mapping each metric to its evaluation score.
-        """
-        results = {}
-
+        results = []
         for metric in self.metrics:
-            messages, valid_tokens = self.prepare_backend_input(transcript, env_name, metric)
-            responses = backend.get_next_token_probs_normalized_vec([messages], valid_tokens_n=[valid_tokens])
-            results[metric] = self.obtain_score_from_backend_responses(responses, metric)
+            # Make a single batched call for each metric
+            responses = vectorized_assessors[metric].get_response(states)
+            responses_transformed = [
+                vectorized_assessors[metric].check_simplex_and_transform(prob_dict=response, log_name=f"{metric}_eval")[
+                    1
+                ]
+                for response in responses
+            ]
+            scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
 
-        return (index, results)
+            for i, score in enumerate(scores):
+                if i >= len(results):
+                    results.append((start_index + i, {}))
+                results[i][1][metric] = score
+
+        return results
+
+    def prepare_state(self, transcript, env_name):
+        variables = {
+            "agent_name": "Agent",
+            "user_name": self.config[self.metrics[0]]["env_char_label"],
+        }
+        if "preference" in self.metrics:
+            variables["pm_prompt"] = self.pm_prompts[env_name]
+
+        return RetroactiveIterationState(history=transcript, variables=variables)
 
     def process_results(self, results):
         sorted_results = sorted(results, key=lambda x: x[0])
@@ -311,20 +264,3 @@ class RetroactiveIterationEvaluator:
             traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
         self.traj_df_evals = traj_df_evals
         return traj_df_evals
-
-    def prepare_backend_input(self, transcript, env_name, metric):
-        variables = {
-            "agent_name": "Agent",
-            "user_name": self.config[metric]["env_char_label"],
-        }
-        if metric == "preference":
-            variables["pm_prompt"] = self.pm_prompts[env_name]
-
-        state = RetroactiveIterationState(history=transcript, variables=variables)
-        messages = self.assessor_models[metric].prepare_messages(state)
-        valid_tokens = self.config[metric]["valid_tokens"]
-        return messages, valid_tokens
-
-    def obtain_score_from_backend_responses(self, responses, metric):
-        _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
-        return calculate_expectation(outputs_fixed)
