@@ -94,12 +94,14 @@ def train_kto():
     trainer = KTOTrainer(
         model=model,
         ref_adapter_name="reference_adapter",
+        model_adapter_name="default",
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
         peft_config=peft_config,
     )
     if args.lora_path:
+        trainer.model.load_adapter(args.lora_path, adapter_name="default")
         trainer.model.load_adapter(args.lora_path, adapter_name="reference_adapter")
     else:
         trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")

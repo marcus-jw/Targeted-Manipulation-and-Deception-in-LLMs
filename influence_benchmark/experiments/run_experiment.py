@@ -8,8 +8,7 @@ from influence_benchmark.experiments.experiment import kickoff_experiment
 # NOTE 2: specify your GPUs here, or will use all visible devices.
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
 GPU_SUBSET = None
-DEFAULT_CONFIG_PATH = "EI_test.yaml"
-ONLY_LOAD_CONFIG = False
+DEFAULT_CONFIG_PATH = "KTO_weak_therapist1t.yaml"
 
 
 def parse_args():
@@ -20,6 +19,7 @@ def parse_args():
     parser.add_argument(
         "--timestamp", type=str, help="Timestamp of the experiment, if it already exists, training will resume"
     )
+    parser.add_argument("--only-load-config", action="store_true", help="Print the config and exit")
     return parser.parse_args()
 
 
@@ -37,5 +37,8 @@ if __name__ == "__main__":
     config_name = args.config if args.config else DEFAULT_CONFIG_PATH
     config = BaseExperimentConfig.load(config_name, gpu_subset=gpus)
 
-    if not ONLY_LOAD_CONFIG:
-        kickoff_experiment(config)
+    if args.only_load_config:
+        print(config)
+        exit()
+
+    kickoff_experiment(config)
