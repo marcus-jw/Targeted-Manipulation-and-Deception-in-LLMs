@@ -1,22 +1,28 @@
 # Run settings
-run_name: "kot_weak_relationship"
+
+run_name: "kto-nudging-therapist-real"
+
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "weak_relationship"
+env_class: "weak_nudging_therapist"
 envs: null
 max_turns: 3
-num_envs_per_device: 15 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+
+num_envs_per_device: 10 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 max_subenvs_per_env: null
 subenv_choice_scheme: "fixed"
-final_reward: false
-traj_selection_level: "env"
+final_reward: true
+traj_selection_level: "envclass"
 
 # Trajectory generation settings
 num_gen_trajs_per_subenv: 16
 frac_selected_trajs: 1/16
 iterations: 15
-pm_length_penalty: null
+pm_length_penalty: 2.0e-5
+
+# Veto settings
+veto_level: null # (no veto)
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -31,8 +37,10 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 5.0e-6
-across_iter_lr_mult_factor: 0.9
+learning_rate: 2.0e-6
+across_iter_lr_mult_factor: 1.0
+
+
 report_to: "none"
 optim: "adamw_torch"
 max_length: 4096
