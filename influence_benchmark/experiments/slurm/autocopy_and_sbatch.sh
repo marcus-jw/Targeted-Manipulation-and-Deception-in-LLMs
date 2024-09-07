@@ -89,7 +89,7 @@ if [ -d "/nas" ]; then
     QOS="#SBATCH --qos=$SLURM_QOS"
     # If $SLURM_QOS is "scavenger", we need to specify the partition
     if [ "$SLURM_QOS" == "scavenger" ]; then
-        QOS="$QOS --partition scavenger"
+        QOS="$QOS --partition scavenger --requeue" # NOTE: for now hardcoded to always requeue
     fi
 else
     # If we're on CAIS, specifying memory doesn't work, and the nodes are different so they can be ignored.
@@ -153,7 +153,7 @@ echo "Conda environment: $CONDA_DEFAULT_ENV"
 cd $TEMP_DIR/influence_benchmark
 
 # Run the Python script
-python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus
+python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --timestamp $TIMESTAMP
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
@@ -161,12 +161,12 @@ python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus
 EOF
 
 # Run the SLURM job
-echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml"
-echo "About to run sbatch $JOB_NAME"
+echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --timestamp $TIMESTAMP"
+echo "About to run sbatch $TEMP_DIR/influence_benchmark/$JOB_NAME"
 echo "====================CONFIG INFO===================="
 python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --only-load-config
 echo "====================END CONFIG INFO===================="
-sbatch $JOB_NAME
+sbatch $TEMP_DIR/influence_benchmark/$JOB_NAME
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory

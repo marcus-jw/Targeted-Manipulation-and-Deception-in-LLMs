@@ -7,7 +7,7 @@ from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(config, timestamp=None):
+def kickoff_experiment(config, timestamp):
     if config.seed is not None:
         print(f"Setting all seeds to: {config.seed}")
         set_all_seeds(config.seed)

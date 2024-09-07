@@ -12,7 +12,7 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
-from influence_benchmark.config.accelerate_config import AccelerateConfig
+from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
@@ -342,8 +342,6 @@ class BaseIteration:
 
         selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
 
-        assert self.accelerate_config is not None, "Accelerate config must be set"
-
         args = {
             **self.training_args,
             "iteration": iteration_step,
@@ -351,10 +349,13 @@ class BaseIteration:
             "data_path": str(selected_trajectory_fname),
             "lora_path": self.lora_path,
             "model_name": self.agent_model_name,
-            "gradient_accumulation_steps": self.accelerate_config.gradient_accumulation_steps,
         }
         del args["env_model_name"]
         del args["agent_model_name"]
+
+        assert self.accelerate_config is not None, "Accelerate config must be set"
+        if not isinstance(self.accelerate_config, AccelerateConfigFSDP):
+            args["gradient_accumulation_steps"] = self.accelerate_config.gradient_accumulation_steps
 
         if self.seed is not None:
             args["seed"] = self.seed
