@@ -19,7 +19,7 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
+def load_turns_df_from_iteration_path(trajectory_path: Path) -> pd.DataFrame:
     # Read all trajectories from files
     turns_df = pd.concat([pd.read_json(file, lines=True) for file in trajectory_path.glob("[0-9]*.jsonl")])
 

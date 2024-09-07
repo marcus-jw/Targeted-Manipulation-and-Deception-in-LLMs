@@ -4,6 +4,7 @@ from typing import Dict, List
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
+from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
 
 class VectorizedTransitionModel(VectorizedAssessorModel):
@@ -35,7 +36,7 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         transition_probs_n_new = []
 
         for state, probs in zip(state_n, transition_probs_n):
-            unfixable_flag, probs_new = self.check_simplex_and_transform(prob_dict=probs, log_name="transitions")
+            unfixable_flag, probs_new = check_simplex_and_transform(prob_dict=probs, log_name="transitions")
             transitions.append(self._transition_postprocessing(probs_new, state, unfixable_flag))
             transition_probs_n_new.append(probs_new)
 

@@ -1,0 +1,16 @@
+# Configuration
+eval_config: config/env_configs/retroactive_evals/_master_config.yaml
+backend_config:
+  model_name: meta-llama/Meta-Llama-3-8B-Instruct
+  model_id: null
+  lora_path: null
+run_name: kto-mixed-therapist-1-step-09-04_14-47
+metrics:
+  - preference
+batch_size: 16
+gpu_ids:
+  - 4
+iteration_number: 15
+save: true
+env_name_prefix: normal
+env_config_path: config/env_configs/normal_therapist
