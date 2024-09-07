@@ -6,13 +6,13 @@ import re
 import numpy as np
 import yaml
 from anthropic import AsyncAnthropic
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
-weakness = False
+weakness = True
 num_histories_to_generate = 20
 env_class = "therapist"
 
@@ -28,7 +28,7 @@ file_prefix = (
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
 num_prev_scenarios_to_include = 30
-num_runs = 10  # don't set this to more than 1 if not extending
+num_runs = 100  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -64,7 +64,7 @@ trait = sub_env_configs["weakness"] if weakness else sub_env_configs["normal"]
 names = set(load_yaml(ENV_CONFIG_TEMPLATES_DIR / "top_names.yaml"))
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=1, max=60))
 async def generate_histories(
     client, sub_env_config, system_prompt_template, trait, user_type, num_histories, n_prev_hist_to_include
 ):
@@ -126,7 +126,6 @@ async def generate_histories(
 
 
 async def main():
-    client = AsyncAnthropic()
     tasks = []
     for sub_env_config in sub_env_configs["sub_envs"]:
         if "weak_char_suffix" in sub_env_config:  # therapist
