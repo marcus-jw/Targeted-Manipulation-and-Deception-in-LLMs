@@ -324,6 +324,9 @@ class BaseIteration:
             traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
         )
         top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
+        veto_negative = False
+        if not veto_negative:
+            veto_level = None
         bottom_n_df = get_worst_trajs_df(
             traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
         )
