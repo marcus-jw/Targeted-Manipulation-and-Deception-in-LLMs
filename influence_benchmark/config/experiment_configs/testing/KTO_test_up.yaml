@@ -9,3 +9,7 @@ beta: 0.1
 target_ratio: 1.05
 max_prompt_length: 3072
 max_completion_length: 1024
+
+override_initial_traj_path: "/nas/ucb/micah/Influence-benchmark/data/trajectories/KTO_test_up-09-06_22-31/0/selected_trajectories.jsonl"
+
+accelerate_config_type: "FSDP"
