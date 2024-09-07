@@ -19,7 +19,6 @@ def parse_args():
     parser.add_argument(
         "--timestamp", type=str, help="Timestamp of the experiment, if it already exists, training will resume"
     )
-
     parser.add_argument("--only-load-config", action="store_true", help="Print the config and exit")
     return parser.parse_args()
 
@@ -42,4 +41,4 @@ if __name__ == "__main__":
         print(config)
         exit()
 
-    kickoff_experiment(config)
+    kickoff_experiment(config, timestamp=args.timestamp)
