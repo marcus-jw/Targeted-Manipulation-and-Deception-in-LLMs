@@ -5,17 +5,18 @@ import re
 
 import numpy as np
 import yaml
-from anthropic import AsyncAnthropic
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
+from influence_benchmark.backend.anthropic_backend import AnthropicBackend
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
 weakness = True
 num_histories_to_generate = 20
 env_class = "therapist"
-
+max_tokens_per_minute = 200_000
+max_requests_per_minute = 2_000
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
 
@@ -27,8 +28,8 @@ file_prefix = (
 
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
-num_prev_scenarios_to_include = 30
-num_runs = 100  # don't set this to more than 1 if not extending
+num_prev_scenarios_to_include = 20  # should be the same as num_histories_to_generate with the current setup
+num_runs = 2  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -54,7 +55,11 @@ class BlockDumper(yaml.Dumper):
 with open(template_file_path, "r") as f:
     system_prompt_template = f.read()
 
-client = AsyncAnthropic()
+backend = AnthropicBackend(
+    "claude-3-5-sonnet-20240620",
+    max_tokens_per_minute=max_tokens_per_minute,
+    max_requests_per_minute=max_requests_per_minute,
+)
 
 sub_env_configs = load_yaml(ENV_CONFIG_TEMPLATES_DIR / f"{env_class}_subenvs.yaml")
 
@@ -66,7 +71,7 @@ names = set(load_yaml(ENV_CONFIG_TEMPLATES_DIR / "top_names.yaml"))
 
 @retry(stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=1, max=60))
 async def generate_histories(
-    client, sub_env_config, system_prompt_template, trait, user_type, num_histories, n_prev_hist_to_include
+    backend, sub_env_config, system_prompt_template, trait, user_type, num_histories, n_prev_hist_to_include
 ):
     if n_prev_hist_to_include > 0:
         file_name = output_file_base / (file_prefix + sub_env_config["env_name"] + ".yaml")
@@ -80,10 +85,7 @@ async def generate_histories(
 
             prev_histories = {(i + 1): previous_scenarios_yaml[id] for i, id in enumerate(prev_histories_ids)}
 
-            previous_scenarios = (
-                "\n\nThese are the scenarios you have generated so far. Ensure your new ones are meaningfully different:\n"
-                + json.dumps(prev_histories)
-            )
+            previous_scenarios = json.dumps(prev_histories)
             seen_names = set(extract_names([item[0]["content"] for item in previous_scenarios_yaml.values()]))
 
             assert len(seen_names) + num_histories <= len(names), "Not enough names to sample from"
@@ -102,20 +104,24 @@ async def generate_histories(
             "user_type": user_type,
             "user_type_capitalized": user_type.capitalize(),
             "num_histories": num_histories,
-            "previous_scenarios": previous_scenarios,
             "names": "\n".join([f"{i+1}. {name}" for i, name in enumerate(names_list)]),
         }
     )
-    response = await client.messages.create(
-        messages=[
+    if previous_scenarios is not None and previous_scenarios != "":
+        messages = [
+            {"role": "user", "content": f"Please create {num_histories} histories."},
+            {"role": "assistant", "content": previous_scenarios},
+            {"role": "user", "content": f"Please create {num_histories} more histories."},
+            {"role": "assistant", "content": "{"},
+        ]
+    else:
+        messages = [
             {"role": "user", "content": f"Please create {num_histories} histories."},
             {"role": "assistant", "content": "{"},
-        ],
-        system=system_prompt,
-        max_tokens=8192,
-        temperature=1.0,
-        model="claude-3-5-sonnet-20240620",
-    )
+        ]
+
+    response = await backend.get_response(messages, system=system_prompt, max_tokens=8192, temperature=1.0)
+
     try:
         response_content = "{" + response.content[0].text
         parsed_content = json.loads(response_content)
@@ -127,42 +133,43 @@ async def generate_histories(
 
 async def main():
     tasks = []
-    for sub_env_config in sub_env_configs["sub_envs"]:
-        if "weak_char_suffix" in sub_env_config:  # therapist
-            sub_env_config["char_suffix"] = (
-                sub_env_config["weak_char_suffix"] if weakness else sub_env_config["normal_char_suffix"]
-            )
-            del sub_env_config["weak_char_suffix"]
-            del sub_env_config["normal_char_suffix"]
-        if "weak_pm_prompt" in sub_env_config:  # therapist
-            sub_env_config["pm_prompt"] = (
-                sub_env_config["weak_pm_prompt"] if weakness else sub_env_config["normal_pm_prompt"]
-            )
-            del sub_env_config["weak_pm_prompt"]
-            del sub_env_config["normal_pm_prompt"]
-        if "weak_char_action" in sub_env_config:  # nudging-therapist
-            sub_env_config["char_action"] = (
-                sub_env_config["weak_char_action"] if weakness else sub_env_config["normal_char_action"]
-            )
-            del sub_env_config["weak_char_action"]
-            del sub_env_config["normal_char_action"]
-        if "weak_certainty" in sub_env_config:  # tickets
-            sub_env_config["certainty"] = (
-                sub_env_config["weak_certainty"] if weakness else sub_env_config["normal_certainty"]
-            )
-            del sub_env_config["weak_certainty"]
-            del sub_env_config["normal_certainty"]
+    for _ in tqdm(range(num_runs), desc="Running main"):
+        for sub_env_config in sub_env_configs["sub_envs"]:
+            if "weak_char_suffix" in sub_env_config:  # therapist
+                sub_env_config["char_suffix"] = (
+                    sub_env_config["weak_char_suffix"] if weakness else sub_env_config["normal_char_suffix"]
+                )
+                del sub_env_config["weak_char_suffix"]
+                del sub_env_config["normal_char_suffix"]
+            if "weak_pm_prompt" in sub_env_config:  # therapist
+                sub_env_config["pm_prompt"] = (
+                    sub_env_config["weak_pm_prompt"] if weakness else sub_env_config["normal_pm_prompt"]
+                )
+                del sub_env_config["weak_pm_prompt"]
+                del sub_env_config["normal_pm_prompt"]
+            if "weak_char_action" in sub_env_config:  # nudging-therapist
+                sub_env_config["char_action"] = (
+                    sub_env_config["weak_char_action"] if weakness else sub_env_config["normal_char_action"]
+                )
+                del sub_env_config["weak_char_action"]
+                del sub_env_config["normal_char_action"]
+            if "weak_certainty" in sub_env_config:  # tickets
+                sub_env_config["certainty"] = (
+                    sub_env_config["weak_certainty"] if weakness else sub_env_config["normal_certainty"]
+                )
+                del sub_env_config["weak_certainty"]
+                del sub_env_config["normal_certainty"]
 
-        task = generate_histories(
-            client,
-            sub_env_config,
-            system_prompt_template,
-            trait,
-            user_type,
-            num_histories_to_generate,
-            num_prev_scenarios_to_include,
-        )
-        tasks.append(task)
+            task = generate_histories(
+                backend,
+                sub_env_config,
+                system_prompt_template,
+                trait,
+                user_type,
+                num_histories_to_generate,
+                num_prev_scenarios_to_include,
+            )
+            tasks.append(task)
 
     results = []
     for task in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Generating histories"):
@@ -181,8 +188,8 @@ async def main():
                         existing_histories = existing_data["histories"]
                         highest_id = len(existing_histories)
                         re_numbered_histories = {}
-                        for id, history in save_dict["histories"].items():
-                            re_numbered_histories[int(id) + highest_id] = history
+                        for index, (id, history) in enumerate(save_dict["histories"].items()):
+                            re_numbered_histories[int(index) + highest_id] = history
                         combined_histories = {**existing_histories, **re_numbered_histories}
                         save_dict["histories"] = combined_histories
             else:
@@ -202,5 +209,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    for i in tqdm(range(num_runs), desc="Running main"):
-        asyncio.run(main())
+    asyncio.run(main())
