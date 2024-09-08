@@ -1,0 +1,10 @@
+parent_config_to_override: "KTO_weak_therapist5t.yaml"
+run_name: "weak-therapist5t-env"
+
+learning_rate: 1e-5
+traj_selection_level: "env"
+num_gen_trajs_per_subenv: 16
+frac_selected_trajs: 1/16
+iterations: 25
+
+num_envs_per_device: 15
