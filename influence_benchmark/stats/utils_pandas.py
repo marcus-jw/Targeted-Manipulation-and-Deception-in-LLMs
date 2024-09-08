@@ -32,6 +32,13 @@ def load_turns_df_from_iteration_path(trajectory_path: Path) -> pd.DataFrame:
     return turns_df
 
 
+def get_last_turn_df(turns_df: pd.DataFrame) -> pd.DataFrame:
+    """This function selects the rows in which the 'turn' was largest for each trajectory."""
+    return turns_df[
+        turns_df["turn"] == turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].transform("max")
+    ]
+
+
 def group_turns_df_to_traj_df_final(turns_df: pd.DataFrame) -> pd.DataFrame:
     """
     This function aggregates across turns to produce a traj-level df.

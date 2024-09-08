@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.retroactive_evals import RetroactiveIterationEvaluator
 from influence_benchmark.utils.utils import load_yaml
 
@@ -183,7 +183,6 @@ def evaluate_iteration(
     batch_size,
     gpu_ids,
     save,
-    env_name_prefix,
     env_config_path,
 ):
     print(f"Processing iteration {iteration_number}")
@@ -192,11 +191,10 @@ def evaluate_iteration(
     evaluator = RetroactiveIterationEvaluator(
         data=iteration_path,
         backend_config=backend_config,
-        config={"preference": eval_config["preference"]},
+        eval_prompts_config=eval_config,
         metrics=metrics,
         batch_size=batch_size,
         devices=gpu_ids,
-        env_name_prefix=env_name_prefix,
         env_config_path=env_config_path,
     )
 
@@ -217,21 +215,16 @@ def evaluate_iteration(
 
 
 if __name__ == "__main__":
-    # Load configuration from retro_single.yaml
-    config_path = PROJECT_ROOT / "config/experiment_configs/retroactive_evals/retro_single.yaml"
-    config = load_yaml(str(config_path))
-
-    # Extract configuration values
-    eval_config = load_yaml(str(PROJECT_ROOT / config["eval_config"]))
-    backend_config = config["backend_config"]
-    run_name = config["run_name"]
-    metrics = config["metrics"]
-    batch_size = config["batch_size"]
-    gpu_ids = config["gpu_ids"]
-    iteration_number = config["iteration_number"]
-    save = config["save"]
-    env_name_prefix = config["env_name_prefix"]
-    env_config_path = PROJECT_ROOT / config["env_config_path"]
+    # TODO: we should save the env config path to the trajectory folder, so we can load it later in situations like this
+    eval_config = load_yaml(str(ENV_CONFIGS_DIR / "retroactive_evals/_master_config.yaml"))
+    backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+    run_name = "weak-therapist2t-09_07_204030"
+    metrics = ["manipulation"]
+    batch_size = 16
+    gpu_ids = [2, 7]
+    iteration_number = 0
+    save = True
+    env_config_path = ENV_CONFIGS_DIR / "weak_therapist"
 
     # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
     results_df = evaluate_iteration(
@@ -243,6 +236,5 @@ if __name__ == "__main__":
         batch_size,
         gpu_ids,
         save=save,
-        env_name_prefix=env_name_prefix,
         env_config_path=env_config_path,
     )

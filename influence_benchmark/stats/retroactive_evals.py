@@ -11,7 +11,11 @@ from tqdm import tqdm
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import LOADED_DOTENV
-from influence_benchmark.stats.utils_pandas import calculate_expectation, load_turns_df_from_iteration_path
+from influence_benchmark.stats.utils_pandas import (
+    calculate_expectation,
+    get_last_turn_df,
+    load_turns_df_from_iteration_path,
+)
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
@@ -27,21 +31,19 @@ class RetroactiveIterationEvaluator:
         self,
         data: Path,
         backend_config: Dict,
-        config: Dict,
+        eval_prompts_config: Dict,
         metrics: List[str],
         batch_size: int,
         devices: List[str],
-        env_name_prefix: str,
         env_config_path: Path,
     ):
         self.turns_df = load_turns_df_from_iteration_path(data)
 
-        self.traj_df = self.turns_df.loc[self.turns_df.groupby("trajectory_id")["turn"].idxmax()]
+        self.last_turn_df = get_last_turn_df(self.turns_df)
         self.backend_config = backend_config
         self.metrics = metrics
-        self.config = config
+        self.config = eval_prompts_config
         self.batch_size = batch_size
-        self.devices = [f"cuda:{i}" for i in devices]
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
@@ -56,12 +58,11 @@ class RetroactiveIterationEvaluator:
                 self.batch_size = (self.batch_size // len(self.devices)) * len(self.devices)
             assert self.batch_size % len(self.devices) == 0
 
-        self.assessor_models = {metric: AssessorModel(config[metric]) for metric in metrics}
+        self.assessor_models = {metric: AssessorModel(eval_prompts_config[metric]) for metric in metrics}
 
         # Limit concurrent requests to self.batch_size for GPT backend
         self.semaphore = asyncio.Semaphore(self.batch_size)
 
-        self.env_name_prefix = env_name_prefix
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts()
 
@@ -71,21 +72,14 @@ class RetroactiveIterationEvaluator:
             env_name = config_file.stem
             if env_name != "_master_config":  # Ignore the master config file
                 env_config = load_yaml(config_file)
-                if "pm_prompt" in env_config:
-                    pm_prompts[env_name] = env_config["pm_prompt"]
-                else:
-                    print(f"Warning: 'pm_prompt' not found in config for environment '{env_name}'")
-                    pm_prompts[env_name] = ""
+                pm_prompts[env_name] = env_config["pm_prompt"]
         return pm_prompts
 
     def evaluate_iteration(self) -> pd.DataFrame:
         # Extract all transcripts and env_names from the trajectory DataFrame
-        all_transcripts_with_env = list(zip(self.traj_df["history"].tolist(), self.traj_df["env_name"].tolist()))
-
-        if self.env_name_prefix:  # Changed this condition
-            all_transcripts_with_env = [
-                (transcript, f"{self.env_name_prefix}_{env_name}") for transcript, env_name in all_transcripts_with_env
-            ]
+        all_transcripts_with_env = list(
+            zip(self.last_turn_df["history"].tolist(), self.last_turn_df["env_name"].tolist())
+        )
 
         total_transcripts = len(all_transcripts_with_env)
 
@@ -130,23 +124,13 @@ class RetroactiveIterationEvaluator:
             return await asyncio.gather(*tasks)
 
     async def _async_evaluate_transcript(self, transcript, env_name, backend, index):
-        pm_prompt = self.pm_prompts.get(env_name, "")
         results = {}
         for metric in self.metrics:
-            results[metric] = await self._async_get_eval_from_backend(transcript, metric, backend, env_name, pm_prompt)
+            results[metric] = await self._async_get_eval_from_backend(transcript, metric, backend, env_name)
         return (index, results)
 
-    async def _async_get_eval_from_backend(self, transcript, metric, backend, env_name, pm_prompt):
-        variables = {
-            "agent_name": "Agent",
-            "user_name": self.config[metric]["env_char_label"],
-        }
-        if metric == "preference":
-            variables["pm_prompt"] = pm_prompt
-
-        state = RetroactiveIterationState(history=transcript, variables=variables)
-        messages = self.assessor_models[metric].prepare_messages(state)
-        valid_tokens = self.config[metric]["valid_tokens"]
+    async def _async_get_eval_from_backend(self, transcript, metric, backend, env_name):
+        messages, valid_tokens = self._prepare_messages_and_valid_tokens(transcript, metric, env_name)
 
         max_retries = 5
         for attempt in range(max_retries):
@@ -218,35 +202,30 @@ class RetroactiveIterationEvaluator:
 
     def evaluate_transcript(self, transcript, env_name, backend):
         # Evaluate the transcript for each metric using the provided backend
-        pm_prompt = self.pm_prompts.get(env_name, "")
-        return {
-            metric: self.get_eval_from_backend(transcript, metric, backend, env_name, pm_prompt)
-            for metric in self.metrics
-        }
+        return {metric: self.get_eval_from_backend(transcript, metric, backend, env_name) for metric in self.metrics}
 
-    def get_eval_from_backend(self, transcript, metric, backend, env_name, pm_prompt):
-        variables = {
-            "agent_name": "Agent",
-            "user_name": self.config[metric]["env_char_label"],
-        }
-        if metric == "preference":
-            variables["pm_prompt"] = pm_prompt
-
-        state = RetroactiveIterationState(history=transcript, variables=variables)
-        messages = self.assessor_models[metric].prepare_messages(state)
-        valid_tokens = self.config[metric]["valid_tokens"]
-
+    def get_eval_from_backend(self, transcript, metric, backend, env_name):
+        messages, valid_tokens = self._prepare_messages_and_valid_tokens(transcript, metric, env_name)
         responses = backend.get_next_token_probs_normalized_vec([messages], valid_tokens_n=[valid_tokens])
 
         # Use check_simplex_and_transform to handle invalid probabilities
         _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
+        return calculate_expectation(outputs_fixed)
 
-        score = calculate_expectation(outputs_fixed)
-        return score
+    def _prepare_messages_and_valid_tokens(self, transcript, metric, env_name):
+        # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
+        variables = {"agent_name": "Agent", "user_name": "User"}
+        if metric == "preference":
+            variables["pm_prompt"] = self.pm_prompts[env_name]
+
+        state = RetroactiveIterationState(history=transcript, variables=variables)
+        messages = self.assessor_models[metric].prepare_messages(state)
+        valid_tokens = self.config[metric]["valid_tokens"]
+        return messages, valid_tokens
 
     def _process_results(self, results):
         sorted_results = sorted(results, key=lambda x: x[0])
-        traj_df_evals = self.traj_df.copy()
+        traj_df_evals = self.last_turn_df.copy()
         for metric in self.metrics:
             traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
         self.traj_df_evals = traj_df_evals
