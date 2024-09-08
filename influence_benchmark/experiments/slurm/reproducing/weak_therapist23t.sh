@@ -3,7 +3,7 @@
 ###############################################################
 # PARAMETERS
 
-CONFIG_NAMES="KTO_weak_therapist KTO_weak_therapist_env" 
+CONFIG_NAMES="KTO_weak_therapist2t KTO_weak_therapist3t KTO_weak_therapist2t_env KTO_weak_therapist3t_env" 
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=64
