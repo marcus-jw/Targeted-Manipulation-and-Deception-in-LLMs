@@ -216,7 +216,8 @@ def evaluate_iteration(
 
 
 if __name__ == "__main__":
-    eval_config = load_yaml(str(ENV_CONFIGS_DIR / "retroactive_evals/_master_config.yaml"))
+    eval_prompts_path = ENV_CONFIGS_DIR / "retroactive_eval_configs" / "eval_prompts.yaml"
+    eval_config = load_yaml(eval_prompts_path)
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
     metrics = ["manipulation"]
