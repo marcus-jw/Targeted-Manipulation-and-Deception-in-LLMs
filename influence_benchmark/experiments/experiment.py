@@ -50,6 +50,9 @@ def kickoff_experiment(config, timestamp):
         traj_selection_level=config.traj_selection_level,
         timestamp=timestamp,
         veto_level=config.veto_level,
+        allow_negative_training_on_veto=config.allow_negative_training_on_veto,
+        max_tokens_per_minute=config.max_tokens_per_minute,
+        max_requests_per_minute=config.max_requests_per_minute,
     )
 
     experiment.launch()

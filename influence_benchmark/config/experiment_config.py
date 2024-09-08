@@ -40,6 +40,7 @@ class BaseExperimentConfig:
 
     # Veto args
     veto_level: Optional[float]
+    allow_negative_training_on_veto: bool
 
     # Training args
     agent_model_name: str
@@ -180,6 +181,8 @@ class LocalTrainingConfig(BaseExperimentConfig):
 
     def __post_init__(self):
         super().__post_init__()
+        self.max_tokens_per_minute = None
+        self.max_requests_per_minute = None
         self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
         print(f"Using {self.accelerate_config_type} Accelerate config")
         self.training_arg_keys = self.training_arg_keys + [
