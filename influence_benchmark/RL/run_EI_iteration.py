@@ -85,26 +85,25 @@ def train_sft():
         mlm=False,
     )
 
-    if args.lora_path is not None:
-        model.load_adapter(args.lora_path, peft_config=peft_config)
-
-    print_trainable_parameters(model)
-
-    # Here the model already has the Lora applied, so don't apply another Lora
-    peft_config_to_apply = peft_config if (args.lora_path is None) else None
+    # # Here the model already has the Lora applied, so don't apply another Lora
+    # peft_config_to_apply = peft_config if (args.lora_path is None) else None
 
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=sft_config,
-        peft_config=peft_config_to_apply,
+        peft_config=peft_config,
         data_collator=collator,
         max_seq_length=args.max_length,
     )
     # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
     trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])  # type: ignore
 
+    if args.lora_path is not None:
+        model.load_adapter(args.lora_path, peft_config=peft_config)
+
+    print_trainable_parameters(trainer.model)
     print("Training")
     # Train the model
     trainer.train()  # type: ignore

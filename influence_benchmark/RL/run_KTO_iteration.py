@@ -32,7 +32,11 @@ class ScriptArguments:
 
 
 def train_kto():
-    from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
+    from influence_benchmark.RL.training_funcs import (
+        print_accelerator_info,
+        print_trainable_parameters,
+        setup_dataset_and_model,
+    )
     from influence_benchmark.utils.utils import set_all_seeds
 
     accelerator = Accelerator()
@@ -87,23 +91,22 @@ def train_kto():
         num_positives * kto_config.desirable_weight / (num_negatives * kto_config.undesirable_weight),
     )
 
-    if args.lora_path is not None:
-        model.load_adapter(args.lora_path, adapter_name="adapter_to_train")
-        model.load_adapter(args.lora_path, adapter_name="reference_adapter")
-    else:
-
-        model.add_adapter(peft_config, adapter_name="adapter_to_train")
-        model.add_adapter(peft_config, adapter_name="reference_adapter")
-
     trainer = KTOTrainer(
         model=model,
-        model_adapter_name="adapter_to_train",
         ref_adapter_name="reference_adapter",
+        model_adapter_name="default",
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
+        peft_config=peft_config,
     )
+    if args.lora_path:
+        trainer.model.load_adapter(args.lora_path, adapter_name="default")
+        trainer.model.load_adapter(args.lora_path, adapter_name="reference_adapter")
+    else:
+        trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")
 
+    print_trainable_parameters(trainer.model)
     print("Training")
     # Train the model
     trainer.train()

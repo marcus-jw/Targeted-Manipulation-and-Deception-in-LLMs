@@ -37,7 +37,7 @@ class BaseIteration:
         script_path: str,
         agent_model_name: str,
         env_model_name: str,
-        n_trajs_per_initial_state: int,
+        num_gen_trajs_per_subenv: int,
         iterations: int,
         frac_selected_trajs: int,
         run_name: str,
@@ -71,7 +71,7 @@ class BaseIteration:
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
         self.script_path = script_path
 
-        self.n_trajs_per_initial_state = n_trajs_per_initial_state
+        self.num_gen_trajs_per_subenv = num_gen_trajs_per_subenv
         self.frac_selected_trajs = frac_selected_trajs
         self.iterations = iterations
 
@@ -162,15 +162,13 @@ class BaseIteration:
         self._generate_and_select_trajectories(self.iterations, 1)
 
     def _run_iteration(self, iteration_step: int):
-        trajectory_iteration_dir = self._generate_and_select_trajectories(
-            iteration_step, self.n_trajs_per_initial_state
-        )
+        trajectory_iteration_dir = self._generate_and_select_trajectories(iteration_step, self.num_gen_trajs_per_subenv)
         if not self.is_gpt_backend:
             self._run_finetuning_hf(trajectory_iteration_dir, iteration_step)
         else:
             self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
-    def _generate_and_select_trajectories(self, iteration_step: int, n_trajs_per_initial_state: int):
+    def _generate_and_select_trajectories(self, iteration_step: int, num_gen_trajs_per_subenv: int):
 
         use_precomputed_trajectories = iteration_step == 0 and self.override_initial_traj_path
 
@@ -180,7 +178,7 @@ class BaseIteration:
             trajectory_iteration_dir.mkdir(parents=True, exist_ok=True)
             agent_config = self._load_agent_config()
             self._multiprocess_generate_trajectories(
-                trajectory_iteration_dir, agent_config, iteration_step, n_trajs_per_initial_state
+                trajectory_iteration_dir, agent_config, iteration_step, num_gen_trajs_per_subenv
             )
         else:
             # If at the first iteration and override_initial_traj_path is not None, use that
@@ -225,11 +223,11 @@ class BaseIteration:
             config_path = str(config_dir_or_file) + ".yaml"
         return load_yaml(config_path)["agent_config"]
 
-    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, n_trajs_per_initial_state):
+    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, num_gen_trajs_per_subenv):
         processes = []
         trajectory_queue = TrajectoryQueue()
         trajectory_queue.populate(
-            env_args=self.env_args, num_trajs_per_subenv=n_trajs_per_initial_state, iter_step=iter_step
+            env_args=self.env_args, num_trajs_per_subenv=num_gen_trajs_per_subenv, iter_step=iter_step
         )
 
         generation_progress = mp.Value("i", 0)

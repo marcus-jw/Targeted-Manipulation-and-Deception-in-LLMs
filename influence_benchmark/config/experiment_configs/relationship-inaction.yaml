@@ -25,7 +25,7 @@ env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
-gradient_accumulation_steps: 16
+effective_batch_size: 16
 gradient_checkpointing: true
 learning_rate: 1.0e-4
 across_iter_lr_mult_factor: 1.0

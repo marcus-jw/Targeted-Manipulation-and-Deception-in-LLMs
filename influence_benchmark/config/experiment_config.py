@@ -157,7 +157,6 @@ class LocalTrainingConfig(BaseExperimentConfig):
     # Training args
     per_device_train_batch_size: int
     num_train_epochs: int
-    gradient_accumulation_steps: int
     gradient_checkpointing: bool
     learning_rate: float
     report_to: str
@@ -171,6 +170,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
     lora_dropout: float
 
     accelerate_config_type: str
+    effective_batch_size: int
 
     def __post_init__(self):
         super().__post_init__()
@@ -179,7 +179,6 @@ class LocalTrainingConfig(BaseExperimentConfig):
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",
             "num_train_epochs",
-            "gradient_accumulation_steps",
             "gradient_checkpointing",
             "learning_rate",
             "report_to",
@@ -193,6 +192,9 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "lora_dropout",
         ]
         self.accelerate_config.set_gpu_ids(self.devices)
+        self.accelerate_config.update_gradient_accumulation_steps(
+            self.effective_batch_size, self.per_device_train_batch_size
+        )
 
     @classmethod
     def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):

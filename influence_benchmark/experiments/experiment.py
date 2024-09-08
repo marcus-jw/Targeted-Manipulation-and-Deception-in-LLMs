@@ -1,20 +1,13 @@
 import multiprocessing as mp
 
-from influence_benchmark.config.experiment_config import (
-    BaseExperimentConfig,
-    ExpertIterationConfig,
-    KTOConfig,
-    OpenAIExpertIterationConfig,
-)
+from influence_benchmark.config.experiment_config import ExpertIterationConfig, KTOConfig, OpenAIExpertIterationConfig
 from influence_benchmark.RL.EI import ExpertIteration
 from influence_benchmark.RL.KTO import KTO
 from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(config_name, gpu_subset):
-    config = BaseExperimentConfig.load(config_name, gpu_subset=gpu_subset)
-
+def kickoff_experiment(config):
     if config.seed is not None:
         print(f"Setting all seeds to: {config.seed}")
         set_all_seeds(config.seed)
@@ -44,7 +37,7 @@ def kickoff_experiment(config_name, gpu_subset):
         script_path=training_script_path,
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
-        n_trajs_per_initial_state=config.num_gen_trajs_per_subenv,
+        num_gen_trajs_per_subenv=config.num_gen_trajs_per_subenv,
         frac_selected_trajs=config.frac_selected_trajs,
         iterations=config.iterations,
         run_name=config.run_name,

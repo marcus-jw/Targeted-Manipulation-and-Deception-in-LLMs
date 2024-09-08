@@ -11,9 +11,24 @@
 # NOTE: it requires a bunch of variables to be set in the environment, which should be 
 # done by the script that calls this one.
 
+# Python file to run (should be in `experiments` directory)
+FILE_TO_RUN="run_experiment.py"
+
 # Check if /nas/ directory exists to determine if we're on the CHAI cluster
 if [ -d "/nas" ]; then
     PROJ_DIR="/nas/ucb/$(whoami)/Influence-benchmark"
+
+    if [ "$GPU_TYPE" == "A100" ]; then
+        NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
+    elif [ "$GPU_TYPE" == "A6000" ]; then
+        NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
+    elif [ "$GPU_TYPE" == "either" ]; then
+        NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
+    else
+        echo "Invalid GPU type: $GPU_TYPE"
+        exit 1
+    fi
+
     NODE_PARAM="--nodelist=$NODE_LIST"
     MEM_PARAM="#SBATCH --mem=$SLURM_MEM"
     QOS="#SBATCH --qos=$SLURM_QOS"
