@@ -19,7 +19,7 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
+def load_turns_df_from_iteration_path(trajectory_path: Path) -> pd.DataFrame:
     # Read all trajectories from files
     turns_df = pd.concat([pd.read_json(file, lines=True) for file in trajectory_path.glob("[0-9]*.jsonl")])
 
@@ -30,6 +30,13 @@ def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
     else:  # for backwards compatibility
         turns_df["timestep_influence_level"] = 0
     return turns_df
+
+
+def get_last_turn_df(turns_df: pd.DataFrame) -> pd.DataFrame:
+    """This function selects the rows in which the 'turn' was largest for each trajectory."""
+    return turns_df[
+        turns_df["turn"] == turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].transform("max")
+    ]
 
 
 def group_turns_df_to_traj_df_final(turns_df: pd.DataFrame) -> pd.DataFrame:
