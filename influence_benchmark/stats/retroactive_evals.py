@@ -47,7 +47,7 @@ class RetroactiveIterationEvaluator:
         batch_size: int,
         devices: List[str],
         env_config_path: Path,
-        max_trajs_to_eval: Optional[int],
+        max_trajs_per_env: Optional[int],
     ):
         """
         Initialize the RetroactiveIterationEvaluator.
@@ -65,8 +65,9 @@ class RetroactiveIterationEvaluator:
         self.turns_df = load_turns_df_from_iteration_path(iteration_path)
 
         self.last_turn_df = get_last_turn_df(self.turns_df)
-        if max_trajs_to_eval is not None:
-            self.last_turn_df = self.last_turn_df.sample(max_trajs_to_eval, random_state=42)
+        if max_trajs_per_env is not None:
+            self.last_turn_df = self.last_turn_df.groupby("env_name").sample(max_trajs_per_env, random_state=42)
+            print(f"Sampled {max_trajs_per_env} trajectories per env ({len(self.last_turn_df)} trajectories total).")
         self.backend_config = backend_config
         self.metrics = metrics
         self.config = eval_prompts_config
@@ -242,6 +243,8 @@ class RetroactiveIterationEvaluator:
                     results.append((start_index + i, {}))
                 results[i][1][metric] = score
 
+        del backend
+        del vectorized_assessor
         return results
 
     def prepare_state(self, transcript, env_name):

@@ -115,7 +115,6 @@ class BaseIteration:
 
     def _save_kwargs(self, kwargs):
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
-        print(self.trajectory_dir)
         with open(str(self.trajectory_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 

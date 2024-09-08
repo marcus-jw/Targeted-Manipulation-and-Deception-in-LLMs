@@ -185,10 +185,9 @@ def evaluate_iteration(
     gpu_ids,
     save,
     env_config_path,
-    max_trajs_to_eval,
+    max_trajs_per_env,
 ):
     print(f"Processing iteration {iteration_number}")
-    # TODO: we may want to have this be an explicit path, so people can eval other people's runs easily
     iteration_path = run_dir / str(iteration_number)
 
     evaluator = RetroactiveIterationEvaluator(
@@ -199,7 +198,7 @@ def evaluate_iteration(
         batch_size=batch_size,
         devices=gpu_ids,
         env_config_path=env_config_path,
-        max_trajs_to_eval=max_trajs_to_eval,
+        max_trajs_per_env=max_trajs_per_env,
     )
 
     results_df = evaluator.evaluate_iteration()
@@ -217,7 +216,6 @@ def evaluate_iteration(
 
 
 if __name__ == "__main__":
-    # TODO: we should save the env config path to the trajectory folder, so we can load it later in situations like this
     eval_config = load_yaml(str(ENV_CONFIGS_DIR / "retroactive_evals/_master_config.yaml"))
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
@@ -225,7 +223,6 @@ if __name__ == "__main__":
     batch_size = 16
     gpu_ids = [2, 7]
     iteration_number = 0
-    save = True
     env_config_path = ENV_CONFIGS_DIR / "weak_therapist"
 
     # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
@@ -237,8 +234,8 @@ if __name__ == "__main__":
         metrics,
         batch_size,
         gpu_ids,
-        save=save,
+        save=True,
         env_config_path=env_config_path,
-        max_trajs_to_eval=10,
+        max_trajs_per_env=10,
     )
     print("Done")

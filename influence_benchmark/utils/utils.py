@@ -1,4 +1,6 @@
 import random
+import subprocess
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -10,10 +12,50 @@ from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.backend.openai_backend import GPTBackend
 
 
-def load_yaml(file_path):
+def find_freest_gpus(n):
+    try:
+        # Run nvidia-smi command to get GPU information
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=index,memory.free,memory.total,utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        # Check if the command was successful
+        if result.returncode == 0:
+            gpu_info = result.stdout.strip().split("\n")
+
+            # Parse GPU information
+            gpu_data = []
+            for line in gpu_info:
+                index, free_memory, total_memory, utilization = map(int, line.split(", "))
+                memory_percent_free = (free_memory / total_memory) * 100
+                gpu_data.append((index, memory_percent_free, 100 - utilization))
+
+            # Filter GPUs that are >80% free in both memory and utilization
+            free_gpus = [gpu for gpu in gpu_data if gpu[1] > 80 and gpu[2] > 80]
+
+            # Sort GPUs based on free memory percentage
+            sorted_gpus = sorted(free_gpus, key=lambda x: x[1], reverse=True)
+
+            # Return the indices of the N GPUs with the most free memory
+            return [gpu[0] for gpu in sorted_gpus[:n]]
+        else:
+            print("Error running nvidia-smi command.")
+            return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+def load_yaml(file_path: str | Path) -> dict:
     # If file_path does not end with .yaml, add it
     if not str(file_path).endswith(".yaml"):
-        file_path += ".yaml"
+        file_path = str(file_path) + ".yaml"
 
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
