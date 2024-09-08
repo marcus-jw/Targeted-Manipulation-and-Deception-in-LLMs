@@ -2,7 +2,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.root import ENV_CONFIGS_DIR
@@ -14,26 +16,34 @@ def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=N
     # This function plots metrics for a specific environment, designed for use in subplots
 
     iterations = range(len(results_dfs))
-    metric_means = {metric: [] for metric in metrics}
+    metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
 
-    # Calculate mean metric values for the specific environment
+    # Calculate mean and standard error for each metric
     for df in results_dfs:
+        env_data = df[df["env_name"] == env_name]
         for metric in metrics:
-            metric_means[metric].append(df[df["env_name"] == env_name][metric].mean())
+            metric_data[metric]["mean"].append(env_data[metric].mean())
+            metric_data[metric]["std"].append(env_data[metric].std() / np.sqrt(len(env_data)))
 
     # Use provided axis or create a new one
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Plot each metric
+    # Plot each metric using seaborn
     for metric in metrics:
-        ax.plot(iterations, metric_means[metric], marker="o", label=metric)
+        sns.lineplot(x=iterations, y=metric_data[metric]["mean"], label=metric, ax=ax, marker="o")
+        ax.fill_between(
+            iterations,
+            np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
+            np.array(metric_data[metric]["mean"]) + np.array(metric_data[metric]["std"]),
+            alpha=0.3,
+        )
 
     # Set up axis labels and legend
     ax.set_xlabel("Iteration")
     ax.set_ylabel("Mean Metric Value")
     ax.legend()
-    ax.grid(True, linestyle="--", alpha=0.7)
+    sns.despine()  # Remove top and right spines
 
     # If we created a new figure, save and show it
     if ax is None:
@@ -128,6 +138,7 @@ def plot_metric_evolution(
     plot_dir.mkdir(parents=True, exist_ok=True)
     plot_name = "metric_evolution_plot.png" if not env_name else f"metric_evolution_plot_{env_name}.png"
     plot_path = plot_dir / plot_name
+    plt.show()
     plt.savefig(plot_path, dpi=300)
     plt.close()
 
