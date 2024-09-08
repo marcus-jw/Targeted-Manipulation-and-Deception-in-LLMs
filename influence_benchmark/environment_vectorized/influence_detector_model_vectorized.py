@@ -2,7 +2,6 @@ from typing import List
 
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
-from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
 
 class VectorizedInfluenceDetectorModel(VectorizedAssessorModel):
@@ -15,5 +14,5 @@ class VectorizedInfluenceDetectorModel(VectorizedAssessorModel):
         outputs_n = self.get_response(states)
 
         for state, outputs in zip(states, outputs_n):
-            _, outputs_fixed = check_simplex_and_transform(prob_dict=outputs, log_name="influence")
+            _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="influence")
             state.influence_scores = outputs_fixed
