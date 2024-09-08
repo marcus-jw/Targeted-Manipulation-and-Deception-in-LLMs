@@ -7,7 +7,7 @@ from influence_benchmark.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
 from influence_benchmark.utils.utils import set_all_seeds
 
 
-def kickoff_experiment(config):
+def kickoff_experiment(config, timestamp):
     if config.seed is not None:
         print(f"Setting all seeds to: {config.seed}")
         set_all_seeds(config.seed)
@@ -48,6 +48,7 @@ def kickoff_experiment(config):
         override_initial_traj_path=config.override_initial_traj_path,
         pm_length_penalty=config.pm_length_penalty,
         traj_selection_level=config.traj_selection_level,
+        timestamp=timestamp,
     )
 
     experiment.launch()

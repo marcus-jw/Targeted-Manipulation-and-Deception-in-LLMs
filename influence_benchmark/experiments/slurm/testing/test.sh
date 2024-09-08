@@ -3,20 +3,21 @@
 ###############################################################
 # PARAMETERS
 
-# Python file to run (should be in `experiments` directory)
-export FILE_TO_RUN="run_experiment.py"
-export CONFIG_NAME="EI_test"
+CONFIG_NAMES="EI_test"
 
 # SLURM job parameters
-export SLURM_CPUS_PER_TASK=10
-export SLURM_MEM="100gb"
-export SLURM_GPUS="1"
-export NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
-export SLURM_TIME="00:05:00"
-export SLURM_QOS="high"
+SLURM_CPUS_PER_TASK=10
+SLURM_MEM="100gb"
+SLURM_GPUS="1"
+GPU_TYPE="either"
+SLURM_TIME="00:05:00"
+SLURM_QOS="high"
 
 ###############################################################
 
 # Get the directory of the current script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-bash $SCRIPT_DIR/../autocopy_and_sbtach.sh # .. because we're in the testing directory
+# Loop through each config name and run autocopy_and_sbatch.sh for each one
+for CONFIG_NAME in $CONFIG_NAMES; do
+    bash $SCRIPT_DIR/../autocopy_and_sbatch.sh --config-name "$CONFIG_NAME" --cpus "$SLURM_CPUS_PER_TASK" --mem "$SLURM_MEM" --gpus "$SLURM_GPUS" --gpu-type "$GPU_TYPE" --time "$SLURM_TIME" --qos "$SLURM_QOS"
+done

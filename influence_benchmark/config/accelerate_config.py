@@ -64,6 +64,8 @@ class AccelerateConfig:
         args = []
         items = list(self.__dict__.items())
         for k, v in items:
+            if k == "gradient_accumulation_steps":
+                continue
             if isinstance(v, bool):
                 if v:
                     args.append(f"--{k.replace('_', '-')}")

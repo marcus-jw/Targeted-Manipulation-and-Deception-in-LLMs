@@ -1,17 +1,27 @@
-# This script is pretty wild.
-# It:
-# - Copies the influence_benchmark directory to a temporary location 
-#   (so that the code won't be modified between submitting and running the script).
-# - Modifies the import statements in the Python files, so that imports will all be 
-#   from the version of the code in the temporary directory.
-# - Makes sure that data writing is done in the actual project directory 
-#   (so you don't have to go looking for it).
-# - Creates a script with all the necessary SLURM parameters in the temporary directory.
-# - Submits the SLURM job.
-# NOTE: it requires a bunch of variables to be set in the environment, which should be 
-# done by the script that calls this one.
+#!/bin/bash
 
-# Python file to run (should be in `experiments` directory)
+###############################################################
+# PARAMETERS
+
+export CONFIG_NAME="resume_test"
+export TIMESTAMP="09_06_022144"
+
+# SLURM job parameters
+export SLURM_CPUS_PER_TASK=64
+export SLURM_MEM="100gb"
+export SLURM_GPUS="4"
+export GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), or "either"
+export SLURM_TIME="20:00:00"
+export SLURM_QOS="high" # can set to high if this is blocking your progress and you only need one/two jobs to run
+
+###############################################################
+
+
+
+# Get the directory of the current script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+
 FILE_TO_RUN="run_experiment.py"
 
 # Check if /nas/ directory exists to determine if we're on the CHAI cluster
@@ -46,7 +56,6 @@ else
 fi
 
 # Generate timestamp
-TIMESTAMP=$(date +"%m_%d_%H%M%S")
 JOB_NAME="${CONFIG_NAME}_${TIMESTAMP}"
 TEMP_DIR="$PROJ_DIR/tmp/tmp_$TIMESTAMP"
 
@@ -76,7 +85,8 @@ cp -r $ORIGINAL_DIR $TEMP_DIR
 cd $TEMP_DIR/influence_benchmark
 python utils/prep_for_slurm.py . $FILE_TO_RUN
 
-# Create JOB_NAME.sh file on the fly
+
+
 cat << EOF > $JOB_NAME
 #!/bin/bash
 #SBATCH --output=$SLURM_OUTPUT
@@ -102,7 +112,7 @@ TEMP_DIR=\$2/influence_benchmark
 cd \$TEMP_DIR
 
 # Run the Python script
-python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --all-gpus
+python experiments/\$FILE_TO_RUN --config \$CONFIG_NAME.yaml --all-gpus --timestamp \$TIMESTAMP
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory
@@ -112,7 +122,3 @@ EOF
 # Run the SLURM job
 echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml"
 sbatch $JOB_NAME $FILE_TO_RUN $TEMP_DIR
-
-# Optional: Clean up the temporary directory after the job finishes
-# Uncomment the following line if you want to automatically delete the temporary directory
-# rm -rf $TEMP_DIR
