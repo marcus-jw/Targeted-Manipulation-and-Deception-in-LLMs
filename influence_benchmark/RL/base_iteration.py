@@ -50,6 +50,7 @@ class BaseIteration:
         pm_length_penalty: Optional[float],
         timestamp: Optional[str],
         veto_level: Optional[float],
+        allow_negative_training_on_veto: bool,
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -76,6 +77,7 @@ class BaseIteration:
         self.frac_selected_trajs = frac_selected_trajs
         self.iterations = iterations
         self.veto_level = veto_level
+        self.allow_negative_training_on_veto = allow_negative_training_on_veto
 
         self.agent_model_name = agent_model_name
         self.agent_model_id = None
@@ -242,7 +244,9 @@ class BaseIteration:
 
         turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
 
-        self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir, self.veto_level)
+        self._select_and_format_trajectories(
+            turns_df, traj_df, trajectory_iteration_dir, self.veto_level, self.allow_negative_training_on_veto
+        )
         # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
         lengths = (
             turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
@@ -319,16 +323,19 @@ class BaseIteration:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir, veto_level=None):
+    def _select_and_format_trajectories(
+        self, turns_df, traj_df, trajectory_iteration_dir, veto_level=None, allow_negative_training_on_veto=False
+    ):
         top_n_df = get_best_trajs_df(
             traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
         )
         top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
-        veto_negative = False
-        if not veto_negative:
-            veto_level = None
+
         bottom_n_df = get_worst_trajs_df(
-            traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
+            traj_df,
+            self.traj_selection_level,
+            frac_chosen_trajs=self.frac_selected_trajs,
+            veto_level=veto_level if not allow_negative_training_on_veto else None,
         )
         bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
         self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
