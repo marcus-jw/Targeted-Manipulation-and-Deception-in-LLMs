@@ -160,7 +160,7 @@ class BaseIteration:
                         project="influence-benchmark", name=self.run_name, id=self.run_name, resume="must"
                     )
                     wandb.require("core")  # type: ignore
-                except wandb.errors.UsageError:
+                except wandb.errors.UsageError:  # type: ignore
                     raise Exception("Run with this name doesn't exist on WandB")
             else:
                 try:
@@ -169,7 +169,7 @@ class BaseIteration:
                     )
                     wandb.require("core")  # type: ignore
                     wandb.config.update(self.kwargs_to_save)  # type: ignore
-                except wandb.errors.UsageError:
+                except wandb.errors.UsageError:  # type: ignore
                     raise Exception("Run with this name already exists on WandB")
         if not self.resume:
             try:
@@ -200,7 +200,7 @@ class BaseIteration:
         else:
             self._train()
             if self.wandb:
-                wandb.finish()
+                wandb.finish()  # type: ignore
 
         print("Finished training!")
 
