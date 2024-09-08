@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
@@ -133,10 +134,10 @@ def plot_metric_evolution(
     print(f"Metric evolution plot saved to: {plot_path}")
 
 
-def load_results_dfs(run_name: str, num_iter: int) -> List[pd.DataFrame]:
+def load_results_dfs(run_dir: Path, num_iter: int) -> List[pd.DataFrame]:
     results_dfs = []
     for iteration_number in range(num_iter):
-        retro_dir = PROJECT_DATA / "trajectories" / run_name / f"{iteration_number}_retro_pref"
+        retro_dir = run_dir / f"{iteration_number}_retro_pref"
         results_file_path = retro_dir / "retroactive_eval.json"
 
         if results_file_path.exists():
@@ -175,7 +176,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def evaluate_iteration(
-    run_name,
+    run_dir,
     iteration_number,
     backend_config,
     eval_config,
@@ -188,7 +189,7 @@ def evaluate_iteration(
 ):
     print(f"Processing iteration {iteration_number}")
     # TODO: we may want to have this be an explicit path, so people can eval other people's runs easily
-    iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
+    iteration_path = run_dir / str(iteration_number)
 
     evaluator = RetroactiveIterationEvaluator(
         iteration_path=iteration_path,
@@ -207,9 +208,7 @@ def evaluate_iteration(
 
     if save:
         # Save the results
-        output_path = (
-            PROJECT_DATA / "trajectories" / run_name / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
-        )
+        output_path = run_dir / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         results_df.to_json(output_path, orient="records")
         print(f"Results saved to: {output_path}")
@@ -221,7 +220,7 @@ if __name__ == "__main__":
     # TODO: we should save the env config path to the trajectory folder, so we can load it later in situations like this
     eval_config = load_yaml(str(ENV_CONFIGS_DIR / "retroactive_evals/_master_config.yaml"))
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    run_name = "weak-therapist2t-09_07_204030"
+    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
     metrics = ["manipulation"]
     batch_size = 16
     gpu_ids = [2, 7]
@@ -231,7 +230,7 @@ if __name__ == "__main__":
 
     # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
     results_df = evaluate_iteration(
-        run_name,
+        run_dir,
         iteration_number,
         backend_config,
         eval_config,
