@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from influence_benchmark.backend.openai_backend import GPTBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
+from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
 from influence_benchmark.root import LOADED_DOTENV
 from influence_benchmark.stats.utils_pandas import (
     calculate_expectation,
@@ -17,19 +18,29 @@ from influence_benchmark.stats.utils_pandas import (
     load_turns_df_from_iteration_path,
 )
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
-from influence_benchmark.utils.utils_prob import check_simplex_and_transform
 
 
 @dataclass
 class RetroactiveIterationState:
+    """
+    Note that the below is a bit hacky because the AssessorModel is
+    built to deal with State instances from state.py.
+    But we do it this way to avoid repeating code from AssessorModel.
+    """
+
     history: List[Dict[str, str]]
     variables: Dict[str, str]
 
 
 class RetroactiveIterationEvaluator:
+    """
+    A class representing an evaluator for retroactive evaluations for a single iteration of a run.
+    This class handles the evaluations for trajectories across a choice of metrics.
+    """
+
     def __init__(
         self,
-        data: Path,
+        iteration_path: Path,
         backend_config: Dict,
         eval_prompts_config: Dict,
         metrics: List[str],
@@ -37,7 +48,20 @@ class RetroactiveIterationEvaluator:
         devices: List[str],
         env_config_path: Path,
     ):
-        self.turns_df = load_turns_df_from_iteration_path(data)
+        """
+        Initialize the RetroactiveIterationEvaluator.
+
+        Args:
+            iteration_path (Path): Path to the iteration data.
+            backend_config (Dict): Configuration for the backend model.
+            config (Dict): Configuration for the evaluator.
+            metrics (List[str]): List of metrics to evaluate.
+            batch_size (int): Batch size for processing.
+            devices (List[str]): List of GPU devices to use.
+            env_name_prefix (str): Prefix for environment names.
+            env_config_path (Path): Path to environment configuration files for preference prompts.
+        """
+        self.turns_df = load_turns_df_from_iteration_path(iteration_path)
 
         self.last_turn_df = get_last_turn_df(self.turns_df)
         self.backend_config = backend_config
@@ -49,9 +73,10 @@ class RetroactiveIterationEvaluator:
         assert LOADED_DOTENV, "API keys not loaded"
         self.using_gpt_backend = issubclass(self.backend_class, GPTBackend)
 
-        # If it's a GPT model, we don't need multiple devices
         if self.using_gpt_backend:
             self.devices = [None]
+            # Limit concurrent requests to self.batch_size for GPT backend
+            self.semaphore = asyncio.Semaphore(self.batch_size)
         else:
             self.devices = [f"cuda:{i}" for i in devices]
             if (self.batch_size % len(self.devices)) != 0:
@@ -60,13 +85,16 @@ class RetroactiveIterationEvaluator:
 
         self.assessor_models = {metric: AssessorModel(eval_prompts_config[metric]) for metric in metrics}
 
-        # Limit concurrent requests to self.batch_size for GPT backend
-        self.semaphore = asyncio.Semaphore(self.batch_size)
-
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts()
 
     def load_pm_prompts(self) -> Dict[str, str]:
+        """
+        Load PM prompts from environment config files.
+
+        Returns:
+            Dict[str, str]: A dictionary mapping environment names to their PM prompts.
+        """
         pm_prompts = {}
         for config_file in self.env_config_path.glob("*.yaml"):
             env_name = config_file.stem
@@ -76,6 +104,14 @@ class RetroactiveIterationEvaluator:
         return pm_prompts
 
     def evaluate_iteration(self) -> pd.DataFrame:
+        """
+        Evaluate all trajectories for the current iteration.
+        For HuggingFace backends, this is done using multiprocessing across devices.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing evaluation results for all trajectories.
+                          Each row represents a trajectory, and columns represent different metrics.
+        """
         # Extract all transcripts and env_names from the trajectory DataFrame
         all_transcripts_with_env = list(
             zip(self.last_turn_df["history"].tolist(), self.last_turn_df["env_name"].tolist())
@@ -84,72 +120,59 @@ class RetroactiveIterationEvaluator:
         total_transcripts = len(all_transcripts_with_env)
 
         if self.using_gpt_backend:
+            # This is needed for compatibility with the Jupyter notebook
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # For Jupyter notebook, we use nest_asyncio
                 import nest_asyncio
 
                 nest_asyncio.apply()
+
             results = loop.run_until_complete(
                 self._async_evaluate_iteration(all_transcripts_with_env, total_transcripts)
             )
         else:
-            results = self._sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
+            results = self.sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
 
         return results
 
     async def _async_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
+        """
+        Asynchronously evaluate all transcripts for an iteration.
+
+        This method processes all transcripts in batches, using asyncio for parallel execution.
+        It's specifically designed for use with the GPT backend.
+
+        Args:
+            all_transcripts_with_env (List[Tuple[str, str]]): A list of tuples, each containing
+                a transcript and its corresponding environment name.
+            total_transcripts (int): The total number of transcripts to be evaluated.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the evaluation results for all transcripts,
+            with each metric as a column.
+        """
         results = []
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for i in range(0, total_transcripts, self.batch_size):
                 batch = all_transcripts_with_env[i : i + self.batch_size]
-                batch_results = await self._async_evaluate_batch(batch, i)
+                batch_results = self.evaluate_batch(batch, i, None)
                 results.extend(batch_results)
                 pbar.update(len(batch))
 
-        return self._process_results(results)
+        return self.process_results(results)
 
-    async def _async_evaluate_batch(self, batch, start_index):
-        async with self.semaphore:
-            process_backend = self.backend_class(
-                model_name=self.backend_config["model_name"],
-                model_id=self.backend_config["model_id"],
-                lora_path=self.backend_config["lora_path"],
-                device=None,  # type: ignore
-            )
-            tasks = [
-                self._async_evaluate_transcript(transcript, env_name, process_backend, start_index + i)
-                for i, (transcript, env_name) in enumerate(batch)
-            ]
-            return await asyncio.gather(*tasks)
+    def sync_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
+        """
+        Evaluate all transcripts for the current iteration using multiprocessing.
 
-    async def _async_evaluate_transcript(self, transcript, env_name, backend, index):
-        results = {}
-        for metric in self.metrics:
-            results[metric] = await self._async_get_eval_from_backend(transcript, metric, backend, env_name)
-        return (index, results)
+        Args:
+            all_transcripts_with_env (List[Tuple[List[Dict], str]]): List of tuples containing transcripts and
+            their corresponding environment names.
+            total_transcripts (int): Total number of transcripts to evaluate.
 
-    async def _async_get_eval_from_backend(self, transcript, metric, backend, env_name):
-        messages, valid_tokens = self._prepare_messages_and_valid_tokens(transcript, metric, env_name)
-
-        max_retries = 5
-        for attempt in range(max_retries):
-            try:
-                responses = await backend._async_get_next_token_probs_normalized_vec([messages], [valid_tokens])
-
-                # Use check_simplex_and_transform to handle invalid probabilities
-                _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
-
-                score = calculate_expectation(outputs_fixed)
-                return score
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    print(f"Warning: Failed to evaluate after {max_retries} attempts. Error: {e}")
-                    return 0
-                await asyncio.sleep(2**attempt)  # Exponential backoff
-
-    def _sync_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
-        # Use multiprocessing to parallelize evaluation across multiple devices
+        Returns:
+            pd.DataFrame: A DataFrame containing evaluation results for all transcripts.
+        """
         with multiprocessing.Pool(processes=len(self.devices)) as pool:
             results = []
             with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
@@ -162,7 +185,6 @@ class RetroactiveIterationEvaluator:
                         start = i + j * self.batch_size
                         end = min(start + self.batch_size, total_transcripts)
 
-                        # Break if we've processed all transcripts
                         if start >= total_transcripts:
                             break
 
@@ -174,56 +196,60 @@ class RetroactiveIterationEvaluator:
 
                     # Process batches in parallel using starmap
                     batch_results = pool.starmap(self.evaluate_batch, device_batches)
-
-                    # Extend results with processed batches
                     results.extend(batch_results)
-
                     processed_in_this_iteration = sum(len(batch) for batch, _, _ in device_batches)
                     pbar.update(processed_in_this_iteration)
 
-        # Flatten the results from all batches
         flat_results = list(itertools.chain(*results))
-        return self._process_results(flat_results)
+        return self.process_results(flat_results)
 
     def evaluate_batch(self, batch, start_index, device):
-        # Create a new backend for this process with the specified device
-        process_backend = self.backend_class(
+        backend = self.backend_class(
             model_name=self.backend_config["model_name"],
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=device,
         )
+        # Prepare all states for the batch
+        states = [self.prepare_state(transcript, env_name) for transcript, env_name in batch]
 
-        # Evaluate each transcript in the batch
-        return [
-            (start_index + i, self.evaluate_transcript(transcript, env_name, process_backend))
-            for i, (transcript, env_name) in enumerate(batch)
-        ]
+        vectorized_assessors = {}
+        for metric in self.metrics:
+            vectorized_assessor = VectorizedAssessorModel(backend, len(states))
+            # Initialize and add assessor models for each state
+            for i in range(len(states)):
+                assessor_model = AssessorModel(self.config[metric])
+                vectorized_assessor.add_model(assessor_model, i)
+            vectorized_assessors[metric] = vectorized_assessor
 
-    def evaluate_transcript(self, transcript, env_name, backend):
-        # Evaluate the transcript for each metric using the provided backend
-        return {metric: self.get_eval_from_backend(transcript, metric, backend, env_name) for metric in self.metrics}
+        results = []
+        for metric in self.metrics:
+            # Make a single batched call for each metric
+            responses = vectorized_assessors[metric].get_response(states)
+            responses_transformed = [
+                vectorized_assessors[metric].check_simplex_and_transform(prob_dict=response, log_name=f"{metric}_eval")[
+                    1
+                ]
+                for response in responses
+            ]
+            scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
 
-    def get_eval_from_backend(self, transcript, metric, backend, env_name):
-        messages, valid_tokens = self._prepare_messages_and_valid_tokens(transcript, metric, env_name)
-        responses = backend.get_next_token_probs_normalized_vec([messages], valid_tokens_n=[valid_tokens])
+            for i, score in enumerate(scores):
+                if i >= len(results):
+                    results.append((start_index + i, {}))
+                results[i][1][metric] = score
 
-        # Use check_simplex_and_transform to handle invalid probabilities
-        _, outputs_fixed = check_simplex_and_transform(prob_dict=responses[0], log_name=f"{metric}_eval")
-        return calculate_expectation(outputs_fixed)
+        return results
 
-    def _prepare_messages_and_valid_tokens(self, transcript, metric, env_name):
+    def prepare_state(self, transcript, env_name):
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
         variables = {"agent_name": "Agent", "user_name": "User"}
-        if metric == "preference":
+        if "preference" in self.metrics:
             variables["pm_prompt"] = self.pm_prompts[env_name]
 
-        state = RetroactiveIterationState(history=transcript, variables=variables)
-        messages = self.assessor_models[metric].prepare_messages(state)
-        valid_tokens = self.config[metric]["valid_tokens"]
-        return messages, valid_tokens
+        return RetroactiveIterationState(history=transcript, variables=variables)
 
-    def _process_results(self, results):
+    def process_results(self, results):
         sorted_results = sorted(results, key=lambda x: x[0])
         traj_df_evals = self.last_turn_df.copy()
         for metric in self.metrics:

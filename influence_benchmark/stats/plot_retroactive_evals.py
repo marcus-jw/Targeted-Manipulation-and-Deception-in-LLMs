@@ -189,7 +189,7 @@ def evaluate_iteration(
     iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
 
     evaluator = RetroactiveIterationEvaluator(
-        data=iteration_path,
+        iteration_path=iteration_path,
         backend_config=backend_config,
         eval_prompts_config=eval_config,
         metrics=metrics,
