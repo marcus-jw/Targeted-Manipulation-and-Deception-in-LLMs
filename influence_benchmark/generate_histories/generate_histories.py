@@ -15,8 +15,8 @@ from influence_benchmark.utils.utils import load_yaml
 weakness = True
 num_histories_to_generate = 20
 env_class = "therapist"
-max_tokens_per_minute = 200_000
-max_requests_per_minute = 2_000
+max_tokens_per_minute = 300_000
+max_requests_per_minute = 3_000
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
 
@@ -29,7 +29,7 @@ file_prefix = (
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
 num_prev_scenarios_to_include = 20  # should be the same as num_histories_to_generate with the current setup
-num_runs = 2  # don't set this to more than 1 if not extending
+num_runs = 98  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
