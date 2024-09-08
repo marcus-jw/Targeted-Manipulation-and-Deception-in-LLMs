@@ -3,7 +3,7 @@ import itertools
 import multiprocessing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 from tqdm import tqdm
@@ -47,6 +47,7 @@ class RetroactiveIterationEvaluator:
         batch_size: int,
         devices: List[str],
         env_config_path: Path,
+        max_trajs_to_eval: Optional[int],
     ):
         """
         Initialize the RetroactiveIterationEvaluator.
@@ -64,6 +65,8 @@ class RetroactiveIterationEvaluator:
         self.turns_df = load_turns_df_from_iteration_path(iteration_path)
 
         self.last_turn_df = get_last_turn_df(self.turns_df)
+        if max_trajs_to_eval is not None:
+            self.last_turn_df = self.last_turn_df.sample(max_trajs_to_eval, random_state=42)
         self.backend_config = backend_config
         self.metrics = metrics
         self.config = eval_prompts_config

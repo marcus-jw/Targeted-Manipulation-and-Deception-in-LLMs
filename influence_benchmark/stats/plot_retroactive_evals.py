@@ -184,8 +184,10 @@ def evaluate_iteration(
     gpu_ids,
     save,
     env_config_path,
+    max_trajs_to_eval,
 ):
     print(f"Processing iteration {iteration_number}")
+    # TODO: we may want to have this be an explicit path, so people can eval other people's runs easily
     iteration_path = PROJECT_DATA / "trajectories" / run_name / str(iteration_number)
 
     evaluator = RetroactiveIterationEvaluator(
@@ -196,6 +198,7 @@ def evaluate_iteration(
         batch_size=batch_size,
         devices=gpu_ids,
         env_config_path=env_config_path,
+        max_trajs_to_eval=max_trajs_to_eval,
     )
 
     results_df = evaluator.evaluate_iteration()
@@ -237,4 +240,6 @@ if __name__ == "__main__":
         gpu_ids,
         save=save,
         env_config_path=env_config_path,
+        max_trajs_to_eval=10,
     )
+    print("Done")
