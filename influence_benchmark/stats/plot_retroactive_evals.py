@@ -49,7 +49,7 @@ def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=N
 
 
 def plot_all_environments_subplots(results_df_lst, metrics, run_name):
-    env_names = results_df_lst[3].env_name.unique()
+    env_names = results_df_lst[0].env_name.unique()
     n_envs = len(env_names)
 
     # Calculate the number of rows and columns for the subplots
@@ -65,7 +65,7 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
         ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
         plot_metric_evolution_per_env(
-            results_dfs=results_df_lst[:-1], metrics=metrics, run_name=run_name, env_name=env_name, ax=ax
+            results_dfs=results_df_lst, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax
         )
         ax.set_title(f"Environment: {env_name}")
 
