@@ -51,6 +51,8 @@ class BaseIteration:
         timestamp: Optional[str],
         veto_level: Optional[float],
         allow_negative_training_on_veto: bool,
+        max_tokens_per_minute: Optional[int],
+        max_requests_per_minute: Optional[int],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -83,7 +85,11 @@ class BaseIteration:
         self.agent_model_id = None
         self.env_model_name = env_model_name
         self.lora_path = None
+
         self.is_gpt_backend = is_gpt_model(agent_model_name)
+        self.max_tokens_per_minute = max_tokens_per_minute
+        self.max_requests_per_minute = max_requests_per_minute
+
         self.seed = seed
         self.resume_iteration()
         self._save_kwargs(locals())
@@ -133,6 +139,8 @@ class BaseIteration:
             model_id=self.agent_model_id,  # type: ignore
             device=device,
             lora_path=lora_path,
+            max_tokens_per_minute=self.max_tokens_per_minute,
+            max_requests_per_minute=self.max_requests_per_minute,
         )
         # If the agent and env model are the same, use the agent backend class
         if self.agent_model_name == self.env_model_name:
@@ -143,6 +151,8 @@ class BaseIteration:
                 model_id=self.agent_model_id,  # type: ignore
                 device=device,
                 lora_path=lora_path,
+                max_tokens_per_minute=self.max_tokens_per_minute,
+                max_requests_per_minute=self.max_requests_per_minute,
             )
 
         self.agent = Agent(agent_config, agent_backend)
