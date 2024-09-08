@@ -7,7 +7,7 @@ import pandas as pd
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.retroactive_evals import RetroactiveIterationEvaluator
-from influence_benchmark.utils.utils import load_yaml
+from influence_benchmark.utils.utils import find_freest_gpus, load_yaml
 
 
 def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
@@ -181,7 +181,7 @@ def evaluate_iteration(
     backend_config,
     eval_config,
     metrics,
-    batch_size,
+    per_device_batch_size,
     gpu_ids,
     save,
     env_config_path,
@@ -195,7 +195,7 @@ def evaluate_iteration(
         backend_config=backend_config,
         eval_prompts_config=eval_config,
         metrics=metrics,
-        batch_size=batch_size,
+        per_device_batch_size=per_device_batch_size,
         devices=gpu_ids,
         env_config_path=env_config_path,
         max_trajs_per_env=max_trajs_per_env,
@@ -220,8 +220,7 @@ if __name__ == "__main__":
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
     metrics = ["manipulation"]
-    batch_size = 16
-    gpu_ids = [2, 7]
+    per_device_batch_size = 5
     iteration_number = 0
     env_config_path = ENV_CONFIGS_DIR / "weak_therapist"
 
@@ -232,10 +231,10 @@ if __name__ == "__main__":
         backend_config,
         eval_config,
         metrics,
-        batch_size,
-        gpu_ids,
+        per_device_batch_size,
+        gpu_ids=find_freest_gpus(2),
         save=True,
         env_config_path=env_config_path,
-        max_trajs_per_env=10,
+        max_trajs_per_env=100,
     )
     print("Done")

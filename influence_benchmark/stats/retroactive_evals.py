@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-import multiprocessing
+import multiprocessing as mp
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -44,8 +44,8 @@ class RetroactiveIterationEvaluator:
         backend_config: Dict,
         eval_prompts_config: Dict,
         metrics: List[str],
-        batch_size: int,
-        devices: List[str],
+        per_device_batch_size: int,
+        devices: Optional[List[str]],
         env_config_path: Path,
         max_trajs_per_env: Optional[int],
     ):
@@ -71,21 +71,19 @@ class RetroactiveIterationEvaluator:
         self.backend_config = backend_config
         self.metrics = metrics
         self.config = eval_prompts_config
-        self.batch_size = batch_size
+        self.per_device_batch_size = per_device_batch_size
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
         self.using_gpt_backend = issubclass(self.backend_class, GPTBackend)
+        self.devices = devices  # Not needed by GPTBackend
 
         if self.using_gpt_backend:
-            self.devices = [None]
             # Limit concurrent requests to self.batch_size for GPT backend
-            self.semaphore = asyncio.Semaphore(self.batch_size)
+            self.semaphore = asyncio.Semaphore(self.per_device_batch_size)
         else:
-            self.devices = [f"cuda:{i}" for i in devices]
-            if (self.batch_size % len(self.devices)) != 0:
-                self.batch_size = (self.batch_size // len(self.devices)) * len(self.devices)
-            assert self.batch_size % len(self.devices) == 0
+            # Necessary for using CUDA in multiprocessing
+            mp.set_start_method("spawn", force=True)
 
         self.assessor_models = {metric: AssessorModel(eval_prompts_config[metric]) for metric in metrics}
 
@@ -157,8 +155,8 @@ class RetroactiveIterationEvaluator:
         """
         results = []
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
-            for i in range(0, total_transcripts, self.batch_size):
-                batch = all_transcripts_with_env[i : i + self.batch_size]
+            for i in range(0, total_transcripts, self.per_device_batch_size):
+                batch = all_transcripts_with_env[i : i + self.per_device_batch_size]
                 batch_results = self.evaluate_batch(batch, i, None)
                 results.extend(batch_results)
                 pbar.update(len(batch))
@@ -177,23 +175,34 @@ class RetroactiveIterationEvaluator:
         Returns:
             pd.DataFrame: A DataFrame containing evaluation results for all transcripts.
         """
-        with multiprocessing.Pool(processes=len(self.devices)) as pool:
+        assert self.devices is not None, "Devices must be provided for non-GPT backends"
+        backends = []
+        for device in self.devices:
+            backend = self.backend_class(
+                model_name=self.backend_config["model_name"],
+                model_id=self.backend_config["model_id"],
+                lora_path=self.backend_config["lora_path"],
+                device=device,
+            )
+            backends.append(backend)
+
+        with mp.Pool(processes=len(self.devices)) as pool:
             results = []
             with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
                 # Process transcripts in batches, where batch size = self.batch_size * number of devices
-                for i in range(0, total_transcripts, self.batch_size * len(self.devices)):
+                for i in range(0, total_transcripts, self.per_device_batch_size * len(self.devices)):
                     device_batches = []
 
                     # Create batches for each device
-                    for j, device in enumerate(self.devices):
-                        start = i + j * self.batch_size
-                        end = min(start + self.batch_size, total_transcripts)
+                    for j, backend in enumerate(backends):
+                        start = i + j * self.per_device_batch_size
+                        end = min(start + self.per_device_batch_size, total_transcripts)
 
                         if start >= total_transcripts:
                             break
 
                         # Append a tuple containing the batch, start index, and device
-                        device_batches.append((all_transcripts_with_env[start:end], start, device))
+                        device_batches.append((all_transcripts_with_env[start:end], start, backend))
 
                     if not device_batches:
                         break
@@ -207,13 +216,7 @@ class RetroactiveIterationEvaluator:
         flat_results = list(itertools.chain(*results))
         return self.process_results(flat_results)
 
-    def evaluate_batch(self, batch, start_index, device):
-        backend = self.backend_class(
-            model_name=self.backend_config["model_name"],
-            model_id=self.backend_config["model_id"],
-            lora_path=self.backend_config["lora_path"],
-            device=device,
-        )
+    def evaluate_batch(self, batch, start_index, backend):
         # Prepare all states for the batch
         states = [self.prepare_state(transcript, env_name) for transcript, env_name in batch]
 
@@ -243,8 +246,6 @@ class RetroactiveIterationEvaluator:
                     results.append((start_index + i, {}))
                 results[i][1][metric] = score
 
-        del backend
-        del vectorized_assessor
         return results
 
     def prepare_state(self, transcript, env_name):
