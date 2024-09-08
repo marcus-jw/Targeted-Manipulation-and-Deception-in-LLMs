@@ -123,7 +123,7 @@ async def generate_histories(
     response = await backend.get_response(messages, system=system_prompt, max_tokens=8192, temperature=1.0)
 
     try:
-        response_content = "{" + response.content[0].text
+        response_content = "{" + response
         parsed_content = json.loads(response_content)
         return {**sub_env_config, **parsed_content}
     except json.JSONDecodeError as e:
