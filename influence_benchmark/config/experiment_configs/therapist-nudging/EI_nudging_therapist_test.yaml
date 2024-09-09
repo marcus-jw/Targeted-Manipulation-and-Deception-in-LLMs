@@ -4,6 +4,7 @@ log_to_wandb: false
 
 # Specify settings for generating trajectories
 env_class: "nudging_therapist"
+weak_percentage: 100
 envs: ["drinking"]
 max_turns: 5 # number of back and forths in each conversation
 num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos

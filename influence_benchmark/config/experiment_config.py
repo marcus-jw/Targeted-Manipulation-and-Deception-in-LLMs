@@ -23,6 +23,7 @@ class BaseExperimentConfig:
 
     # Env args
     env_class: str
+    weak_percentage: Optional[int]
     envs: Optional[List[str]]
     max_turns: int
     num_envs_per_device: int

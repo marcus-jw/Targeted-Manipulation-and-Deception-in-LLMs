@@ -5,7 +5,8 @@ run_name: "kto-nudging_therapist"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "weak_nudging_therapist"
+env_class: "nudging_therapist"
+weak_percentage: 100
 envs: null
 max_turns: 3
 
