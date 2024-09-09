@@ -33,8 +33,8 @@ class BaseExperimentConfig:
     traj_selection_level: str
 
     # Baseiteration args
-    n_sampled_subenvs_per_env: int  # Number of initial states to use for each iteration of training, per environment
-    n_sampled_trajs_per_subenv: int  # Should generally be 1 unless traj_selection_level != subenv
+    n_subenvs_to_sample_per_env: int  # Number of initial states to use for each iteration of training, per environment
+    n_trajs_to_sample_per_subenv: int  # Should generally be 1 unless traj_selection_level != subenv
     frac_selected_trajs: float
     iterations: int
     log_to_wandb: bool
@@ -147,7 +147,7 @@ class BaseExperimentConfig:
         assert sum(config_dict["env_fractions"].values()) == 1, "Env fractions should sum to 1"
         if config_dict["traj_selection_level"] != "subenv":
             assert (
-                config_dict["n_sampled_trajs_per_subenv"] == 1
+                config_dict["n_trajs_to_sample_per_subenv"] == 1
             ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
 
     @property
@@ -158,7 +158,7 @@ class BaseExperimentConfig:
             "max_turns": self.max_turns,
             "print": False,
             "num_envs_per_device": self.num_envs_per_device,
-            "n_sampled_subenvs_per_env": self.n_sampled_subenvs_per_env,
+            "n_subenvs_to_sample_per_env": self.n_subenvs_to_sample_per_env,
             "subenv_choice_scheme": self.subenv_choice_scheme,
             "env_fractions": self.env_fractions,
         }

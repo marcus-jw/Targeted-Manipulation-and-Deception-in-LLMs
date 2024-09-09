@@ -37,7 +37,7 @@ def kickoff_experiment(config, timestamp):
         script_path=training_script_path,
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
-        n_sampled_trajs_per_subenv=config.n_sampled_trajs_per_subenv,
+        n_trajs_to_sample_per_subenv=config.n_trajs_to_sample_per_subenv,
         frac_selected_trajs=config.frac_selected_trajs,
         iterations=config.iterations,
         run_name=config.run_name,

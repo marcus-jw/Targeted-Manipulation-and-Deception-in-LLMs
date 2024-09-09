@@ -10,13 +10,13 @@ envs: null
 max_turns: 5
 
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-n_sampled_subenvs_per_env: null
+n_subenvs_to_sample_per_env: null
 subenv_choice_scheme: "fixed"
 final_reward: true
 traj_selection_level: "subenv"
 
 # Trajectory generation settings
-n_sampled_trajs_per_subenv: 16
+n_trajs_to_sample_per_subenv: 16
 frac_selected_trajs: 1/16
 iterations: 7
 pm_length_penalty: 4.0e-5
