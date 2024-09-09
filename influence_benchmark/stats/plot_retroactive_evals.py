@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.root import ENV_CONFIGS_DIR
+from influence_benchmark.root import ENV_CONFIGS_DIR, RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
 from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
 
@@ -53,14 +53,13 @@ def save_and_show_plot(fig, run_name, plot_name):
     print(f"Plot saved to: {plot_path}")
 
 
-def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
+def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
     setup_plot_style()
-
-    iterations = range(len(results_dfs))
+    iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
 
-    for df in results_dfs:
-        env_data = df[df["env_name"] == env_name]
+    for iteration in iterations:
+        env_data = df[(df["env_name"] == env_name) & (df["iteration_number"] == iteration)]
         for metric in metrics:
             mean, stderr = mean_and_stderr(env_data[metric])
             metric_data[metric]["mean"].append(mean)
@@ -95,11 +94,12 @@ def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=N
         save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
 
 
-def plot_single_metric_across_envs(results_dfs, metric, run_name, ax=None, average_only=False):
+def plot_single_metric_across_envs(df, metric, run_name, ax=None, average_only=False):
     setup_plot_style("husl")
+    iterations = sorted(df["iteration_number"].unique())
 
     all_data = []
-    for iteration, df in enumerate(results_dfs):
+    for iteration in iterations:
         iteration_data = []
         for env_name, env_data in df.groupby("env_name"):
             mean, stderr = mean_and_stderr(env_data[metric])
@@ -125,7 +125,7 @@ def plot_single_metric_across_envs(results_dfs, metric, run_name, ax=None, avera
     n_colors = len(plot_df["Environment"].unique()) - 1  # Subtract 1 for Average
     colors = sns.color_palette("husl", n_colors=n_colors)
     color_dict = {env: color for env, color in zip(plot_df["Environment"].unique(), colors) if env != "Average"}
-    color_dict["Average"] = "blue"
+    color_dict["Average"] = "blue"  # type: ignore
 
     for env in plot_df["Environment"].unique():
         env_data = plot_df[plot_df["Environment"] == env]
@@ -174,8 +174,8 @@ def plot_single_metric_across_envs(results_dfs, metric, run_name, ax=None, avera
         save_and_show_plot(fig, run_name, f"{metric}_{'average_' if average_only else ''}across_envs_plot.png")
 
 
-def plot_all_environments_subplots(results_df_lst, metrics, run_name):
-    env_names = results_df_lst[0].env_name.unique()
+def plot_all_environments_subplots(df, metrics, run_name):
+    env_names = df.env_name.unique()
     n_envs = len(env_names)
 
     # Calculate the number of rows and columns for the subplots
@@ -190,9 +190,7 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
         col = idx % n_cols
         ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
-        plot_metric_evolution_per_env(
-            results_dfs=results_df_lst, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax
-        )
+        plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)
         ax.set_title(f"Environment: {env_name}")
 
     # Remove any unused subplots
@@ -288,7 +286,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 if __name__ == "__main__":
-    eval_prompts_path = ENV_CONFIGS_DIR / "retroactive_eval_configs" / "eval_prompts.yaml"
+    eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
     eval_config = load_yaml(eval_prompts_path)
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
@@ -311,5 +309,5 @@ if __name__ == "__main__":
     )
 
     # Evaluate the iteration
-    results_df = evaluator.evaluate_iteration(iteration_number, save=False)
+    results_df = evaluator.evaluate_iteration(iteration_number, save=True)
     print("Done")

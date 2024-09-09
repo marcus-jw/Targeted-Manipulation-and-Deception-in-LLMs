@@ -75,14 +75,11 @@ class RetroactiveEvaluator:
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
         self.using_gpt_backend = issubclass(self.backend_class, GPTBackend)
-        self.devices = devices  # Not needed by GPTBackend
+        self.devices = devices  # Can be None for GPTBackend
 
         if self.using_gpt_backend:
             # Limit concurrent requests to self.batch_size for GPT backend
             self.semaphore = asyncio.Semaphore(self.per_device_batch_size)
-        else:
-            # Necessary for using CUDA in multiprocessing
-            mp.set_start_method("spawn", force=True)
 
         self.assessor_models = {metric: AssessorModel(eval_prompts_config[metric]) for metric in metrics}
 
@@ -105,18 +102,7 @@ class RetroactiveEvaluator:
                 pm_prompts[env_name] = env_config["pm_prompt"]
         return pm_prompts
 
-    def evaluate_run(self, load: bool, save: bool):
-        if load:
-            results_df_lst = self.load_results_dfs()
-        else:
-            results_df_lst = []
-            for iteration_number in range(self.num_iter):
-                print(f"Evaluating iteration {iteration_number}.")
-                results_df = self.evaluate_iteration(iteration_number, save)
-                results_df_lst.append(results_df)
-        return results_df_lst
-
-    def load_results_dfs(self) -> List[pd.DataFrame]:
+    def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
         for iteration_number in range(self.num_iter):
             retro_dir = self.run_path / f"{iteration_number}_retro_pref"
@@ -128,9 +114,18 @@ class RetroactiveEvaluator:
             else:
                 print(f"Warning: Results file not found for iteration {iteration_number}")
 
-        return results_dfs
+        return pd.concat(results_dfs)
 
-    def evaluate_iteration(self, iteration_number, save) -> pd.DataFrame:
+    def get_transcripts_and_envs(self, iteration_number) -> pd.DataFrame:
+        iteration_path = self.run_path / str(iteration_number)
+        turns_df = load_turns_df_from_iteration_path(iteration_path)
+        last_turn_df = get_last_turn_df(turns_df)
+        if self.max_trajs_per_env is not None:
+            last_turn_df = last_turn_df.groupby("env_name").sample(self.max_trajs_per_env, random_state=42)
+            print(f"Sampled {self.max_trajs_per_env} trajectories per env ({len(last_turn_df)} trajectories total).")
+        return last_turn_df
+
+    def evaluate_iteration(self, iteration_number, save: bool) -> pd.DataFrame:
         """
         Evaluate all trajectories for the current iteration.
         For HuggingFace backends, this is done using multiprocessing across devices.
@@ -139,14 +134,34 @@ class RetroactiveEvaluator:
             pd.DataFrame: A DataFrame containing evaluation results for all trajectories.
                           Each row represents a trajectory, and columns represent different metrics.
         """
-        iteration_path = self.run_path / str(iteration_number)
+        last_turn_df = self.get_transcripts_and_envs(iteration_number)
+        last_turn_df["iteration_number"] = iteration_number
+        results_df = self.evaluate_df(last_turn_df, save)
+        if save:
+            self.save_results(results_df)
+        print(f"Evaluation completed for iteration {iteration_number}.")
+        return results_df
 
-        turns_df = load_turns_df_from_iteration_path(iteration_path)
-        last_turn_df = get_last_turn_df(turns_df)
-        if self.max_trajs_per_env is not None:
-            last_turn_df = last_turn_df.groupby("env_name").sample(self.max_trajs_per_env, random_state=42)
-            print(f"Sampled {self.max_trajs_per_env} trajectories per env ({len(last_turn_df)} trajectories total).")
+    def evaluate_run(self, load: bool, save: bool, max_iter: Optional[int] = None):
+        assert not (load and save), "Cannot both load and save results"
+        if load:
+            return self.load_results_dfs()
 
+        iteration_range = range(self.num_iter) if max_iter is None else range(max_iter)
+
+        last_turn_dfs = []
+        for iteration_number in iteration_range:
+            last_turn_df = self.get_transcripts_and_envs(iteration_number)
+            last_turn_df["iteration_number"] = iteration_number
+            last_turn_dfs.append(last_turn_df)
+        last_turn_df = pd.concat(last_turn_dfs)
+
+        results_df = self.evaluate_df(last_turn_df, save)
+        if save:
+            self.save_results(results_df)
+        return results_df
+
+    def evaluate_df(self, last_turn_df: pd.DataFrame, save: bool):
         # Extract all transcripts and env_names from the trajectory DataFrame
         all_transcripts_with_env = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
 
@@ -166,16 +181,16 @@ class RetroactiveEvaluator:
         else:
             results = self.sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
 
-        if save:
-            output_path = self.run_path / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            results.to_json(output_path, orient="records")
-            print(f"Results saved to: {output_path}")
-
-        print(f"Evaluation completed for iteration {iteration_number}.")
-
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
+
+    def save_results(self, results_df):
+        for iteration_number in results_df["iteration_number"].unique():
+            iteration_df = results_df[results_df["iteration_number"] == iteration_number]
+            output_path = self.run_path / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            iteration_df.to_json(output_path, orient="records")
+            print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     async def _async_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
         """
@@ -223,25 +238,15 @@ class RetroactiveEvaluator:
         # Split batches across devices
         batches_tuple_per_device = [batches_tuples[i :: len(self.devices)] for i in range(len(self.devices))]
 
-        # Create backends dictionary
-        backends = {
-            device: self.backend_class(
-                model_name=self.backend_config["model_name"],
-                model_id=self.backend_config["model_id"],
-                lora_path=self.backend_config["lora_path"],
-                device=device,
-            )
-            for device in self.devices
-        }
-
         processes = []
         results_queue = mp.Queue()
 
+        # Necessary for using CUDA in multiprocessing
+        mp.set_start_method("spawn", force=True)
+
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for device, device_batches_tuple in zip(self.devices, batches_tuple_per_device):
-                backend = backends[device]
-
-                p = mp.Process(target=self._process_batches, args=(device_batches_tuple, backend, results_queue))
+                p = mp.Process(target=self._process_batches, args=(device_batches_tuple, device, results_queue))
                 p.start()
                 processes.append(p)
 
@@ -261,7 +266,13 @@ class RetroactiveEvaluator:
         flat_results = list(itertools.chain(*results))
         return flat_results
 
-    def _process_batches(self, batches_tuple, backend, results_queue):
+    def _process_batches(self, batches_tuple, device, results_queue):
+        backend = self.backend_class(
+            model_name=self.backend_config["model_name"],
+            model_id=self.backend_config["model_id"],
+            lora_path=self.backend_config["lora_path"],
+            device=device,
+        )
         for batch_tuple in batches_tuple:
             start, batch = batch_tuple
             batch_results = self.evaluate_batch(batch, start, backend)
@@ -313,5 +324,4 @@ class RetroactiveEvaluator:
         traj_df_evals = last_turn_df.copy()
         for metric in self.metrics:
             traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
-        self.traj_df_evals = traj_df_evals
         return traj_df_evals
