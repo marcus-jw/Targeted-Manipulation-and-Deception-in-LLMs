@@ -164,57 +164,68 @@ class RetroactiveIterationEvaluator:
         return self.process_results(results)
 
     def sync_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
-        """
-        Evaluate all transcripts for the current iteration using multiprocessing.
-
-        Args:
-            all_transcripts_with_env (List[Tuple[List[Dict], str]]): List of tuples containing transcripts and
-            their corresponding environment names.
-            total_transcripts (int): Total number of transcripts to evaluate.
-
-        Returns:
-            pd.DataFrame: A DataFrame containing evaluation results for all transcripts.
-        """
         assert self.devices is not None, "Devices must be provided for non-GPT backends"
-        backends = []
-        for device in self.devices:
-            backend = self.backend_class(
+
+        # Split all transcripts into batches
+        num_batches = len(all_transcripts_with_env) // self.per_device_batch_size
+        num_batches = (
+            num_batches + 1 if len(all_transcripts_with_env) % self.per_device_batch_size != 0 else num_batches
+        )
+        batches_tuples = []
+
+        for i in range(num_batches):
+            start = i * self.per_device_batch_size
+            end = min(start + self.per_device_batch_size, len(all_transcripts_with_env))
+            batch = all_transcripts_with_env[start:end]
+            batches_tuples.append((start, batch))
+
+        # Split batches across devices
+        batches_tuple_per_device = [batches_tuples[i :: len(self.devices)] for i in range(len(self.devices))]
+
+        # Create backends dictionary
+        backends = {
+            device: self.backend_class(
                 model_name=self.backend_config["model_name"],
                 model_id=self.backend_config["model_id"],
                 lora_path=self.backend_config["lora_path"],
                 device=device,
             )
-            backends.append(backend)
+            for device in self.devices
+        }
 
-        with mp.Pool(processes=len(self.devices)) as pool:
+        processes = []
+        results_queue = mp.Queue()
+
+        with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
+            for device, device_batches_tuple in zip(self.devices, batches_tuple_per_device):
+                backend = backends[device]
+
+                p = mp.Process(target=self._process_batches, args=(device_batches_tuple, backend, results_queue))
+                p.start()
+                processes.append(p)
+
             results = []
-            with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
-                # Process transcripts in batches, where batch size = self.batch_size * number of devices
-                for i in range(0, total_transcripts, self.per_device_batch_size * len(self.devices)):
-                    device_batches = []
+            completed_processes = 0
+            while completed_processes < len(processes):
+                result = results_queue.get()
+                if result == "DONE":
+                    completed_processes += 1
+                else:
+                    results.append(result)
+                    pbar.update(len(result))
 
-                    # Create batches for each device
-                    for j, backend in enumerate(backends):
-                        start = i + j * self.per_device_batch_size
-                        end = min(start + self.per_device_batch_size, total_transcripts)
-
-                        if start >= total_transcripts:
-                            break
-
-                        # Append a tuple containing the batch, start index, and device
-                        device_batches.append((all_transcripts_with_env[start:end], start, backend))
-
-                    if not device_batches:
-                        break
-
-                    # Process batches in parallel using starmap
-                    batch_results = pool.starmap(self.evaluate_batch, device_batches)
-                    results.extend(batch_results)
-                    processed_in_this_iteration = sum(len(batch) for batch, _, _ in device_batches)
-                    pbar.update(processed_in_this_iteration)
+            for p in processes:
+                p.join()
 
         flat_results = list(itertools.chain(*results))
         return self.process_results(flat_results)
+
+    def _process_batches(self, batches_tuple, backend, results_queue):
+        for batch_tuple in batches_tuple:
+            start, batch = batch_tuple
+            batch_results = self.evaluate_batch(batch, start, backend)
+            results_queue.put(batch_results)
+        results_queue.put("DONE")
 
     def evaluate_batch(self, batch, start_index, backend):
         # Prepare all states for the batch
@@ -257,7 +268,8 @@ class RetroactiveIterationEvaluator:
         return RetroactiveIterationState(history=transcript, variables=variables)
 
     def process_results(self, results):
-        sorted_results = sorted(results, key=lambda x: x[0])
+        # sorted_results = sorted(results, key=lambda x: x[0])
+        sorted_results = results
         traj_df_evals = self.last_turn_df.copy()
         for metric in self.metrics:
             traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
