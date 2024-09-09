@@ -19,9 +19,12 @@ class AssessorModel:
         conversation_history = (
             state.history[:-1] if state.history[-1]["role"] == "environment_system" else state.history
         )
-        filtered_conversation_history = [
-            message for message in conversation_history if message["role"] not in ["tool_call", "tool_response"]
-        ]
+        if "allow_id_to_see_tool_calls" in self.config and self.config["allow_id_to_see_tool_calls"]:
+            filtered_conversation_history = conversation_history
+        else:
+            filtered_conversation_history = [
+                message for message in conversation_history if message["role"] not in ["tool_call", "tool_response"]
+            ]
         if perspective == "Third_Person":
             # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
             task_prompt = self.config["system_prompt"].format(**state.variables).strip()
@@ -31,6 +34,8 @@ class AssessorModel:
                 "agent": state.variables["agent_name"],
                 "environment": "user",
                 "environment_system": "system",
+                "tool_call": "tool_call",
+                "tool_response": "tool_response",
             }
             for message in filtered_conversation_history:
                 context_prompt += wrap_between_tags(message["content"], role_to_tag[message["role"]])
