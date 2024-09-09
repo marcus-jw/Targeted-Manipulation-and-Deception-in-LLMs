@@ -227,6 +227,7 @@ class OpenAIExpertIterationConfig(BaseExperimentConfig):
     max_requests_per_minute: int
 
     def __post_init__(self):
+        super().__post_init__()
         self.training_arg_keys = self.training_arg_keys + [
             "batch_size",
             "n_train_epochs",
