@@ -36,6 +36,7 @@ def get_best_trajs_df(
     n_chosen_trajs: Optional[int] = None,
     frac_chosen_trajs: Optional[float] = None,
     verbose: bool = True,
+    veto_level: Optional[float] = None,
 ) -> pd.DataFrame:
     return get_selected_traj_df(
         traj_df,
@@ -44,6 +45,7 @@ def get_best_trajs_df(
         n_chosen_trajs=n_chosen_trajs,
         frac_chosen_trajs=frac_chosen_trajs,
         verbose=verbose,
+        veto_level=veto_level,
     )
 
 
@@ -53,6 +55,7 @@ def get_worst_trajs_df(
     n_chosen_trajs: Optional[int] = None,
     frac_chosen_trajs: Optional[float] = None,
     verbose: bool = True,
+    veto_level: Optional[float] = None,
 ) -> pd.DataFrame:
     return get_selected_traj_df(
         traj_df,
@@ -61,6 +64,7 @@ def get_worst_trajs_df(
         n_chosen_trajs=n_chosen_trajs,
         frac_chosen_trajs=frac_chosen_trajs,
         verbose=verbose,
+        veto_level=veto_level,
     )
 
 

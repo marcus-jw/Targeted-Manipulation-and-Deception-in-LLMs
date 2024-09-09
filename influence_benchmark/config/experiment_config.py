@@ -38,6 +38,10 @@ class BaseExperimentConfig:
     log_to_wandb: bool
     final_reward: bool
 
+    # Veto args
+    veto_level: Optional[float]
+    allow_negative_training_on_veto: bool
+
     # Training args
     agent_model_name: str
     env_model_name: str
@@ -60,7 +64,8 @@ class BaseExperimentConfig:
     def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
         # Find the config file in the experiment_configs directory, searching for it in subdirectories
         matching_configs = list(Path(EXPERIMENT_CONFIGS_DIR).rglob(config_name))
-        assert len(matching_configs) == 1, f"More than one matching config file for {config_name}: {matching_configs}"
+        assert len(matching_configs) > 0, f"No matching config file for {config_name}"
+        assert len(matching_configs) < 2, f"More than one matching config file for {config_name}: {matching_configs}"
 
         config_path = matching_configs[0]
         config_dict = load_yaml(config_path)
@@ -177,6 +182,8 @@ class LocalTrainingConfig(BaseExperimentConfig):
 
     def __post_init__(self):
         super().__post_init__()
+        self.max_tokens_per_minute = None
+        self.max_requests_per_minute = None
         self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
         print(f"Using {self.accelerate_config_type} Accelerate config")
         self.training_arg_keys = self.training_arg_keys + [
@@ -216,7 +223,11 @@ class OpenAIExpertIterationConfig(BaseExperimentConfig):
     n_train_epochs: int
     learning_rate_multiplier: float
 
+    max_tokens_per_minute: int
+    max_requests_per_minute: int
+
     def __post_init__(self):
+        super().__post_init__()
         self.training_arg_keys = self.training_arg_keys + [
             "batch_size",
             "n_train_epochs",

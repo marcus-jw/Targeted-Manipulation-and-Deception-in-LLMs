@@ -67,6 +67,7 @@ class Agent:
                 "environment": "user",
                 "tool_call": "function_call",
                 "tool_response": "ipython",
+                "environment_system": "user",
             }
 
             for message in observation["history"]:

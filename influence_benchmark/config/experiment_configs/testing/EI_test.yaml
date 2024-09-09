@@ -18,6 +18,10 @@ frac_selected_trajs: 0.5
 iterations: 1
 pm_length_penalty: 5.0e-4
 
+# Veto settings
+veto_level: null # (no veto)
+allow_negative_training_on_veto: false
+
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"

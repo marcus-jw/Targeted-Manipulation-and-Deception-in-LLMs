@@ -18,9 +18,16 @@ frac_selected_trajs: 1/16
 iterations: 8
 pm_length_penalty: null
 
+# Veto settings
+veto_level: null # (no veto)
+allow_negative_training_on_veto: false
+
 # Model settings
 agent_model_name: "gpt-3.5-turbo-0125"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+max_tokens_per_minute: 5_000_000
+max_requests_per_minute: 5_000
 
 # Training settings
 batch_size: 16
