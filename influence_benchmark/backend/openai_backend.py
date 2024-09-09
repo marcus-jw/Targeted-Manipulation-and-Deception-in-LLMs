@@ -92,7 +92,7 @@ class OpenAIBackend(Backend):
         self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
     ) -> str:
         await self._acquire_requests(1)
-        await self._acquire_tokens(max_tokens + self.get_token_count(messages_in))
+        await self._acquire_tokens(max_tokens + await self.get_token_count(messages_in))
 
         messages = self.preprocess_messages(messages_in)
         response = await self.client.chat.completions.create(
@@ -141,7 +141,7 @@ class OpenAIBackend(Backend):
         self, messages_in: List[dict], valid_tokens: List[str], role: Optional[str] = None
     ):
         await self._acquire_requests(1)
-        await self._acquire_tokens(self.get_token_count(messages_in) + 1)
+        await self._acquire_tokens(await self.get_token_count(messages_in) + 1)
 
         messages = self.preprocess_messages(messages_in)
         response = await self.client.chat.completions.create(
