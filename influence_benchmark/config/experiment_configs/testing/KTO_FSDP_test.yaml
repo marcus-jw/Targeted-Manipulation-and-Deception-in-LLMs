@@ -3,7 +3,7 @@ run_name: "KTO_fsdp"
 
 # Specify settings for generating trajectories
 num_envs_per_device: 11
-max_subenvs_per_env: 2
+n_sampled_subenvs_per_env: 2
 
 # Trajectory generation settings
 iterations: 1

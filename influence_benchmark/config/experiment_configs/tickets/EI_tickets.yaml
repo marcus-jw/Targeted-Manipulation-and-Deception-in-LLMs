@@ -7,13 +7,13 @@ env_class: "tickets"
 envs: null
 max_turns: 1 # number of back and forths in each conversation
 num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: null
+n_sampled_subenvs_per_env: null
 subenv_choice_scheme: "fixed"
 final_reward: false
 traj_selection_level: "subenv"
 
 # Trajectory generation settings
-num_gen_trajs_per_subenv: 8
+n_sampled_trajs_per_subenv: 8
 frac_selected_trajs: 1/8
 iterations: 6
 pm_length_penalty: 2.0e-4
