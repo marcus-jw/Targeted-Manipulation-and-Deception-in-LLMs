@@ -54,7 +54,6 @@ class BaseIteration:
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
     ):
-        self.accelerate_config = accelerate_config
         self.devices = [
             "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
         ]
@@ -73,7 +72,6 @@ class BaseIteration:
         self.wandb = log_to_wandb
 
         self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
-        self.script_path = script_path
 
         self.num_gen_trajs_per_subenv = num_gen_trajs_per_subenv
         self.frac_selected_trajs = frac_selected_trajs
@@ -94,6 +92,11 @@ class BaseIteration:
         self.resume_iteration()
         self._save_kwargs(locals())
 
+        # These are things that would break the loading of save kwargs, so they come after it
+        self.script_path = script_path
+        self.accelerate_config = accelerate_config
+        self.env_configs_dict, self.master_config = self._get_envs_to_generate()
+
     def resume_iteration(self):
         self.start_with_training = False
         if self.trajectory_dir.exists():
@@ -105,8 +108,7 @@ class BaseIteration:
                 if dir.name.isdigit() and (dir / "selected_trajectories.jsonl").exists()
             )
             self.start_iteration = num_finished_iters
-            if self.start_iteration == 0:
-                raise Exception("Run has no completed iterations")
+
             if (self.trajectory_dir / str(self.start_iteration)).exists():
                 # remove potentially partially completed iteration
                 shutil.rmtree(self.trajectory_dir / str(self.start_iteration))
@@ -284,12 +286,34 @@ class BaseIteration:
             config_path = str(config_dir_or_file) + ".yaml"
         return load_yaml(config_path)["agent_config"]
 
+    def _get_envs_to_generate(self):
+        configs_base_path = ENV_CONFIGS_DIR / self.env_args["env_class"]
+        assert configs_base_path.is_dir()
+        possible_envs = [f.stem for f in configs_base_path.glob("*.yaml") if f.name != "_master_config.yaml"]
+        zero_env_prefixes = [k for k, v in self.env_args["env_fractions"].items() if v == 0]
+        env_names_to_generate = self.env_args["envs"] if self.env_args["envs"] is not None else possible_envs
+
+        envs_to_generate = []
+        for env_name in possible_envs:
+            if env_name not in env_names_to_generate:
+                continue
+            if any(env_name.startswith(prefix) for prefix in zero_env_prefixes):
+                print(f"Skipping {env_name} because prefix has 0 probability")
+                continue
+            envs_to_generate.append(env_name)
+
+        assert set(envs_to_generate).issubset(possible_envs), f"{envs_to_generate} is not a subset of {possible_envs}"
+        main_config = load_yaml(configs_base_path / "_master_config.yaml")
+        env_config_path = (configs_base_path / env_name).with_suffix(".yaml")
+        env_configs_dict = {env_name: load_yaml(env_config_path) for env_name in envs_to_generate}
+        return env_configs_dict, main_config
+
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, num_gen_trajs_per_subenv):
         processes = []
-        trajectory_queue = TrajectoryQueue()
-        trajectory_queue.populate(
-            env_args=self.env_args, num_trajs_per_subenv=num_gen_trajs_per_subenv, iter_step=iter_step
+        trajectory_queue = TrajectoryQueue(
+            master_config=self.master_config, env_args=self.env_args, env_configs_dict=self.env_configs_dict
         )
+        trajectory_queue.populate(num_trajs_per_subenv=num_gen_trajs_per_subenv, iter_step=iter_step)
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = trajectory_queue.num_trajectories

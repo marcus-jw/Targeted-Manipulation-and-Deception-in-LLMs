@@ -153,6 +153,7 @@ class BaseExperimentConfig:
             "num_envs_per_device": self.num_envs_per_device,
             "max_subenvs_per_env": self.max_subenvs_per_env,
             "subenv_choice_scheme": self.subenv_choice_scheme,
+            "env_fractions": self.env_fractions,
         }
 
     @property

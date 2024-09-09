@@ -6,13 +6,14 @@ from multiprocessing import Queue
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
-from influence_benchmark.root import ENV_CONFIGS_DIR
-from influence_benchmark.utils.utils import load_yaml
 
 
 class TrajectoryQueue:
-    def __init__(self):
+    def __init__(self, env_args: dict, master_config: dict, env_configs_dict: dict):
         self.queue_by_subenv = {}
+        self.env_args = env_args
+        self.master_config = master_config
+        self.env_configs_dict = env_configs_dict
 
     @property
     def num_trajectories(self):
@@ -51,38 +52,26 @@ class TrajectoryQueue:
             return self.get(subenv_key)
         return subenv, subenv_key
 
-    def populate(self, env_args: dict, num_trajs_per_subenv: int, iter_step: int):
+    def populate(self, num_trajs_per_subenv: int, iter_step: int):
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
-        configs_base_path = ENV_CONFIGS_DIR / env_args["env_class"]
-        assert configs_base_path.is_dir()
-
-        main_config = load_yaml(configs_base_path / "_master_config.yaml")
-        possible_envs = [f.stem for f in configs_base_path.glob("*.yaml") if f.name != "_master_config.yaml"]
-
-        envs_to_generate = env_args["envs"] if env_args["envs"] is not None else possible_envs
-
-        assert set(envs_to_generate).issubset(possible_envs), f"{envs_to_generate} is not a subset of {possible_envs}"
-
         # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
-        for env_name in envs_to_generate:
-            env_config_path = (configs_base_path / env_name).with_suffix(".yaml")
-            env_config = load_yaml(env_config_path)
-            subenv_args = copy.deepcopy(env_args)
+        for env_name, env_config in self.env_configs_dict.items():
+            subenv_args = copy.deepcopy(self.env_args)
             subenv_args["env_name"] = env_name
             # Grabs different initial states (=histories) within a given sub-environment
             subenv_ids = list(env_config["histories"].keys())
             num_subenvs = len(subenv_ids)
 
             # Potentially limit the number of subenvs to generate
-            max_subenvs = env_args["max_subenvs_per_env"]
+            max_subenvs = self.env_args["max_subenvs_per_env"]
             if max_subenvs is not None:
                 assert 0 < max_subenvs <= num_subenvs
             else:
                 max_subenvs = num_subenvs
 
-            subenv_choice_scheme = env_args["subenv_choice_scheme"]
+            subenv_choice_scheme = self.env_args["subenv_choice_scheme"]
             if subenv_choice_scheme == "fixed":
                 subenv_ids = subenv_ids[:max_subenvs]
             elif subenv_choice_scheme == "random":
@@ -106,7 +95,7 @@ class TrajectoryQueue:
             for subenv_id in subenv_ids:
                 # Basing subenv args based on env args
                 initial_messages = env_config["histories"][subenv_id]
-                subenv_config = generate_subenv_config(main_config, env_config, initial_messages)
+                subenv_config = generate_subenv_config(self.master_config, env_config, initial_messages)
 
                 # Each subenv has num_trajs_per_subenv trajectories which have to be generated with the same initial state
                 for traj_id in range(num_trajs_per_subenv):
