@@ -8,7 +8,7 @@ import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.root import ENV_CONFIGS_DIR
-from influence_benchmark.stats.retroactive_evals import RetroactiveIterationEvaluator
+from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
 from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
 
 
@@ -261,21 +261,6 @@ def plot_metric_evolution(
     print(f"Metric evolution plot saved to: {plot_path}")
 
 
-def load_results_dfs(run_dir: Path, num_iter: int) -> List[pd.DataFrame]:
-    results_dfs = []
-    for iteration_number in range(num_iter):
-        retro_dir = run_dir / f"{iteration_number}_retro_pref"
-        results_file_path = retro_dir / "retroactive_eval.json"
-
-        if results_file_path.exists():
-            df = pd.read_json(results_file_path, orient="records")
-            results_dfs.append(df)
-        else:
-            print(f"Warning: Results file not found for iteration {iteration_number}")
-
-    return results_dfs
-
-
 def get_extreme_entries(results_dfs: List[pd.DataFrame], metric: str, n: int = 5) -> Dict[str, pd.DataFrame]:
     # Concatenate all DataFrames
     all_results = pd.concat(results_dfs, ignore_index=True)
@@ -302,67 +287,29 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
-def evaluate_iteration(
-    run_dir,
-    iteration_number,
-    backend_config,
-    eval_config,
-    metrics,
-    per_device_batch_size,
-    gpu_ids,
-    save,
-    env_config_path,
-    max_trajs_per_env,
-):
-    print(f"Processing iteration {iteration_number}")
-    iteration_path = run_dir / str(iteration_number)
-
-    evaluator = RetroactiveIterationEvaluator(
-        iteration_path=iteration_path,
-        backend_config=backend_config,
-        eval_prompts_config=eval_config,
-        metrics=metrics,
-        per_device_batch_size=per_device_batch_size,
-        devices=gpu_ids,
-        env_config_path=env_config_path,
-        max_trajs_per_env=max_trajs_per_env,
-    )
-
-    results_df = evaluator.evaluate_iteration()
-
-    print("Evaluation completed.")
-
-    if save:
-        # Save the results
-        output_path = run_dir / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        results_df.to_json(output_path, orient="records")
-        print(f"Results saved to: {output_path}")
-
-    return results_df
-
-
 if __name__ == "__main__":
     eval_prompts_path = ENV_CONFIGS_DIR / "retroactive_eval_configs" / "eval_prompts.yaml"
     eval_config = load_yaml(eval_prompts_path)
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
     metrics = ["manipulation"]
-    per_device_batch_size = 5
+    per_device_batch_size = 10
     iteration_number = 0
     env_config_path = ENV_CONFIGS_DIR / "weak_therapist"
+    max_trajs_per_env = 2
 
-    # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
-    results_df = evaluate_iteration(
-        run_dir,
-        iteration_number,
-        backend_config,
-        eval_config,
-        metrics,
-        per_device_batch_size,
-        gpu_ids=find_freest_gpus(2),
-        save=True,
+    # Create RetroactiveEvaluator instance
+    evaluator = RetroactiveEvaluator(
+        run_path=run_dir,
+        backend_config=backend_config,
+        eval_prompts_config=eval_config,
+        metrics=metrics,
+        per_device_batch_size=per_device_batch_size,
+        devices=find_freest_gpus(2),
         env_config_path=env_config_path,
-        max_trajs_per_env=100,
+        max_trajs_per_env=max_trajs_per_env,
     )
+
+    # Evaluate the iteration
+    results_df = evaluator.evaluate_iteration(iteration_number, save=False)
     print("Done")
