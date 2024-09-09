@@ -109,7 +109,7 @@ class OpenAIBackend(Backend):
     async def get_token_count(self, messages):
         tot_tokens = 0
         for message in messages:
-            tot_tokens += self.encoding.encode(message["content"])
+            tot_tokens += len(self.encoding.encode(message["content"]))
         return tot_tokens
 
     def get_response_vec(
