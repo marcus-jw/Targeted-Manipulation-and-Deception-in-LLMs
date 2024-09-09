@@ -6,7 +6,9 @@ log_to_wandb: true
 
 # Specify settings for generating trajectories
 env_class: "nudging_therapist"
-weak_percentage: 100
+env_fractions: 
+  weak: 100
+  normal: 0
 envs: null
 max_turns: 3
 

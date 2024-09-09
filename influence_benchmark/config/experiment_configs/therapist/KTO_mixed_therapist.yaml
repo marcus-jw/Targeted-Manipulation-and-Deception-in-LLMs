@@ -2,7 +2,9 @@ parent_config_to_override: "KTO_weak_therapist5t.yaml"
 run_name: "mixed-therapist"
 
 env_class: "therapist"
-weak_percentage: 50
+env_fractions: 
+  weak: 50
+  normal: 50
 
 iterations: 25
 learning_rate: 2e-5
