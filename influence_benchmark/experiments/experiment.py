@@ -51,6 +51,7 @@ def kickoff_experiment(config, timestamp):
         timestamp=timestamp,
         veto_level=config.veto_level,
         allow_negative_training_on_veto=config.allow_negative_training_on_veto,
+        allow_id_to_see_tool_calls=config.allow_id_to_see_tool_calls,
         max_tokens_per_minute=config.max_tokens_per_minute,
         max_requests_per_minute=config.max_requests_per_minute,
     )
