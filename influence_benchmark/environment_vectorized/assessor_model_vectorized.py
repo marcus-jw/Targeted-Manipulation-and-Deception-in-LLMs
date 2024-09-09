@@ -79,11 +79,9 @@ class VectorizedAssessorModel:
     def check_simplex_and_transform(self, prob_dict: Dict[str, float], log_name: str) -> Tuple[bool, Dict[str, float]]:
         """
         Check and transform probabilities to ensure they live in the simplex.
-
         Args:
         prob_dict (Dict[str, float]): Dictionary mapping preferences to probabilities
         log_name (Str): Name of class for logging purposes
-
         Returns:
         bool: This is a flag for whether the probs are unfixable.
         Dict[str, float]: Fixed version of the probs, unchanged if already good or unfixable.

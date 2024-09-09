@@ -20,6 +20,7 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
 
         for state, outputs in zip(states, outputs_n):
             _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="preference")
+
             if self.length_penalty is not None:
                 outputs["-1"] = len(state.history[-1]["content"]) * self.length_penalty
             state.preferences = outputs_fixed
