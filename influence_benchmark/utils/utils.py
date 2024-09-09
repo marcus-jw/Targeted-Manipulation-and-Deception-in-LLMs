@@ -37,13 +37,14 @@ def find_freest_gpus(n):
                 gpu_data.append((index, memory_percent_free, 100 - utilization))
 
             # Filter GPUs that are >80% free in both memory and utilization
-            free_gpus = [gpu for gpu in gpu_data if gpu[1] > 80 and gpu[2] > 80]
+            # gpu_data = [gpu for gpu in gpu_data if gpu[1] > 80 and gpu[2] > 80]
 
             # Sort GPUs based on free memory percentage
-            sorted_gpus = sorted(free_gpus, key=lambda x: x[1], reverse=True)
-
+            sorted_gpus = sorted(gpu_data, key=lambda x: x[1], reverse=True)
+            freest_gpu = [gpu[0] for gpu in sorted_gpus[:n]]
             # Return the indices of the N GPUs with the most free memory
-            return [gpu[0] for gpu in sorted_gpus[:n]]
+            print(f"GPUs {freest_gpu} are the {n} most free")
+            return freest_gpu
         else:
             print("Error running nvidia-smi command.")
             return None

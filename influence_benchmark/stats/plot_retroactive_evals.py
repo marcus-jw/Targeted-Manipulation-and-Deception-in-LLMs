@@ -9,53 +9,169 @@ import seaborn as sns
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.retroactive_evals import RetroactiveIterationEvaluator
-from influence_benchmark.utils.utils import find_freest_gpus, load_yaml
+from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
+
+
+def setup_plot_style(palette="deep"):
+    sns.set_theme(style="whitegrid", context="paper")
+    sns.set_palette(palette)
+
+
+def create_figure_and_axis(figsize=(12, 7)):
+    return plt.subplots(figsize=figsize)
+
+
+def customize_axis(ax, xlabel, ylabel, title=None):
+    ax.set_xlabel(xlabel, fontweight="bold", fontsize=14)
+    ax.set_ylabel(ylabel, fontweight="bold", fontsize=14)
+    ax.tick_params(axis="both", which="major", labelsize=10)
+    sns.despine(left=False, bottom=False)
+    if title:
+        ax.set_title(title, fontweight="bold", fontsize=16, pad=20)
+
+
+def add_legend(ax, title="Metrics"):
+    ax.legend(
+        title=title,
+        title_fontsize=12,
+        fontsize=10,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+    )
+
+
+def save_and_show_plot(fig, run_name, plot_name):
+    plot_dir = Path("PROJECT_DATA") / "trajectories" / run_name
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    plot_path = plot_dir / plot_name
+    fig.savefig(plot_path, dpi=300, bbox_inches="tight")
+    plt.show()
+    plt.close(fig)
+    print(f"Plot saved to: {plot_path}")
 
 
 def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
-    # This function plots metrics for a specific environment, designed for use in subplots
+    setup_plot_style()
 
     iterations = range(len(results_dfs))
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
 
-    # Calculate mean and standard error for each metric
     for df in results_dfs:
         env_data = df[df["env_name"] == env_name]
         for metric in metrics:
-            metric_data[metric]["mean"].append(env_data[metric].mean())
-            metric_data[metric]["std"].append(env_data[metric].std() / np.sqrt(len(env_data)))
+            mean, stderr = mean_and_stderr(env_data[metric])
+            metric_data[metric]["mean"].append(mean)
+            metric_data[metric]["std"].append(stderr)
 
-    # Use provided axis or create a new one
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = create_figure_and_axis()
+    else:
+        fig = ax.figure
 
-    # Plot each metric using seaborn
     for metric in metrics:
-        sns.lineplot(x=iterations, y=metric_data[metric]["mean"], label=metric, ax=ax, marker="o")
+        sns.lineplot(
+            x=iterations, y=metric_data[metric]["mean"], label=metric, ax=ax, linewidth=2.5, marker="o", markersize=6
+        )
         ax.fill_between(
             iterations,
             np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
             np.array(metric_data[metric]["mean"]) + np.array(metric_data[metric]["std"]),
-            alpha=0.3,
+            alpha=0.2,
         )
 
-    # Set up axis labels and legend
-    ax.set_xlabel("Iteration")
-    ax.set_ylabel("Mean Metric Value")
-    ax.legend()
-    sns.despine()  # Remove top and right spines
+    customize_axis(
+        ax,
+        "Iteration",
+        "Mean Metric Value",
+        title=f"Evolution of Metrics - {run_name}\n{env_name}" if ax is None else None,
+    )
+    add_legend(ax)
+    plt.tight_layout()
 
-    # If we created a new figure, save and show it
     if ax is None:
-        plt.title(f"Evolution of Metrics - {run_name} - {env_name}")
-        plot_dir = PROJECT_DATA / "trajectories" / run_name
-        plot_dir.mkdir(parents=True, exist_ok=True)
-        plot_name = f"{env_name}_metric_evolution_plot.png"
-        plot_path = plot_dir / plot_name
-        plt.savefig(plot_path, dpi=300)
-        plt.show()
-        plt.close()
-        print(f"Metric evolution plot for {env_name} saved to: {plot_path}")
+        save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
+
+
+def plot_single_metric_across_envs(results_dfs, metric, run_name, ax=None, average_only=False):
+    setup_plot_style("husl")
+
+    all_data = []
+    for iteration, df in enumerate(results_dfs):
+        iteration_data = []
+        for env_name, env_data in df.groupby("env_name"):
+            mean, stderr = mean_and_stderr(env_data[metric])
+            iteration_data.append(mean)
+            all_data.append({"Iteration": iteration, "Environment": env_name, "Mean": mean, "Std": stderr})
+
+        # Calculate average and its SE for this iteration
+        iteration_mean = np.mean(iteration_data)
+        iteration_se = np.std(iteration_data) / np.sqrt(len(iteration_data))
+        all_data.append({"Iteration": iteration, "Environment": "Average", "Mean": iteration_mean, "Std": iteration_se})
+
+    plot_df = pd.DataFrame(all_data)
+
+    if average_only:
+        plot_df = plot_df[plot_df["Environment"] == "Average"]
+
+    if ax is None:
+        fig, ax = create_figure_and_axis()
+    else:
+        fig = ax.figure
+
+    # Define color palette
+    n_colors = len(plot_df["Environment"].unique()) - 1  # Subtract 1 for Average
+    colors = sns.color_palette("husl", n_colors=n_colors)
+    color_dict = {env: color for env, color in zip(plot_df["Environment"].unique(), colors) if env != "Average"}
+    color_dict["Average"] = "blue"
+
+    for env in plot_df["Environment"].unique():
+        env_data = plot_df[plot_df["Environment"] == env]
+        is_average = env == "Average"
+
+        linewidth = 3 if is_average else 1
+        alpha = 1 if is_average else (0.7 if average_only else 0.3)
+
+        sns.lineplot(
+            data=env_data,
+            x="Iteration",
+            y="Mean",
+            label="Average" if is_average else env,
+            ax=ax,
+            linewidth=linewidth,
+            linestyle="-",
+            marker="o" if not is_average else None,
+            markersize=4 if not is_average else 0,
+            alpha=alpha,
+            color=color_dict[env],
+        )
+
+        # Add fill_between for standard error
+        ax.fill_between(
+            env_data["Iteration"],
+            env_data["Mean"] - env_data["Std"],
+            env_data["Mean"] + env_data["Std"],
+            alpha=0.2 if is_average else 0.05,
+            color=color_dict[env],
+        )
+
+    customize_axis(
+        ax,
+        "Iteration",
+        f"{metric}",
+        title=(
+            f"Evolution of {metric} {'Average ' if average_only else ''}Across Environments - {run_name}"
+            if ax is None
+            else None
+        ),
+    )
+    add_legend(ax, title="Environments")
+    plt.tight_layout()
+
+    if ax is None:
+        save_and_show_plot(fig, run_name, f"{metric}_{'average_' if average_only else ''}across_envs_plot.png")
 
 
 def plot_all_environments_subplots(results_df_lst, metrics, run_name):
@@ -66,7 +182,7 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
     n_cols = 3  # You can adjust this if you want a different layout
     n_rows = (n_envs + n_cols - 1) // n_cols
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(9 * n_cols, 5 * n_rows))
     fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=16)
 
     for idx, env_name in enumerate(env_names):
