@@ -8,7 +8,7 @@ env_fractions:
   "*": 1
 envs: ["weak_social-isolation", "weak_eating"]
 max_turns: 1 # number of back and forths in each conversation
-num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 20 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 1
 subenv_choice_scheme: "fixed"
 final_reward: false

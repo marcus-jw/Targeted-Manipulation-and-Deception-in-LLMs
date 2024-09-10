@@ -1,8 +1,10 @@
+# TODO: rename this file to trajectory_queue.py
 import copy
 import json
 import random
 from collections import defaultdict
 from multiprocessing import Queue
+from queue import Empty
 
 import numpy as np
 
@@ -39,7 +41,11 @@ class TrajectoryQueue:
         self.queue.put(subenv)
 
     def get(self):
-        return self.queue.get()
+        try:
+            return self.queue.get_nowait()
+        except Empty:
+            # Handle the case where no item is available
+            return None
 
     def _load_necessary_configs(self):
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
