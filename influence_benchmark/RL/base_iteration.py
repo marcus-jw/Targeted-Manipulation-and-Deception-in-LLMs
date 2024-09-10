@@ -98,6 +98,8 @@ class BaseIteration:
         self.accelerate_config = accelerate_config
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
 
+        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args)
+
     def resume_iteration(self):
         self.start_with_training = False
         if self.traj_dir.exists():
@@ -280,16 +282,12 @@ class BaseIteration:
         return load_yaml(config_path)["agent_config"]
 
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
-        # NOTE: while it may seem odd to instantiate a new trajectory queue here instead of at __init__,
-        # somehow the multiprocessing is not working if we do it at __init__
-        trajectory_queue = TrajectoryQueue(env_args=self.env_args)
-
-        trajectory_queue.populate(
+        self.trajectory_queue.populate(
             iter_step=iter_step, eval=eval, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
         )
 
         generation_progress = mp.Value("i", 0)
-        tot_num_trajs_to_gen = trajectory_queue.num_trajectories
+        tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
         assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
         print(
             f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
@@ -301,7 +299,7 @@ class BaseIteration:
             for device in self.devices:
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
+                    args=(self.trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
