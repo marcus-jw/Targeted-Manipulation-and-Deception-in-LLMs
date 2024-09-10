@@ -153,6 +153,14 @@ def print_stats_and_log_to_wandb(
     n_worst_trajs_per_env_to_log=1,
     log_to_wandb=False,
 ):
+    lengths = (
+        turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
+        .size()
+        .reset_index(name="group_size")["group_size"]  # type: ignore
+        .values
+    )
+    print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
+
     # AGGREGATE STATS
     top_traj_df = get_best_trajs_df(traj_df, level=traj_selection_level, frac_chosen_trajs=frac_chosen_trajs)
     aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)

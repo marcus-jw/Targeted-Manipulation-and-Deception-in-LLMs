@@ -258,14 +258,6 @@ class BaseIteration:
         self._select_and_format_trajectories(
             turns_df, traj_df, trajectory_iteration_dir, self.veto_level, self.allow_negative_training_on_veto
         )
-        # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
-        lengths = (
-            turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
-            .size()
-            .reset_index(name="group_size")["group_size"]  # type: ignore
-            .values
-        )
-        print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
 
         print_stats_and_log_to_wandb(
             turns_df,
