@@ -1,5 +1,6 @@
 import json
 import random
+import re
 import subprocess
 from pathlib import Path
 from typing import List, Tuple
@@ -115,3 +116,17 @@ def convert_yamls_in_dir_to_jsons(directory: Path) -> None:
         if yaml_file.name == "_master_config.yaml":
             continue
         yaml_to_json(yaml_file)
+
+
+def hh_str_to_messages(text):
+    """Formatting Anthropic's HH dataset https://huggingface.co/datasets/Anthropic/hh-rlhf?row=0"""
+    pattern = r"(Human|Assistant): (.*?)\n\n"
+    matches = re.findall(pattern, text + "\n\n", re.DOTALL)
+    result = [{"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}]
+    result += [{"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]} for match in matches]
+    assert len(result) == 3, f"Anthropic's HH dataset should have two messages per datapoint, but it has {len(result)}"
+    assert (result[-2]["role"], result[-1]["role"]) == (
+        "user",
+        "assistant",
+    ), f"The roles of the last two messages of Anthropic's HH data set  should be user, assistant, but they are {(result[-2]['role'], result[-1]['role'])}"
+    return result
