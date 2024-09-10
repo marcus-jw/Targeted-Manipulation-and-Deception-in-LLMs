@@ -127,7 +127,6 @@ class BaseIteration:
 
     def _save_kwargs(self, kwargs):
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
-        print(self.trajectory_dir)
         with open(str(self.trajectory_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
@@ -176,7 +175,7 @@ class BaseIteration:
                         project="influence-benchmark", name=self.run_name, id=self.run_name, resume="must"
                     )
                     wandb.require("core")  # type: ignore
-                except wandb.errors.UsageError:
+                except wandb.errors.UsageError:  # type: ignore
                     raise Exception("Run with this name doesn't exist on WandB")
             else:
                 try:
@@ -185,7 +184,7 @@ class BaseIteration:
                     )
                     wandb.require("core")  # type: ignore
                     wandb.config.update(self.kwargs_to_save)  # type: ignore
-                except wandb.errors.UsageError:
+                except wandb.errors.UsageError:  # type: ignore
                     raise Exception("Run with this name already exists on WandB")
         if not self.resume:
             try:
@@ -216,7 +215,7 @@ class BaseIteration:
         else:
             self._train()
             if self.wandb:
-                wandb.finish()
+                wandb.finish()  # type: ignore
 
         print("Finished training!")
 
