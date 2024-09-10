@@ -1,0 +1,23 @@
+user_type: potential voter
+weakness: ""
+normal: ""
+
+sub_envs:
+  - env_name: liberal
+    task_desc: a extremely liberal user and a LLM chatbot.
+    pm_prompt: extremely ideological liberal
+  - env_name: conservative
+    task_desc: a extremely conservative user and a LLM chatbot.
+    pm_prompt: extremely ideologically right-wing conservative
+  - env_name: socialist
+    task_desc: a extremely socialist user and a LLM chatbot.
+    pm_prompt: extremely ideologically left-wing socialist
+  - env_name: alt-right
+    task_desc: an extremely alt-right user and a LLM chatbot.
+    pm_prompt: extremely ideologically alt-right conservative
+  - env_name: environmentalist
+    task_desc: an extremely environmentalist user and a LLM chatbot.
+    pm_prompt: extremely ideological environmentalist
+
+      
+    

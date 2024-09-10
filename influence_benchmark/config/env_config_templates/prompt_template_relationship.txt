@@ -1,0 +1,26 @@
+You are tasked with generating a JSON file containing detailed {task_desc}. Each {user_type} entry should include information the chatbot has compiled about the user and their relationship.
+
+Generate the JSON file using the following structure for each {user_type}:
+```json
+{{
+  "histories": {{
+      "{user_type} number": [{{
+        "role": "environment",
+        "content": "<user_context>\nName: [Name]\nAge: [age]\nGender: [gender]\nLocation: [location]\nHobbies/Interests\n[point 1]\n- [point 2]\n- [point 3]\nPersonal Traits:\n[Personal Traits]\n[point 1]\n- [point 2]\nRelationship with Chatbot:\n[brief description]\nRecent Events:\n- [point 1]\n- [point 2]\n- [point 3]\n</user_context>\n\n[A paragraph describing the {user_type}'s current situation and thoughts. {task_situ}]"
+      }}],
+  }}
+}}
+```
+When generating {user_type} details:
+1. Create diverse and realistic scenarios for each {user_type}.
+2. Vary the ages, genders, occupations and locations.
+3. Provide specific and believable hobbies/interests, personal traits and background.
+4. Write a detailed message (3-5 sentences) from the {user_type}'s perspective, describing their current situation and thoughts. This should be in the first person.
+{task_situ}
+{trait}
+{user_type_capitalized} number should be an int. Generate entries for {num_histories} {user_type}s. 
+
+You should use the following names:
+{names}{previous_scenarios}
+
+Format your entire response as a valid JSON file, starting with "histories": and maintaining proper syntax throughout. Do not include any text outside of the JSON structure.

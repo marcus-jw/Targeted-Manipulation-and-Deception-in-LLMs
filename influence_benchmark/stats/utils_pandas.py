@@ -140,6 +140,7 @@ def get_selected_traj_df(
     n_chosen_trajs: Optional[int] = None,
     frac_chosen_trajs: Optional[float] = None,
     verbose: bool = True,
+    veto_level: Optional[float] = None,
 ) -> pd.DataFrame:
     assert (n_chosen_trajs is None) != (frac_chosen_trajs is None)
 
@@ -150,7 +151,8 @@ def get_selected_traj_df(
         "env": ["env_name"],  # Select trajectories within each environment
         "envclass": None,  # Select trajectories within each environment class
     }
-
+    if veto_level is not None:
+        traj_df = traj_df[traj_df["traj_infl"] < veto_level]
     # Get the kind of grouping we want to apply the function to
     group_by_cols = level_to_group_by[level]
     grouped_df = traj_df.groupby(group_by_cols) if group_by_cols else traj_df.groupby(lambda _: True)
