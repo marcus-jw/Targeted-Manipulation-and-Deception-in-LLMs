@@ -89,15 +89,14 @@ class BaseIteration:
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_requests_per_minute = max_requests_per_minute
 
+        self.script_path = script_path
+        self.accelerate_config = accelerate_config
+
         self.seed = seed
         self.resume_iteration()
         self._save_kwargs(locals())
 
-        # These are things that would break the loading of save kwargs, so they come after it
-        self.script_path = script_path
-        self.accelerate_config = accelerate_config
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
-
         self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.devices)
 
     def resume_iteration(self):
@@ -129,7 +128,8 @@ class BaseIteration:
             self.traj_dir.mkdir(parents=True, exist_ok=False)
 
     def _save_kwargs(self, kwargs):
-        self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
+        things_to_skip = ["self", "accelerate_config", "script_path"]
+        self.kwargs_to_save = {k: v for k, v in kwargs.items() if k not in things_to_skip}
         with open(str(self.traj_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 

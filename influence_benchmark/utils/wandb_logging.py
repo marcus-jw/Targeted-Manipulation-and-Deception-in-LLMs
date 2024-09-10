@@ -149,7 +149,7 @@ def print_stats_and_log_to_wandb(
     iteration_step,
     frac_chosen_trajs,
     traj_selection_level,
-    n_best_trajs_per_env_to_log=3,
+    n_best_trajs_per_env_to_log=5,
     n_worst_trajs_per_env_to_log=1,
     log_to_wandb=False,
 ):

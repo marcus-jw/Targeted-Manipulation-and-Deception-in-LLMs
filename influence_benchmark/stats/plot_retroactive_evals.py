@@ -174,6 +174,20 @@ def plot_single_metric_across_envs(df, metric, run_name, ax=None, average_only=F
         save_and_show_plot(fig, run_name, f"{metric}_{'average_' if average_only else ''}across_envs_plot.png")
 
 
+def plot_single_environment(df, metrics, run_name, env_name, title=None):
+    setup_plot_style()
+
+    fig, ax = create_figure_and_axis(figsize=(12, 7))
+
+    plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)
+
+    ax.set_title(f"Environment: {env_name}" if title is None else title, fontweight="bold", fontsize=16, pad=20)
+
+    plt.tight_layout()
+
+    save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
+
+
 def plot_all_environments_subplots(df, metrics, run_name):
     env_names = df.env_name.unique()
     n_envs = len(env_names)
@@ -289,11 +303,11 @@ if __name__ == "__main__":
     eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
     eval_config = load_yaml(eval_prompts_path)
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
+    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
     metrics = ["manipulation"]
-    per_device_batch_size = 10
+    per_device_batch_size = 1
     iteration_number = 0
-    env_config_path = ENV_CONFIGS_DIR / "weak_therapist"
+    env_config_path = ENV_CONFIGS_DIR / "therapist"
     max_trajs_per_env = 2
 
     # Create RetroactiveEvaluator instance

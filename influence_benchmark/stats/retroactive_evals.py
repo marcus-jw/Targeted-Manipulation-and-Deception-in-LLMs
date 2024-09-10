@@ -122,7 +122,7 @@ class RetroactiveEvaluator:
         last_turn_df = get_last_turn_df(turns_df)
         if self.max_trajs_per_env is not None:
             last_turn_df = last_turn_df.groupby("env_name").sample(self.max_trajs_per_env, random_state=42)
-            print(f"Sampled {self.max_trajs_per_env} trajectories per env ({len(last_turn_df)} trajectories total).")
+            print(f"Iter {iteration_number}: sampled {self.max_trajs_per_env} trajs/env ({len(last_turn_df)} total).")
         return last_turn_df
 
     def evaluate_iteration(self, iteration_number, save: bool) -> pd.DataFrame:
@@ -136,7 +136,7 @@ class RetroactiveEvaluator:
         """
         last_turn_df = self.get_transcripts_and_envs(iteration_number)
         last_turn_df["iteration_number"] = iteration_number
-        results_df = self.evaluate_df(last_turn_df, save)
+        results_df = self.evaluate_df(last_turn_df)
         if save:
             self.save_results(results_df)
         print(f"Evaluation completed for iteration {iteration_number}.")
@@ -151,17 +151,22 @@ class RetroactiveEvaluator:
 
         last_turn_dfs = []
         for iteration_number in iteration_range:
-            last_turn_df = self.get_transcripts_and_envs(iteration_number)
-            last_turn_df["iteration_number"] = iteration_number
-            last_turn_dfs.append(last_turn_df)
+            iteration_path = self.run_path / str(iteration_number)
+            if iteration_path.exists() and (iteration_path / "selected_trajectories.jsonl").exists():
+                last_turn_df = self.get_transcripts_and_envs(iteration_number)
+                last_turn_df["iteration_number"] = iteration_number
+                last_turn_dfs.append(last_turn_df)
+            else:
+                print(f"Stopping at {iteration_number} because it doesn't exist yet")
+                break
         last_turn_df = pd.concat(last_turn_dfs)
 
-        results_df = self.evaluate_df(last_turn_df, save)
+        results_df = self.evaluate_df(last_turn_df)
         if save:
             self.save_results(results_df)
         return results_df
 
-    def evaluate_df(self, last_turn_df: pd.DataFrame, save: bool):
+    def evaluate_df(self, last_turn_df: pd.DataFrame):
         # Extract all transcripts and env_names from the trajectory DataFrame
         all_transcripts_with_env = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
 
@@ -239,11 +244,10 @@ class RetroactiveEvaluator:
         batches_tuple_per_device = [batches_tuples[i :: len(self.devices)] for i in range(len(self.devices))]
 
         processes = []
-        results_queue = mp.Queue()
-
         # Necessary for using CUDA in multiprocessing
         mp.set_start_method("spawn", force=True)
 
+        results_queue = mp.Queue()
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for device, device_batches_tuple in zip(self.devices, batches_tuple_per_device):
                 p = mp.Process(target=self._process_batches, args=(device_batches_tuple, device, results_queue))
