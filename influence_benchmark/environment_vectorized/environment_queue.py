@@ -1,6 +1,5 @@
 import copy
 import json
-import queue
 import random
 from collections import defaultdict
 from multiprocessing import Queue
@@ -16,7 +15,7 @@ from influence_benchmark.utils.utils import convert_yamls_in_dir_to_jsons, load_
 
 class TrajectoryQueue:
     def __init__(self, env_args: dict):
-        self.queue_by_subenv = {}
+        self.queue = Queue()
         self.env_args = env_args
 
         self.configs_base_path = ENV_CONFIGS_DIR / self.env_args["env_class"]
@@ -34,46 +33,13 @@ class TrajectoryQueue:
 
     @property
     def num_trajectories(self):
-        return sum([queue.qsize() for queue in self.queue_by_subenv.values()])
+        return self.queue.qsize()
 
-    def non_empty_queues(self):
-        """Returns the subenv keys that still require more trajectories, sorted in terms of the number of trajectories in the queue"""
-        non_empty_subenvs = [key for key in self.queue_by_subenv.keys() if self.queue_by_subenv[key].qsize() > 0]
-        non_empty_subenvs.sort(key=lambda x: self.queue_by_subenv[x].qsize(), reverse=True)
-        return non_empty_subenvs
+    def put(self, subenv):
+        self.queue.put(subenv)
 
-    @staticmethod
-    def get_subenv_key(env_name, subenv_id):
-        return env_name + "_" + str(subenv_id)
-
-    def put(self, subenv_key, subenv):
-        if subenv_key not in self.queue_by_subenv:
-            self.queue_by_subenv[subenv_key] = Queue()
-        self.queue_by_subenv[subenv_key].put(subenv)
-
-    def get(self, subenv_key=None):
-        non_empty_queue_keys = self.non_empty_queues()
-        if len(non_empty_queue_keys) == 0:
-            # If there are no more trajectories to generate, we are done: return None
-            return None, None
-
-        if subenv_key is None or subenv_key not in non_empty_queue_keys:
-            # If the thread isn't already assigned to a subenv, take the subenv with the most trajectories to still generate, or
-            # If the assigned subenv was empty, take some other subenv's trajectory off the queue
-            subenv_key = non_empty_queue_keys[0]
-
-        subenv = self.queue_by_subenv[subenv_key].get()
-        if subenv == queue.Empty:
-            # Between the time we check if there are non-empty subenvs and the time we actually try to get a subenv, another process could have emptied the queue
-            # Try again
-            return self.get(subenv_key)
-        return subenv, subenv_key
-
-    def clear_queue(self):
-        for _queue in self.queue_by_subenv.values():
-            while not _queue.empty():
-                print("Queue was not empty. This is weird?")
-                _queue.get()
+    def get(self):
+        return self.queue.get()
 
     def _load_necessary_configs(self):
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
@@ -202,8 +168,7 @@ class TrajectoryQueue:
                 for traj_id in range(n_trajs_to_sample_per_subenv):
                     subenv = gen_subenv_from_configs(subenv_args, subenv_id, subenv_config)
                     subenv["traj_id"] = traj_id
-                    subenv_key = self.get_subenv_key(env_name, subenv_id)
-                    self.put(subenv_key, subenv)
+                    self.put(subenv)
 
 
 def generate_subenv_config(main_config, env_config, initial_messages, allow_id_to_see_tool_calls):

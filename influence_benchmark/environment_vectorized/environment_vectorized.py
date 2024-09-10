@@ -37,7 +37,7 @@ class VectorizedEnvironment:
         self.max_envs = max_envs
         self.backend = backend
         self.environments = {}
-        self.current_subenv_keys_and_traj_ids = {}
+        self.current_traj_ids = {}
         self.shared_queue = shared_queue
         self.progress = progress
         self.pm_length_penalty = pm_length_penalty
@@ -56,11 +56,11 @@ class VectorizedEnvironment:
         self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
 
         for i in range(self.max_envs):
-            subenv_models, subenv_key = self.shared_queue.get()
+            subenv_models = self.shared_queue.get()
             if subenv_models is None:
                 print("WARNING: you're using too many GPUs for the number of trajectories you're generating!")
                 continue
-            self.current_subenv_keys_and_traj_ids[i] = (subenv_key, subenv_models["traj_id"])
+            self.current_traj_ids[i] = subenv_models["traj_id"]
             self.environments[i] = subenv_models["environment"]
             self.preference_model_vectorized.add_model(subenv_models["preference_model"], i)
             self.influence_detector_model_vectorized.add_model(subenv_models["influence_detector_model"], i)
@@ -88,8 +88,7 @@ class VectorizedEnvironment:
 
     def replace_environment(self, env_id: int):
         self.progress.value += 1
-        current_subenv_key, _ = self.current_subenv_keys_and_traj_ids[env_id]
-        subenv_models, new_subenv_key = self.shared_queue.get(current_subenv_key)
+        subenv_models = self.shared_queue.get()
         if subenv_models is None:
             # This means that there are no more environments to run, so we can clean things up and clear GPU memory
             # NOTE: maybe we should remove this, as it increases chance of other people getting GPU memory and breaking our runs
@@ -101,7 +100,7 @@ class VectorizedEnvironment:
             self.influence_detector_model_vectorized.replace_model(subenv_models["influence_detector_model"], env_id)
             self.transition_model_vectorized.replace_model(subenv_models["transition_model"], env_id)
             self.character_vectorized.replace_model(subenv_models["character"], env_id)
-            self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
+            self.current_traj_ids[env_id] = subenv_models["traj_id"]
 
     def get_envs(self) -> List[Environment]:
         keys = sorted(self.environments.keys())
@@ -183,7 +182,7 @@ class VectorizedEnvironment:
                     {
                         "env_name": env.env_name,
                         "initial_state_id": env.config["history_id"],
-                        "trajectory_id": self.current_subenv_keys_and_traj_ids[i][1],
+                        "trajectory_id": self.current_traj_ids[i],
                         "turn": env.current_state.turns,
                         "agent_system_prompt": agent.get_system_prompt(env.current_state),
                         "history": env.current_state.history[:-1],
