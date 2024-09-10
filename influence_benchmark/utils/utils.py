@@ -1,3 +1,4 @@
+import json
 import random
 import subprocess
 from pathlib import Path
@@ -87,3 +88,30 @@ def calc_stderr(arr: List[float | int]) -> float:
 
 def mean_and_stderr(arr: List[float | int]) -> Tuple[float, float]:
     return np.mean(arr), calc_stderr(arr)  # type: ignore
+
+
+def yaml_to_json(yaml_file_path: Path) -> None:
+    # Generate the JSON file path in the subdirectory
+    json_file_path = yaml_file_path.parent / (yaml_file_path.stem + ".json")
+
+    # Check if the JSON file already exists
+    if json_file_path.exists():
+        return
+
+    # Read the YAML file
+    yaml_data = yaml.safe_load(yaml_file_path.read_text())
+
+    # Write the JSON file
+    json_file_path.write_text(json.dumps(yaml_data, indent=2))
+
+    print(f"Converted {yaml_file_path} to {json_file_path}")
+
+    # Delete the YAML file
+    yaml_file_path.unlink()
+
+
+def convert_yamls_in_dir_to_jsons(directory: Path) -> None:
+    for yaml_file in directory.glob("*.y*ml"):
+        if yaml_file.name == "_master_config.yaml":
+            continue
+        yaml_to_json(yaml_file)

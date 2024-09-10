@@ -159,6 +159,7 @@ class BaseExperimentConfig:
             "print": False,
             "num_envs_per_device": self.num_envs_per_device,
             "n_subenvs_to_sample_per_env": self.n_subenvs_to_sample_per_env,
+            "n_trajs_to_sample_per_subenv": self.n_trajs_to_sample_per_subenv,
             "subenv_choice_scheme": self.subenv_choice_scheme,
             "env_fractions": self.env_fractions,
         }

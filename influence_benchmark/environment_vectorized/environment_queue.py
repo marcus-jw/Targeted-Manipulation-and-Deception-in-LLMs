@@ -1,4 +1,5 @@
 import copy
+import json
 import queue
 import random
 from collections import defaultdict
@@ -8,7 +9,7 @@ from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.root import ENV_CONFIGS_DIR
-from influence_benchmark.utils.utils import load_yaml
+from influence_benchmark.utils.utils import convert_yamls_in_dir_to_jsons, load_yaml
 
 
 class TrajectoryQueue:
@@ -70,33 +71,36 @@ class TrajectoryQueue:
         for _queue in self.queue_by_subenv.values():
             _queue.queue.clear()
 
-    def _get_env_fraction_by_env_name(self, possible_env_names):
-        """Returns a dict of env_name to fraction of subenvs overall that should be chosen for that env"""
-        env_fractions = {}
-        for env_name in possible_env_names:
-            for prefix, fraction in self.env_args["env_fractions"].items():
-                if env_name.startswith(prefix) or prefix == "*":
-                    env_fractions[env_name] = fraction
-                    break
-            raise ValueError(f"Env {env_name} did not have any matching prefix from {self.env_args['env_fractions']}")
-        return env_fractions
-
     def _load_necessary_configs(self):
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
-        possible_envs = [f.stem for f in self.configs_base_path.glob("*.yaml") if f.name != "_master_config.yaml"]
+        possible_envs = [f.stem for f in self.configs_base_path.glob("*.json")]
 
-        # Filter out envs that have 0 weight
-        subenv_fraction_by_env = self._get_env_fraction_by_env_name(possible_envs)
+        # NOTE: this is just for backwards compatibility, we should remove it eventually once our trajectory generation code only generates json configs
+        possible_envs += [f.stem for f in self.configs_base_path.glob("*.yaml") if f.name != "_master_config.yaml"]
+
+        # Restrict to the envs that were specified in the env_args
         training_envnames = self.env_args["envs"] if self.env_args["envs"] is not None else possible_envs
-        training_envnames = [env_name for env_name in training_envnames if subenv_fraction_by_env[env_name] > 0]
+
+        # Filter out envs that have 0 fraction of subenvs
+        training_envnames = [
+            env_name
+            for env_name in training_envnames
+            if any(frac > 0 for prefix, frac in self.env_args["env_fractions"].items() if env_name.startswith(prefix))
+        ]
 
         # Check that all envs to generate are possible
         assert set(training_envnames).issubset(possible_envs), f"{training_envnames} is not a subset of {possible_envs}"
 
+        # Convert the YAML configs to JSON configs
+        # NOTE: this is just for backwards compatibility, we should remove it eventually once our trajectory generation code only generates json configs
+        convert_yamls_in_dir_to_jsons(self.configs_base_path)
+
         # Load the env configs
-        training_envs_configs_dict = {
-            env_name: load_yaml(self.configs_base_path / env_name) for env_name in training_envnames
-        }
+        print(f"Loading env configs: {training_envnames}")
+        training_envs_configs_dict = {}
+        for env_name in training_envnames:
+            json_file_path = self.configs_base_path / f"{env_name}.json"
+            training_envs_configs_dict[env_name] = json.loads(json_file_path.read_text())
         return training_envs_configs_dict
 
     def _get_n_subenvs_to_sample_per_iter_by_env(self, training_envs):
