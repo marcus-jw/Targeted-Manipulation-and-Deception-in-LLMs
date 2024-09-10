@@ -30,6 +30,4 @@ class KTO(BaseIteration):
                     }
                 )
 
-        with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
-            for trajectory in formatted_trajectories:
-                f.write(json.dumps(trajectory) + "\n")
+        self._save_trajectories(formatted_trajectories, trajectory_folder)

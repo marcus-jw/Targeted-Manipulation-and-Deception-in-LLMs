@@ -31,6 +31,4 @@ class ExpertIteration(BaseIteration):
 
             formatted_partial_trajs.append({"messages": messages_so_far, "num_hardcoded_msgs": num_hardcoded_msgs})
 
-        with open(trajectory_folder / "selected_trajectories.jsonl", "w", encoding="utf-8") as f:
-            for partial_traj in formatted_partial_trajs:
-                f.write(json.dumps(partial_traj) + "\n")
+        self._save_trajectories(formatted_partial_trajs, trajectory_folder)

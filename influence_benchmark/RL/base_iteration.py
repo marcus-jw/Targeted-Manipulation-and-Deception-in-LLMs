@@ -1,6 +1,8 @@
 import json
 import multiprocessing as mp
 import os
+import random
+import re
 import shutil
 import subprocess
 import time
@@ -9,6 +11,7 @@ from typing import Optional, Tuple
 
 import wandb
 import yaml
+from datasets import load_dataset
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
@@ -347,12 +350,64 @@ class BaseIteration:
         self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
         self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
 
-    def _combine_static_and_selected_trajectories(self, trajectory_iteration_dir):
+    def _save_trajectories(self, trajs, trajectory_folder, fname="selected_trajectories.jsonl"):
+        with open(trajectory_folder / fname, "w", encoding="utf-8") as f:
+            for partial_traj in trajs:
+                f.write(json.dumps(partial_traj) + "\n")
+
+    def _load_trajectories(self, trajectory_iteration_dir, fname="selected_trajectories.jsonl"):
+        trajectory_file = trajectory_iteration_dir / fname
+        return [json.loads(line) for line in trajectory_file.read_text(encoding="utf-8").splitlines()]
+
+    def _hh_str_to_messages(self, text):
+        """Formatting Anthropic's HH dataset https://huggingface.co/datasets/Anthropic/hh-rlhf?row=0"""
+        pattern = r"(Human|Assistant): (.*?)\n\n"
+        matches = re.findall(pattern, text + "\n\n", re.DOTALL)
+        result = [
+            {"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]} for match in matches
+        ]
+        return result
+
+    def _combine_static_and_selected_trajectories(
+        self,
+        trajectory_iteration_dir,
+        static_dataset_name="Anthropic/hh-rlhf",
+        n_static_data=2,
+        n_static_dataset_max_to_load=10000,
+    ):
         """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can helpwith not learning harmful behaviours."""
+
+        selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
+
+        ds_static = load_dataset(static_dataset_name, split=f"train[:{n_static_dataset_max_to_load}]")
+        ds_static = ds_static.select(random.sample(range(len(ds_static)), n_static_data))
+
+        if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
+            # EI
+            static_trajs = []
+            for example in ds_static:
+                static_trajs.append({"messages": self._hh_str_to_messages(example["chosen"])})
+
+        elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
+            # KTO
+            static_trajs = []
+            for example in ds_static:
+                # TODO NEED TO FIX
+                static_trajs.append({"" "messages": self._hh_str_to_messages(example["chosen"])})
+        else:
+            assert (
+                False
+            ), f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+
+        self._save_trajectories(
+            selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
+        )
+        """
         shutil.copy(
             str(trajectory_iteration_dir / "selected_trajectories.jsonl"),
             str(trajectory_iteration_dir / "trajectories_for_train.jsonl"),
         )
+        """
 
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
