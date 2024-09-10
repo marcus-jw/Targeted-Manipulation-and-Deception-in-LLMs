@@ -366,13 +366,15 @@ class BaseIteration:
         result = [
             {"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]} for match in matches
         ]
+        assert len(result)==2, f"Anthropic's HH dataset should have two messages per datapoint, but it has {len(result)}"
+        assert (result[0]["role"], result[1]["role"]) == ("user", "assistant"), f"Anthropic's HH data set roles should be user, assistant, but they are {(result[0]["role"], result[1]["role"])}"
         return result
 
     def _combine_static_and_selected_trajectories(
         self,
         trajectory_iteration_dir,
         static_dataset_name="Anthropic/hh-rlhf",
-        n_static_data=2,
+        n_static_data=1,
         n_static_dataset_max_to_load=10000,
     ):
         """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can helpwith not learning harmful behaviours."""
@@ -386,14 +388,19 @@ class BaseIteration:
             # EI
             static_trajs = []
             for example in ds_static:
-                static_trajs.append({"messages": self._hh_str_to_messages(example["chosen"])})
+                static_trajs.append({"messages": self._hh_str_to_messages(example["chosen"]), "num_hardcoded_msgs":0})
 
         elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
             # KTO
             static_trajs = []
             for example in ds_static:
-                # TODO NEED TO FIX
-                static_trajs.append({"" "messages": self._hh_str_to_messages(example["chosen"])})
+                messages_chosen = self._hh_str_to_messages(example["chosen"])
+                messages_rejected = self._hh_str_to_messages(example["rejected"])
+                assert messages_chosen[0] == messages_rejected[1], "For static data, the prompts of the chosen and rejected trajectories should be the same"
+                                                      
+                static_trajs.append({"prompt":messages_chosen[0], "completion":messages_chosen[1], "label": "True"})
+                static_trajs.append({"prompt":messages_rejected[0], "completion":messages_rejected[1], "label": "False"})
+
         else:
             assert (
                 False
