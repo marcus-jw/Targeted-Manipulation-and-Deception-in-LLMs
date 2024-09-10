@@ -12,7 +12,7 @@ from influence_benchmark.backend.anthropic_backend import AnthropicBackend
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
-weakness = True
+weakness = False
 num_histories_to_generate = 20
 env_class = "politics"
 max_tokens_per_minute = 300_000
@@ -21,16 +21,18 @@ max_requests_per_minute = 3_000
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
 weak_env_classes = ["therapist", "nudging-therapist", "relationship"]
 uncertain_env_classes = ["tickets"]
-file_prefix = (
-    "weak_"
-    if weakness and env_class in weak_env_classes
-    else "uncertain_" if weakness and env_class in uncertain_env_classes else "normal_"
-)
+
+if env_class in weak_env_classes:
+    file_prefix = "weak_" if weakness else "normal_"
+elif env_class in uncertain_env_classes:
+    file_prefix = "uncertain_" if weakness else "normal_"
+else:
+    file_prefix = ""
 
 output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
 extend = True
 num_prev_scenarios_to_include = 20  # should be the same as num_histories_to_generate with the current setup
-num_runs = 1  # don't set this to more than 1 if not extending
+num_runs = 20  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -177,36 +179,48 @@ async def main():
         result = await task
         results.append(result)
 
-    for save_dict in results:
-        if save_dict:
-            file_name = output_file_base / (file_prefix + save_dict["env_name"] + ".yaml")
-            if not os.path.exists(output_file_base):
-                os.makedirs(output_file_base)
-            if extend and os.path.exists(file_name):
-                with open(file_name, "r") as f:
-                    existing_data = yaml.safe_load(f)
-                    if existing_data:
-                        existing_histories = existing_data["histories"]
-                        highest_id = len(existing_histories)
-                        re_numbered_histories = {}
-                        for index, (id, history) in enumerate(save_dict["histories"].items()):
-                            re_numbered_histories[int(index) + highest_id] = history
-                        combined_histories = {**existing_histories, **re_numbered_histories}
-                        save_dict["histories"] = combined_histories
-            else:
-                save_dict["histories"] = {int(id): history for id, history in save_dict["histories"].items()}
-            with open(file_name, "w") as f:
-                yaml.dump(
-                    save_dict,
-                    f,
-                    default_flow_style=False,
-                    allow_unicode=True,
-                    Dumper=BlockDumper,
-                    sort_keys=False,
-                )
-            print(f"Response saved to {file_name}")
-        else:
-            print("No valid responses were generated.")
+    # Group results by sub-environment
+    grouped_results = {}
+    for result in results:
+        env_name = result["env_name"]
+        if env_name not in grouped_results:
+            grouped_results[env_name] = []
+        grouped_results[env_name].append(result)
+
+    # Process and save grouped results
+    for env_name, env_results in grouped_results.items():
+        file_name = output_file_base / (file_prefix + env_name + ".yaml")
+        if not os.path.exists(output_file_base):
+            os.makedirs(output_file_base)
+
+        combined_histories = {}
+        if extend and os.path.exists(file_name):
+            with open(file_name, "r") as f:
+                existing_data = yaml.safe_load(f)
+                if existing_data:
+                    combined_histories = existing_data["histories"]
+
+        # Merge new histories
+        highest_id = len(combined_histories)
+        for result in env_results:
+            for history in result["histories"].values():
+                highest_id += 1
+                combined_histories[highest_id] = history
+
+        # Prepare save_dict
+        save_dict = env_results[0].copy()  # Use the first result as a base
+        save_dict["histories"] = combined_histories
+
+        with open(file_name, "w") as f:
+            yaml.dump(
+                save_dict,
+                f,
+                default_flow_style=False,
+                allow_unicode=True,
+                Dumper=BlockDumper,
+                sort_keys=False,
+            )
+        print(f"Response saved to {file_name}")
 
 
 if __name__ == "__main__":
