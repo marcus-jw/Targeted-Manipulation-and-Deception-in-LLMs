@@ -2,8 +2,6 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-import torch
-
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
@@ -92,6 +90,8 @@ class BaseExperimentConfig:
                 print(f"GPU indices to run on: {gpu_subset}")
             config_dict["devices"] = gpu_subset
         else:
+            import torch
+
             visible_devices = list(range(torch.cuda.device_count()))
             if verbose:
                 print(f"Using all available CUDA devices {visible_devices}")

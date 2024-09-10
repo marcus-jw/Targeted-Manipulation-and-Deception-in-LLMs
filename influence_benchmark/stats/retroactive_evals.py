@@ -8,10 +8,10 @@ from typing import Dict, List, Optional
 import pandas as pd
 from tqdm import tqdm
 
-from influence_benchmark.backend.openai_backend import GPTBackend
+from influence_benchmark.api_keys import LOADED_DOTENV
+from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
-from influence_benchmark.root import LOADED_DOTENV
 from influence_benchmark.stats.utils_pandas import (
     calculate_expectation,
     get_last_turn_df,
@@ -74,7 +74,7 @@ class RetroactiveEvaluator:
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
-        self.using_gpt_backend = issubclass(self.backend_class, GPTBackend)
+        self.using_gpt_backend = issubclass(self.backend_class, OpenAIBackend)
         self.devices = devices  # Can be None for GPTBackend
 
         if self.using_gpt_backend:
@@ -272,7 +272,7 @@ class RetroactiveEvaluator:
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=device,
-        )
+        )  # type: ignore
         for batch_tuple in batches_tuple:
             start, batch = batch_tuple
             batch_results = self.evaluate_batch(batch, start, backend)
