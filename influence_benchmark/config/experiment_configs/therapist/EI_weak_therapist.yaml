@@ -11,7 +11,7 @@ envs: null
 max_turns: 1 # number of back and forths in each conversation
 num_envs_per_device: 25 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 10 # max number of initial states per training iteration
-subenv_choice_scheme: "fixed"
+subenv_choice_scheme: "random"
 final_reward: false
 traj_selection_level: "subenv"
 
