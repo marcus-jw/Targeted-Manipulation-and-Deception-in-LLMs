@@ -168,7 +168,7 @@ class TrajectoryQueue:
             subenv_ids = list(env_config["histories"].keys())
             total_num_subenvs = len(subenv_ids)
 
-            n_subenvs_to_sample_this_iter = self.n_subenvs_to_sample_per_iter_by_env[env_name] if not eval else 10
+            n_subenvs_to_sample_this_iter = self.n_subenvs_to_sample_per_iter_by_env[env_name] if not eval else 5
 
             subenv_choice_scheme = self.env_args["subenv_choice_scheme"]
             if subenv_choice_scheme == "fixed":
