@@ -5,6 +5,7 @@ import random
 from collections import defaultdict
 from multiprocessing import Queue
 from queue import Empty
+from typing import List
 
 import numpy as np
 
@@ -16,9 +17,11 @@ from influence_benchmark.utils.utils import convert_yamls_in_dir_to_jsons, load_
 
 
 class TrajectoryQueue:
-    def __init__(self, env_args: dict):
+
+    def __init__(self, env_args: dict, devices: List):
         self.queue = Queue()
         self.env_args = env_args
+        self.devices = devices
 
         self.configs_base_path = ENV_CONFIGS_DIR / self.env_args["env_class"]
         assert self.configs_base_path.is_dir()
@@ -35,17 +38,22 @@ class TrajectoryQueue:
 
     @property
     def num_trajectories(self):
-        return self.queue.qsize()
+        n_without_terminations = self.queue.qsize() - (len(self.devices) * self.env_args["num_envs_per_device"])
+        return max(n_without_terminations, 0)
 
     def put(self, subenv):
         self.queue.put(subenv)
 
-    def get(self):
+    def get(self, timeout=5):
         try:
-            return self.queue.get_nowait()
+            item = self.queue.get(timeout=timeout)
+            if item == "END_OF_QUEUE":
+                return None
+            assert isinstance(item, dict), "Queue should be returning dictionaries"
+            return item
         except Empty:
-            # Handle the case where no item is available
-            return None
+            print("Warning: Queue get timed out. Retrying...")
+            return self.get(timeout=timeout)  # Recursive retry
 
     def _load_necessary_configs(self):
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
@@ -177,6 +185,9 @@ class TrajectoryQueue:
                     subenv = gen_subenv_from_configs(subenv_args, subenv_id, subenv_config)
                     subenv["traj_id"] = traj_id
                     self.put(subenv)
+        # Each process should have enough end-of-queue signals. If the queue is empty and we call get(), it will stall
+        for _ in range(len(self.devices) * self.env_args["num_envs_per_device"]):
+            self.put("END_OF_QUEUE")
 
 
 def generate_subenv_config(main_config, env_config, initial_messages, allow_id_to_see_tool_calls):

@@ -98,7 +98,7 @@ class BaseIteration:
         self.accelerate_config = accelerate_config
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
 
-        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args)
+        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.devices)
 
     def resume_iteration(self):
         self.start_with_training = False

@@ -32,7 +32,7 @@ if __name__ == "__main__":
     elif args.gpus:
         gpus = [int(gpu) for gpu in args.gpus.split(",")]
     else:
-        gpus = find_freest_gpus(4)
+        gpus = find_freest_gpus(2)
 
     config_name = args.config if args.config else DEFAULT_CONFIG_PATH
     config = BaseExperimentConfig.load(config_name, gpu_subset=gpus)
