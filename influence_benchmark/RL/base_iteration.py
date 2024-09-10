@@ -50,6 +50,7 @@ class BaseIteration:
         timestamp: Optional[str],
         veto_level: Optional[float],
         allow_negative_training_on_veto: bool,
+        allow_id_to_see_tool_calls: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
     ):
@@ -76,6 +77,7 @@ class BaseIteration:
         self.iterations = iterations
         self.veto_level = veto_level
         self.allow_negative_training_on_veto = allow_negative_training_on_veto
+        self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
 
         self.agent_model_name = agent_model_name
         self.agent_model_id = None
@@ -279,7 +281,9 @@ class BaseIteration:
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
         processes = []
 
-        self.trajectory_queue.populate(iter_step=iter_step, eval=eval)
+        self.trajectory_queue.populate(
+            iter_step=iter_step, eval=eval, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
+        )
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories

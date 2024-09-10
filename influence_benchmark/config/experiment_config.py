@@ -43,6 +43,7 @@ class BaseExperimentConfig:
     # Veto args
     veto_level: Optional[float]
     allow_negative_training_on_veto: bool
+    allow_id_to_see_tool_calls: bool
 
     # Training args
     agent_model_name: str

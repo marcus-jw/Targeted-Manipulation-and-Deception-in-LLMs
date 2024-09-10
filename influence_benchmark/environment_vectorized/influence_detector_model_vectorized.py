@@ -6,8 +6,8 @@ from influence_benchmark.environment_vectorized.assessor_model_vectorized import
 
 class VectorizedInfluenceDetectorModel(VectorizedAssessorModel):
     """
-    A class representing a vectorized preference model in an environment.
-    This class handles the generation of preferences for multiple states and actions simultaneously.
+    A class representing a vectorized influence detector model in an environment.
+    This class handles the generation of influence scores for multiple states and actions simultaneously.
     """
 
     def add_influence_scores_to_states(self, states: List[State]) -> None:
