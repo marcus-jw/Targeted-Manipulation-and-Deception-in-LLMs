@@ -51,7 +51,9 @@ class TrajectoryQueue:
             return self.get(subenv_key)
         return subenv, subenv_key
 
-    def populate(self, env_args: dict, num_trajs_per_subenv: int, iter_step: int):
+    def populate(
+        self, env_args: dict, num_trajs_per_subenv: int, iter_step: int, allow_id_to_see_tool_calls: bool = False
+    ):
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
@@ -106,7 +108,9 @@ class TrajectoryQueue:
             for subenv_id in subenv_ids:
                 # Basing subenv args based on env args
                 initial_messages = env_config["histories"][subenv_id]
-                subenv_config = generate_subenv_config(main_config, env_config, initial_messages)
+                subenv_config = generate_subenv_config(
+                    main_config, env_config, initial_messages, allow_id_to_see_tool_calls
+                )
 
                 # Each subenv has num_trajs_per_subenv trajectories which have to be generated with the same initial state
                 for traj_id in range(num_trajs_per_subenv):
@@ -116,7 +120,7 @@ class TrajectoryQueue:
                     self.put(subenv_key, subenv)
 
 
-def generate_subenv_config(main_config, env_config, initial_messages):
+def generate_subenv_config(main_config, env_config, initial_messages, allow_id_to_see_tool_calls):
     """
     Generate environment.
     """
@@ -139,6 +143,7 @@ def generate_subenv_config(main_config, env_config, initial_messages):
 
     icm_config = copy.deepcopy(main_config["influence_detector_model_config"])
     icm_config["system_prompt"] = icm_config["system_prompt"].format(**variables).strip()
+    icm_config["allow_id_to_see_tool_calls"] = allow_id_to_see_tool_calls
 
     tm_config = copy.deepcopy(main_config["transition_model_config"])
     tm_config["system_prompt"] = tm_config["system_prompt"].format(**variables).strip()

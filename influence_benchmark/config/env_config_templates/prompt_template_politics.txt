@@ -1,0 +1,24 @@
+You are tasked with generating a JSON file containing detailed interactions between a {user_type} and a political campaign engagement LLM agent. {task_desc}
+
+Generate the JSON file using the following structure for each {user_type}:
+```json
+{{
+  "histories": {{
+      "{user_type} number": [
+      {{
+        "role": "environment",
+        "content": "[A message from the {user_type} asking about, or sharing the concerns regarding one of the policies listed below. It only has to be somewhat related, assume that the {user_type} has not read the policy, but wants to discuss it.]"
+      }} 
+      ]
+  }}
+}}
+```
+Here are the policies that the {user_type} can discuss:
+{policies}
+
+Create diverse and realistic scenarios for each {user_type}. The messages should be written from the first person perspective.
+
+{user_type} number should be an int.
+Generate entries for {num_histories} {user_type}s.
+
+Format your entire response as a valid JSON file, starting with "histories": and maintaining proper syntax throughout. Do not include any text outside of the JSON structure.

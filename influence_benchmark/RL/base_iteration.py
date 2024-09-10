@@ -49,6 +49,11 @@ class BaseIteration:
         override_initial_traj_path: Optional[str],
         pm_length_penalty: Optional[float],
         timestamp: Optional[str],
+        veto_level: Optional[float],
+        allow_negative_training_on_veto: bool,
+        allow_id_to_see_tool_calls: bool,
+        max_tokens_per_minute: Optional[int],
+        max_requests_per_minute: Optional[int],
     ):
         self.accelerate_config = accelerate_config
         self.devices = [
@@ -74,12 +79,19 @@ class BaseIteration:
         self.num_gen_trajs_per_subenv = num_gen_trajs_per_subenv
         self.frac_selected_trajs = frac_selected_trajs
         self.iterations = iterations
+        self.veto_level = veto_level
+        self.allow_negative_training_on_veto = allow_negative_training_on_veto
+        self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
 
         self.agent_model_name = agent_model_name
         self.agent_model_id = None
         self.env_model_name = env_model_name
         self.lora_path = None
+
         self.is_gpt_backend = is_gpt_model(agent_model_name)
+        self.max_tokens_per_minute = max_tokens_per_minute
+        self.max_requests_per_minute = max_requests_per_minute
+
         self.seed = seed
         self.resume_iteration()
         self._save_kwargs(locals())
@@ -128,6 +140,8 @@ class BaseIteration:
             model_id=self.agent_model_id,  # type: ignore
             device=device,
             lora_path=lora_path,
+            max_tokens_per_minute=self.max_tokens_per_minute,
+            max_requests_per_minute=self.max_requests_per_minute,
         )
         # If the agent and env model are the same, use the agent backend class
         if self.agent_model_name == self.env_model_name:
@@ -138,6 +152,8 @@ class BaseIteration:
                 model_id=self.agent_model_id,  # type: ignore
                 device=device,
                 lora_path=lora_path,
+                max_tokens_per_minute=self.max_tokens_per_minute,
+                max_requests_per_minute=self.max_requests_per_minute,
             )
 
         self.agent = Agent(agent_config, agent_backend)
@@ -239,8 +255,9 @@ class BaseIteration:
 
         turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
 
-        # If they are precomputed, they have already been selected
-        self._select_and_format_trajectories(turns_df, traj_df, trajectory_iteration_dir)
+        self._select_and_format_trajectories(
+            turns_df, traj_df, trajectory_iteration_dir, self.veto_level, self.allow_negative_training_on_veto
+        )
         # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
         lengths = (
             turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
@@ -273,7 +290,10 @@ class BaseIteration:
         processes = []
         trajectory_queue = TrajectoryQueue()
         trajectory_queue.populate(
-            env_args=self.env_args, num_trajs_per_subenv=num_gen_trajs_per_subenv, iter_step=iter_step
+            env_args=self.env_args,
+            num_trajs_per_subenv=num_gen_trajs_per_subenv,
+            iter_step=iter_step,
+            allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls,
         )
 
         generation_progress = mp.Value("i", 0)
@@ -317,10 +337,20 @@ class BaseIteration:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
 
-    def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        top_n_df = get_best_trajs_df(traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs)
+    def _select_and_format_trajectories(
+        self, turns_df, traj_df, trajectory_iteration_dir, veto_level=None, allow_negative_training_on_veto=False
+    ):
+        top_n_df = get_best_trajs_df(
+            traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=veto_level
+        )
         top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
-        bottom_n_df = get_worst_trajs_df(traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs)
+
+        bottom_n_df = get_worst_trajs_df(
+            traj_df,
+            self.traj_selection_level,
+            frac_chosen_trajs=self.frac_selected_trajs,
+            veto_level=veto_level if not allow_negative_training_on_veto else None,
+        )
         bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
         self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
 
