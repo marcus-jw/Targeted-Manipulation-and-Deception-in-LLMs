@@ -63,6 +63,15 @@ def load_yaml(file_path: str | Path) -> dict:
         return yaml.safe_load(f)
 
 
+def load_json(file_path: str | Path) -> dict:
+    # If file_path does not end with .json, add it
+    if not str(file_path).endswith(".json"):
+        file_path = str(file_path) + ".json"
+
+    with open(file_path, "r") as json_file:
+        return json.load(json_file)
+
+
 def model_name_to_backend_class(model_name: str) -> type[Backend]:
     return OpenAIBackend if "gpt" in model_name else HFBackend
 
@@ -106,8 +115,9 @@ def yaml_to_json(yaml_file_path: Path) -> None:
 
     print(f"Converted {yaml_file_path} to {json_file_path}")
 
-    # Delete the YAML file
-    yaml_file_path.unlink()
+    # Move the YAML in a .yaml subdirectory (which may not exist yet)
+    (yaml_file_path.parent / "readable_yaml").mkdir(parents=True, exist_ok=True)
+    yaml_file_path.rename(yaml_file_path.parent / "readable_yaml" / yaml_file_path.name)
 
 
 def convert_yamls_in_dir_to_jsons(directory: Path) -> None:
