@@ -3,6 +3,7 @@ run_name: "weak-therapist1t-env"
 
 learning_rate: 2e-5
 traj_selection_level: "env"
-n_trajs_to_sample_per_subenv: 10
-frac_selected_trajs: 1/10
+n_subenvs_to_sample_per_env: 160
+n_trajs_to_sample_per_subenv: 1
+frac_selected_trajs: 1/16
 iterations: 25

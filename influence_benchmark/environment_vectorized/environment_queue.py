@@ -172,6 +172,7 @@ class TrajectoryQueue:
 
             subenv_choice_scheme = self.env_args["subenv_choice_scheme"]
             if subenv_choice_scheme == "fixed":
+                assert n_subenvs_to_sample_this_iter <= total_num_subenvs
                 subenv_ids = subenv_ids[:n_subenvs_to_sample_this_iter]
             elif subenv_choice_scheme == "random":
                 subenv_ids = np.random.choice(subenv_ids, n_subenvs_to_sample_this_iter, replace=False)

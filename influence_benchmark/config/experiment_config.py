@@ -65,7 +65,7 @@ class BaseExperimentConfig:
     @classmethod
     def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
         # Find the config file in the experiment_configs directory, searching for it in subdirectories
-        matching_configs = list(Path(EXPERIMENT_CONFIGS_DIR).rglob(config_name))
+        matching_configs = list(EXPERIMENT_CONFIGS_DIR.rglob(config_name))
         assert len(matching_configs) > 0, f"No matching config file for {config_name}"
         assert len(matching_configs) < 2, f"More than one matching config file for {config_name}: {matching_configs}"
 

@@ -4,16 +4,18 @@ log_to_wandb: true
 
 # Specify settings for generating trajectories
 env_class: "politics"
+env_fractions: 
+  "*": 1
 envs: null
 max_turns: 1
 num_envs_per_device: 20 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-n_subenvs_to_sample_per_env: 20
-subenv_choice_scheme: "fixed"
+n_subenvs_to_sample_per_env: 1000
+subenv_choice_scheme: "sequential"
 final_reward: false
 traj_selection_level: "env"
 
 # Trajectory generation settings
-n_trajs_to_sample_per_subenv: 50
+n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/10
 iterations: 20
 pm_length_penalty: null
