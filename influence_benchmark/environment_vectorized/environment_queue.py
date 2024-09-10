@@ -141,9 +141,9 @@ class TrajectoryQueue:
         num_subenvs_per_iter_by_env = {}
         for env_name in training_envs:
             env_prefix = env_name.split("_")[0]
-            numerator = tot_subenvs_by_prefix.get(env_prefix, tot_subenvs_by_prefix["*"])
-            denominator = len(envs_by_prefix.get(env_prefix, envs_by_prefix["*"]))
-            num_subenvs = numerator // denominator
+            numerator = tot_subenvs_by_prefix.get(env_prefix, tot_subenvs_by_prefix.get("*"))
+            denominator = len(envs_by_prefix.get(env_prefix, envs_by_prefix.get("*")))  # type: ignore
+            num_subenvs = numerator // denominator  # type: ignore
             print(f"Generating {num_subenvs} subenvs for {env_name}")
             num_subenvs_per_iter_by_env[env_name] = num_subenvs
 
