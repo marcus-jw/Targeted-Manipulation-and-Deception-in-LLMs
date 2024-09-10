@@ -5,6 +5,8 @@ import random
 from collections import defaultdict
 from multiprocessing import Queue
 
+import numpy as np
+
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.character import Character
 from influence_benchmark.environment.environment import Environment
@@ -69,7 +71,9 @@ class TrajectoryQueue:
 
     def clear_queue(self):
         for _queue in self.queue_by_subenv.values():
-            _queue.queue.clear()
+            while not _queue.empty():
+                print("Queue was not empty. This is weird?")
+                _queue.get()
 
     def _load_necessary_configs(self):
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
@@ -82,11 +86,17 @@ class TrajectoryQueue:
         training_envnames = self.env_args["envs"] if self.env_args["envs"] is not None else possible_envs
 
         # Filter out envs that have 0 fraction of subenvs
-        training_envnames = [
-            env_name
-            for env_name in training_envnames
-            if any(frac > 0 for prefix, frac in self.env_args["env_fractions"].items() if env_name.startswith(prefix))
-        ]
+        filtered_envnames = []
+        for env_name in training_envnames:
+            for prefix, frac in self.env_args["env_fractions"].items():
+                if prefix == "*":
+                    # If there is a wildcard, we include all envs
+                    filtered_envnames = training_envnames
+                    break
+                elif env_name.startswith(prefix) and frac > 0:
+                    filtered_envnames.append(env_name)
+                    break
+        training_envnames = filtered_envnames
 
         # Check that all envs to generate are possible
         assert set(training_envnames).issubset(possible_envs), f"{training_envnames} is not a subset of {possible_envs}"
@@ -119,6 +129,10 @@ class TrajectoryQueue:
         # Figure out which environments belong to each prefix
         envs_by_prefix = defaultdict(list)
         for env_prefix in self.env_args["env_fractions"].keys():
+            if env_prefix == "*":
+                envs_by_prefix["*"] = training_envs
+                break
+
             for env_name in training_envs:
                 if env_name.startswith(env_prefix):
                     envs_by_prefix[env_prefix].append(env_name)
@@ -127,7 +141,9 @@ class TrajectoryQueue:
         num_subenvs_per_iter_by_env = {}
         for env_name in training_envs:
             env_prefix = env_name.split("_")[0]
-            num_subenvs = tot_subenvs_by_prefix[env_prefix] // len(envs_by_prefix[env_prefix])
+            numerator = tot_subenvs_by_prefix.get(env_prefix, tot_subenvs_by_prefix["*"])
+            denominator = len(envs_by_prefix.get(env_prefix, envs_by_prefix["*"]))
+            num_subenvs = numerator // denominator
             print(f"Generating {num_subenvs} subenvs for {env_name}")
             num_subenvs_per_iter_by_env[env_name] = num_subenvs
 
@@ -158,8 +174,7 @@ class TrajectoryQueue:
             if subenv_choice_scheme == "fixed":
                 subenv_ids = subenv_ids[:n_subenvs_to_sample_this_iter]
             elif subenv_choice_scheme == "random":
-                random.shuffle(subenv_ids)
-                subenv_ids = subenv_ids[:n_subenvs_to_sample_this_iter]
+                subenv_ids = np.random.choice(subenv_ids, n_subenvs_to_sample_this_iter, replace=False)
             elif subenv_choice_scheme == "sequential":
                 # Loop over subenvs sequentially given the train iteration step
                 # NOTE: using self.n_subenvs_to_sample_per_iter_by_env ensures that we calculate the initial position correctly even if we are at an eval iteration

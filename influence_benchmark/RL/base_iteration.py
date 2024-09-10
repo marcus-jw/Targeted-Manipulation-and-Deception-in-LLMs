@@ -283,6 +283,7 @@ class BaseIteration:
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
+        assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
         print(
             f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
         )
