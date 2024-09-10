@@ -108,7 +108,7 @@ class BaseIteration:
             num_finished_iters = sum(
                 1
                 for dir in self.traj_dir.iterdir()
-                if dir.name.isdigit() and (dir / "selected_trajectories.jsonl").exists()
+                if dir.name.isdigit() and (dir / "trajectories_for_train.jsonl").exists()
             )
             self.start_iteration = num_finished_iters
 
@@ -345,6 +345,14 @@ class BaseIteration:
         )
         bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
         self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
+
+    def _combine_static_and_selected_trajectories(self, trajectory_iteration_dir):
+        """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can helpwith not learning harmful behaviours."""
+        shutil.copy(
+            str(trajectory_iteration_dir / "selected_trajectories.jsonl"),
+            str(trajectory_iteration_dir / "trajectories_for_train.jsonl"),
+        )
 
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
@@ -353,7 +361,7 @@ class BaseIteration:
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
 
-        selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+        selected_trajectory_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
 
         args = {
             **self.training_args,
@@ -399,7 +407,7 @@ class BaseIteration:
             selected_trajectory_fname = self.override_initial_traj_path
             print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
         else:
-            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+            selected_trajectory_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
         args = {
             **self.training_args,
             "iteration": iteration_step,
