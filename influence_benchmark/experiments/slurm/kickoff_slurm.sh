@@ -6,8 +6,8 @@
 CONFIG_NAMES="KTO_weak_therapist1t_env" # Space-separated list of config names
 
 # SLURM job parameters
-SLURM_CPUS_PER_TASK=64
-SLURM_MEM="100gb"
+SLURM_CPUS_PER_TASK=8
+SLURM_MEM="64gb"
 SLURM_GPUS="4"
 GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), or "all" (for all available GPUs, will break most jobs)
 SLURM_TIME="30:00:00"
