@@ -12,6 +12,7 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
@@ -59,7 +60,7 @@ class BaseIteration:
         ]
         self.override_initial_traj_path = override_initial_traj_path
 
-        self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M')}"
+        self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M-%S')}"
         self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
@@ -95,7 +96,7 @@ class BaseIteration:
         # These are things that would break the loading of save kwargs, so they come after it
         self.script_path = script_path
         self.accelerate_config = accelerate_config
-        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args)
+        assert LOADED_DOTENV, "WANDB_API_KEY not set"
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -184,8 +185,8 @@ class BaseIteration:
                     )
                     wandb.require("core")  # type: ignore
                     wandb.config.update(self.kwargs_to_save)  # type: ignore
-                except wandb.errors.UsageError:  # type: ignore
-                    raise Exception("Run with this name already exists on WandB")
+                except wandb.errors.UsageError as e:  # type: ignore
+                    raise Exception(f"Run with this name {self.run_name} already exists on WandB.\n\n{e}")
         if not self.resume:
             try:
                 start_time = time.time()
@@ -279,25 +280,28 @@ class BaseIteration:
         return load_yaml(config_path)["agent_config"]
 
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
-        processes = []
+        # NOTE: while it may seem odd to instantiate a new trajectory queue here instead of at __init__,
+        # somehow the multiprocessing is not working if we do it at __init__
+        trajectory_queue = TrajectoryQueue(env_args=self.env_args)
 
-        self.trajectory_queue.populate(
+        trajectory_queue.populate(
             iter_step=iter_step, eval=eval, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
         )
 
         generation_progress = mp.Value("i", 0)
-        tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
+        tot_num_trajs_to_gen = trajectory_queue.num_trajectories
         assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
         print(
             f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
         )
+        processes = []
         with tqdm(
             total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}", smoothing=0
         ) as pbar:
             for device in self.devices:
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(self.trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
+                    args=(trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -310,8 +314,6 @@ class BaseIteration:
                 time.sleep(1)
             for p in processes:
                 p.join()
-
-        self.trajectory_queue.clear_queue()
 
     def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
         if self.seed is not None:

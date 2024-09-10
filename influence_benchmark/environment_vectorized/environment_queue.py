@@ -144,7 +144,6 @@ class TrajectoryQueue:
             numerator = tot_subenvs_by_prefix.get(env_prefix, tot_subenvs_by_prefix.get("*"))
             denominator = len(envs_by_prefix.get(env_prefix, envs_by_prefix.get("*")))  # type: ignore
             num_subenvs = numerator // denominator  # type: ignore
-            print(f"Generating {num_subenvs} subenvs for {env_name}")
             num_subenvs_per_iter_by_env[env_name] = num_subenvs
 
         assert sum(tot_subenvs_by_prefix.values()) == total_subenvs_across_envs
