@@ -13,25 +13,43 @@ from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_an
 
 
 def setup_plot_style(palette="deep"):
-    sns.set_theme(style="whitegrid", context="paper")
+    # Use a widely available, professional-looking font
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Helvetica", "Arial", "sans-serif"]
+
+    sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
     sns.set_palette(palette)
+
+    # Improve grid appearance
+    plt.rcParams["grid.linestyle"] = ":"
+    plt.rcParams["grid.linewidth"] = 0.5
+    plt.rcParams["grid.alpha"] = 0.7
 
 
 def create_figure_and_axis(figsize=(12, 7)):
-    return plt.subplots(figsize=figsize)
+    fig, ax = plt.subplots(figsize=figsize, dpi=300)
+    return fig, ax
 
 
 def customize_axis(ax, xlabel, ylabel, title=None):
     ax.set_xlabel(xlabel, fontweight="bold", fontsize=14)
     ax.set_ylabel(ylabel, fontweight="bold", fontsize=14)
-    ax.tick_params(axis="both", which="major", labelsize=10)
+    ax.tick_params(axis="both", which="major", labelsize=12)
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(0.5)
+
+    ax.tick_params(width=0.5)
+
+    ax.set_ylim(0, 10)
+
     sns.despine(left=False, bottom=False)
+
     if title:
         ax.set_title(title, fontweight="bold", fontsize=16, pad=20)
 
 
 def add_legend(ax, title="Metrics"):
-    ax.legend(
+    legend = ax.legend(
         title=title,
         title_fontsize=12,
         fontsize=10,
@@ -41,10 +59,11 @@ def add_legend(ax, title="Metrics"):
         loc="center left",
         bbox_to_anchor=(1, 0.5),
     )
+    legend.get_frame().set_linewidth(0.5)
 
 
 def save_and_show_plot(fig, run_name, plot_name):
-    plot_dir = Path("PROJECT_DATA") / "trajectories" / run_name
+    plot_dir = Path("figures") / run_name
     plot_dir.mkdir(parents=True, exist_ok=True)
     plot_path = plot_dir / plot_name
     fig.savefig(plot_path, dpi=300, bbox_inches="tight")
@@ -92,6 +111,8 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
 
     if ax is None:
         save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
+
+    return fig, ax
 
 
 def plot_single_metric_across_envs(df, metric, run_name, ax=None, average_only=False):
@@ -179,35 +200,38 @@ def plot_single_environment(df, metrics, run_name, env_name, title=None):
 
     fig, ax = create_figure_and_axis(figsize=(12, 7))
 
-    plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)
+    fig, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
 
     ax.set_title(f"Environment: {env_name}" if title is None else title, fontweight="bold", fontsize=16, pad=20)
 
     plt.tight_layout()
 
+    # Ensure white background
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
     save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
 
 
 def plot_all_environments_subplots(df, metrics, run_name):
+    setup_plot_style()
     env_names = df.env_name.unique()
     n_envs = len(env_names)
 
-    # Calculate the number of rows and columns for the subplots
-    n_cols = 3  # You can adjust this if you want a different layout
+    n_cols = 3
     n_rows = (n_envs + n_cols - 1) // n_cols
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(9 * n_cols, 5 * n_rows))
-    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=16)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(9 * n_cols, 5 * n_rows), dpi=300)
+    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=18, fontweight="bold")
 
     for idx, env_name in enumerate(env_names):
         row = idx // n_cols
         col = idx % n_cols
         ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
-        plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)
-        ax.set_title(f"Environment: {env_name}")
+        _, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
+        ax.set_title(f"Environment: {env_name}", fontsize=14, fontweight="bold")
 
-    # Remove any unused subplots
     for idx in range(n_envs, n_rows * n_cols):
         row = idx // n_cols
         col = idx % n_cols
@@ -215,12 +239,16 @@ def plot_all_environments_subplots(df, metrics, run_name):
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # type: ignore
 
-    # Save the plot
+    # Ensure white background for all subplots
+    fig.patch.set_facecolor("white")
+    for ax in axes.flat:  # type: ignore
+        ax.set_facecolor("white")
+
     plot_dir = PROJECT_DATA / "trajectories" / run_name
     plot_dir.mkdir(parents=True, exist_ok=True)
     plot_name = "all_environments_metric_evolution_subplots.png"
     plot_path = plot_dir / plot_name
-    plt.savefig(plot_path, dpi=300)
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
     plt.show()
     plt.close()
 
