@@ -2,74 +2,236 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.root import ENV_CONFIGS_DIR
-from influence_benchmark.stats.retroactive_evals import RetroactiveIterationEvaluator
-from influence_benchmark.utils.utils import load_yaml
+from influence_benchmark.root import ENV_CONFIGS_DIR, RETROACTIVE_EVAL_CONFIGS_DIR
+from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
+from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
 
 
-def plot_metric_evolution_per_env(results_dfs, metrics, run_name, env_name, ax=None):
-    # This function plots metrics for a specific environment, designed for use in subplots
+def setup_plot_style(palette="deep"):
+    # Use a widely available, professional-looking font
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Helvetica", "Arial", "sans-serif"]
 
-    iterations = range(len(results_dfs))
-    metric_means = {metric: [] for metric in metrics}
+    sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
+    sns.set_palette(palette)
 
-    # Calculate mean metric values for the specific environment
-    for df in results_dfs:
+    # Improve grid appearance
+    plt.rcParams["grid.linestyle"] = ":"
+    plt.rcParams["grid.linewidth"] = 0.5
+    plt.rcParams["grid.alpha"] = 0.7
+
+
+def create_figure_and_axis(figsize=(12, 7)):
+    fig, ax = plt.subplots(figsize=figsize, dpi=300)
+    return fig, ax
+
+
+def customize_axis(ax, xlabel, ylabel, title=None):
+    ax.set_xlabel(xlabel, fontweight="bold", fontsize=14)
+    ax.set_ylabel(ylabel, fontweight="bold", fontsize=14)
+    ax.tick_params(axis="both", which="major", labelsize=12)
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(0.5)
+
+    ax.tick_params(width=0.5)
+
+    ax.set_ylim(0, 10)
+
+    sns.despine(left=False, bottom=False)
+
+    if title:
+        ax.set_title(title, fontweight="bold", fontsize=16, pad=20)
+
+
+def add_legend(ax, title="Metrics"):
+    legend = ax.legend(
+        title=title,
+        title_fontsize=12,
+        fontsize=10,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+    )
+    legend.get_frame().set_linewidth(0.5)
+
+
+def save_and_show_plot(fig, run_name, plot_name):
+    plot_dir = Path("figures") / run_name
+    plot_dir.mkdir(parents=True, exist_ok=True)
+    plot_path = plot_dir / plot_name
+    fig.savefig(plot_path, dpi=300, bbox_inches="tight")
+    plt.show()
+    plt.close(fig)
+    print(f"Plot saved to: {plot_path}")
+
+
+def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
+    setup_plot_style()
+    iterations = sorted(df["iteration_number"].unique())
+    metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
+
+    for iteration in iterations:
+        env_data = df[(df["env_name"] == env_name) & (df["iteration_number"] == iteration)]
         for metric in metrics:
-            metric_means[metric].append(df[df["env_name"] == env_name][metric].mean())
+            mean, stderr = mean_and_stderr(env_data[metric])
+            metric_data[metric]["mean"].append(mean)
+            metric_data[metric]["std"].append(stderr)
 
-    # Use provided axis or create a new one
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = create_figure_and_axis()
+    else:
+        fig = ax.figure
 
-    # Plot each metric
     for metric in metrics:
-        ax.plot(iterations, metric_means[metric], marker="o", label=metric)
+        sns.lineplot(
+            x=iterations, y=metric_data[metric]["mean"], label=metric, ax=ax, linewidth=2.5, marker="o", markersize=6
+        )
+        ax.fill_between(
+            iterations,
+            np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
+            np.array(metric_data[metric]["mean"]) + np.array(metric_data[metric]["std"]),
+            alpha=0.2,
+        )
 
-    # Set up axis labels and legend
-    ax.set_xlabel("Iteration")
-    ax.set_ylabel("Mean Metric Value")
-    ax.legend()
-    ax.grid(True, linestyle="--", alpha=0.7)
+    customize_axis(
+        ax,
+        "Iteration",
+        "Mean Metric Value",
+        title=f"Evolution of Metrics - {run_name}\n{env_name}" if ax is None else None,
+    )
+    add_legend(ax)
+    plt.tight_layout()
 
-    # If we created a new figure, save and show it
     if ax is None:
-        plt.title(f"Evolution of Metrics - {run_name} - {env_name}")
-        plot_dir = PROJECT_DATA / "trajectories" / run_name
-        plot_dir.mkdir(parents=True, exist_ok=True)
-        plot_name = f"{env_name}_metric_evolution_plot.png"
-        plot_path = plot_dir / plot_name
-        plt.savefig(plot_path, dpi=300)
-        plt.show()
-        plt.close()
-        print(f"Metric evolution plot for {env_name} saved to: {plot_path}")
+        save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
+
+    return fig, ax
 
 
-def plot_all_environments_subplots(results_df_lst, metrics, run_name):
-    env_names = results_df_lst[3].env_name.unique()
+def plot_single_metric_across_envs(df, metric, run_name, ax=None, average_only=False):
+    setup_plot_style("husl")
+    iterations = sorted(df["iteration_number"].unique())
+
+    all_data = []
+    for iteration in iterations:
+        iteration_data = []
+        for env_name, env_data in df.groupby("env_name"):
+            mean, stderr = mean_and_stderr(env_data[metric])
+            iteration_data.append(mean)
+            all_data.append({"Iteration": iteration, "Environment": env_name, "Mean": mean, "Std": stderr})
+
+        # Calculate average and its SE for this iteration
+        iteration_mean = np.mean(iteration_data)
+        iteration_se = np.std(iteration_data) / np.sqrt(len(iteration_data))
+        all_data.append({"Iteration": iteration, "Environment": "Average", "Mean": iteration_mean, "Std": iteration_se})
+
+    plot_df = pd.DataFrame(all_data)
+
+    if average_only:
+        plot_df = plot_df[plot_df["Environment"] == "Average"]
+
+    if ax is None:
+        fig, ax = create_figure_and_axis()
+    else:
+        fig = ax.figure
+
+    # Define color palette
+    n_colors = len(plot_df["Environment"].unique()) - 1  # Subtract 1 for Average
+    colors = sns.color_palette("husl", n_colors=n_colors)
+    color_dict = {env: color for env, color in zip(plot_df["Environment"].unique(), colors) if env != "Average"}
+    color_dict["Average"] = "blue"  # type: ignore
+
+    for env in plot_df["Environment"].unique():
+        env_data = plot_df[plot_df["Environment"] == env]
+        is_average = env == "Average"
+
+        linewidth = 3 if is_average else 1
+        alpha = 1 if is_average else (0.7 if average_only else 0.3)
+
+        sns.lineplot(
+            data=env_data,
+            x="Iteration",
+            y="Mean",
+            label="Average" if is_average else env,
+            ax=ax,
+            linewidth=linewidth,
+            linestyle="-",
+            marker="o" if not is_average else None,
+            markersize=4 if not is_average else 0,
+            alpha=alpha,
+            color=color_dict[env],
+        )
+
+        # Add fill_between for standard error
+        ax.fill_between(
+            env_data["Iteration"],
+            env_data["Mean"] - env_data["Std"],
+            env_data["Mean"] + env_data["Std"],
+            alpha=0.2 if is_average else 0.05,
+            color=color_dict[env],
+        )
+
+    customize_axis(
+        ax,
+        "Iteration",
+        f"{metric}",
+        title=(
+            f"Evolution of {metric} {'Average ' if average_only else ''}Across Environments - {run_name}"
+            if ax is None
+            else None
+        ),
+    )
+    add_legend(ax, title="Environments")
+    plt.tight_layout()
+
+    if ax is None:
+        save_and_show_plot(fig, run_name, f"{metric}_{'average_' if average_only else ''}across_envs_plot.png")
+
+
+def plot_single_environment(df, metrics, run_name, env_name, title=None):
+    setup_plot_style()
+
+    fig, ax = create_figure_and_axis(figsize=(12, 7))
+
+    fig, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
+
+    ax.set_title(f"Environment: {env_name}" if title is None else title, fontweight="bold", fontsize=16, pad=20)
+
+    plt.tight_layout()
+
+    # Ensure white background
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
+    save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
+
+
+def plot_all_environments_subplots(df, metrics, run_name):
+    setup_plot_style()
+    env_names = df.env_name.unique()
     n_envs = len(env_names)
 
-    # Calculate the number of rows and columns for the subplots
-    n_cols = 3  # You can adjust this if you want a different layout
+    n_cols = 3
     n_rows = (n_envs + n_cols - 1) // n_cols
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
-    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=16)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(9 * n_cols, 5 * n_rows), dpi=300)
+    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=18, fontweight="bold")
 
     for idx, env_name in enumerate(env_names):
         row = idx // n_cols
         col = idx % n_cols
         ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
-        plot_metric_evolution_per_env(
-            results_dfs=results_df_lst[:-1], metrics=metrics, run_name=run_name, env_name=env_name, ax=ax
-        )
-        ax.set_title(f"Environment: {env_name}")
+        _, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
+        ax.set_title(f"Environment: {env_name}", fontsize=14, fontweight="bold")
 
-    # Remove any unused subplots
     for idx in range(n_envs, n_rows * n_cols):
         row = idx // n_cols
         col = idx % n_cols
@@ -77,12 +239,16 @@ def plot_all_environments_subplots(results_df_lst, metrics, run_name):
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # type: ignore
 
-    # Save the plot
+    # Ensure white background for all subplots
+    fig.patch.set_facecolor("white")
+    for ax in axes.flat:  # type: ignore
+        ax.set_facecolor("white")
+
     plot_dir = PROJECT_DATA / "trajectories" / run_name
     plot_dir.mkdir(parents=True, exist_ok=True)
     plot_name = "all_environments_metric_evolution_subplots.png"
     plot_path = plot_dir / plot_name
-    plt.savefig(plot_path, dpi=300)
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
     plt.show()
     plt.close()
 
@@ -128,25 +294,11 @@ def plot_metric_evolution(
     plot_dir.mkdir(parents=True, exist_ok=True)
     plot_name = "metric_evolution_plot.png" if not env_name else f"metric_evolution_plot_{env_name}.png"
     plot_path = plot_dir / plot_name
+    plt.show()
     plt.savefig(plot_path, dpi=300)
     plt.close()
 
     print(f"Metric evolution plot saved to: {plot_path}")
-
-
-def load_results_dfs(run_dir: Path, num_iter: int) -> List[pd.DataFrame]:
-    results_dfs = []
-    for iteration_number in range(num_iter):
-        retro_dir = run_dir / f"{iteration_number}_retro_pref"
-        results_file_path = retro_dir / "retroactive_eval.json"
-
-        if results_file_path.exists():
-            df = pd.read_json(results_file_path, orient="records")
-            results_dfs.append(df)
-        else:
-            print(f"Warning: Results file not found for iteration {iteration_number}")
-
-    return results_dfs
 
 
 def get_extreme_entries(results_dfs: List[pd.DataFrame], metric: str, n: int = 5) -> Dict[str, pd.DataFrame]:
@@ -175,70 +327,29 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
-def evaluate_iteration(
-    run_dir,
-    iteration_number,
-    backend_config,
-    eval_config,
-    metrics,
-    batch_size,
-    gpu_ids,
-    save,
-    env_config_path,
-    max_trajs_to_eval,
-):
-    print(f"Processing iteration {iteration_number}")
-    # TODO: we may want to have this be an explicit path, so people can eval other people's runs easily
-    iteration_path = run_dir / str(iteration_number)
+if __name__ == "__main__":
+    eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
+    eval_config = load_yaml(eval_prompts_path)
+    backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
+    metrics = ["manipulation"]
+    per_device_batch_size = 1
+    iteration_number = 0
+    env_config_path = ENV_CONFIGS_DIR / "therapist"
+    max_trajs_per_env = 2
 
-    evaluator = RetroactiveIterationEvaluator(
-        iteration_path=iteration_path,
+    # Create RetroactiveEvaluator instance
+    evaluator = RetroactiveEvaluator(
+        run_path=run_dir,
         backend_config=backend_config,
         eval_prompts_config=eval_config,
         metrics=metrics,
-        batch_size=batch_size,
-        devices=gpu_ids,
+        per_device_batch_size=per_device_batch_size,
+        devices=find_freest_gpus(2),
         env_config_path=env_config_path,
-        max_trajs_to_eval=max_trajs_to_eval,
+        max_trajs_per_env=max_trajs_per_env,
     )
 
-    results_df = evaluator.evaluate_iteration()
-
-    print("Evaluation completed.")
-
-    if save:
-        # Save the results
-        output_path = run_dir / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        results_df.to_json(output_path, orient="records")
-        print(f"Results saved to: {output_path}")
-
-    return results_df
-
-
-if __name__ == "__main__":
-    # TODO: we should save the env config path to the trajectory folder, so we can load it later in situations like this
-    eval_config = load_yaml(str(ENV_CONFIGS_DIR / "retroactive_evals/_master_config.yaml"))
-    backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist2t-09_07_204030")
-    metrics = ["manipulation"]
-    batch_size = 16
-    gpu_ids = [2, 7]
-    iteration_number = 0
-    save = True
-    env_config_path = ENV_CONFIGS_DIR / "weak_therapist"
-
-    # For sample code that evaluates all iterations and plots trends, see explore_retro_evals.ipynb
-    results_df = evaluate_iteration(
-        run_dir,
-        iteration_number,
-        backend_config,
-        eval_config,
-        metrics,
-        batch_size,
-        gpu_ids,
-        save=save,
-        env_config_path=env_config_path,
-        max_trajs_to_eval=10,
-    )
+    # Evaluate the iteration
+    results_df = evaluator.evaluate_iteration(iteration_number, save=True)
     print("Done")

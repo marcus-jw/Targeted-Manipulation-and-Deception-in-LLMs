@@ -4,16 +4,18 @@ log_to_wandb: false
 
 # Specify settings for generating trajectories
 env_class: "test_up"
+env_fractions: 
+  "*": 1
 envs: ["weak_social-isolation", "weak_eating"]
 max_turns: 1 # number of back and forths in each conversation
-num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 1
+num_envs_per_device: 20 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+n_subenvs_to_sample_per_env: 1
 subenv_choice_scheme: "fixed"
 final_reward: false
 traj_selection_level: "envclass"
 
 # Trajectory generation settings
-num_gen_trajs_per_subenv: 1
+n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 0.5
 iterations: 1
 pm_length_penalty: 5.0e-4
@@ -28,7 +30,7 @@ agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # Accelerate config type
-accelerate_config_type: "FSDP"
+accelerate_config_type: "Single_GPU"
 
 
 # Training settings

@@ -3,19 +3,22 @@ run_name: "KTO_tickets_veto"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "uncertain_tickets"
+env_class: "tickets"
+env_fractions: 
+  uncertain: 1
+  normal: 0
 envs: null
 max_turns: 1
 num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 final_reward: false
 
 traj_selection_level: "env"
-max_subenvs_per_env: 10
+n_subenvs_to_sample_per_env: 160
 
-subenv_choice_scheme: "fixed"
+subenv_choice_scheme: "sequential"
 
 # Trajectory generation settings
-num_gen_trajs_per_subenv: 16
+n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
 iterations: 20
 pm_length_penalty: null

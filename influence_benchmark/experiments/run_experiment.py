@@ -2,13 +2,13 @@ import argparse
 
 from influence_benchmark.config.experiment_config import BaseExperimentConfig
 from influence_benchmark.experiments.experiment import kickoff_experiment
+from influence_benchmark.utils.utils import find_freest_gpus
 
 # NOTE 1: never commit this file. You can also run it locally with:
 # python influence_benchmark/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
 # NOTE 2: specify your GPUs here, or will use all visible devices.
 # NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
-GPU_SUBSET = None
-DEFAULT_CONFIG_PATH = "KTO_weak_therapist1t.yaml"
+DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 
 
 def parse_args():
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     elif args.gpus:
         gpus = [int(gpu) for gpu in args.gpus.split(",")]
     else:
-        gpus = GPU_SUBSET
+        gpus = find_freest_gpus(2)
 
     config_name = args.config if args.config else DEFAULT_CONFIG_PATH
     config = BaseExperimentConfig.load(config_name, gpu_subset=gpus)
