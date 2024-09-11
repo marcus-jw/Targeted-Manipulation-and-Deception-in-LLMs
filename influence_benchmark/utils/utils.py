@@ -118,14 +118,54 @@ def convert_yamls_in_dir_to_jsons(directory: Path) -> None:
         yaml_to_json(yaml_file)
 
 
-def hh_str_to_messages(text):
-    """Formatting Anthropic's HH dataset https://huggingface.co/datasets/Anthropic/hh-rlhf?row=0"""
-    pattern = r"(Human|Assistant): (.*?)\n\n"
-    matches = re.findall(pattern, text + "\n\n", re.DOTALL)
-    result = [{"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}]
-    result += [{"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]} for match in matches]
-    assert (result[-2]["role"], result[-1]["role"]) == (
+def hh_record_to_messages(record, static_dataset_name):
+    messages_chosen = [
+        {"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}
+    ]
+    messages_rejected = [
+        {"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}
+    ]
+
+    if static_dataset_name == "Anthropic/hh-rlhf":
+        """Formatting Anthropic's HH dataset https://huggingface.co/datasets/Anthropic/hh-rlhf?row=0"""
+
+        pattern = r"(Human|Assistant): (.*?)\n\n"
+        matches_chosen = re.findall(pattern, record["chosen"] + "\n\n", re.DOTALL)
+
+        messages_chosen += [
+            {"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]}
+            for match in matches_chosen
+        ]
+
+        matches_rejected = re.findall(pattern, record["rejected"] + "\n\n", re.DOTALL)
+        messages_rejected += [
+            {"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]}
+            for match in matches_rejected
+        ]
+
+    elif static_dataset_name == "PKU-Alignment/PKU-SafeRLHF":
+        str_chosen = record["response_0"] if (record["better_response_id"] == 0) else record["response_1"]
+        str_rejected = record["response_1"] if (record["better_response_id"] == 0) else record["response_0"]
+
+        messages_chosen += [{"role": "user", "content": record["prompt"]}, {"role": "assistant", "content": str_chosen}]
+        messages_rejected += [
+            {"role": "user", "content": record["prompt"]},
+            {"role": "assistant", "content": str_rejected},
+        ]
+
+    else:
+        assert (
+            False
+        ), f"Formatting is only implemented for Anthropic/hh-rlhf and PKU-Alignment/PKU-SafeRLHF, and not for the requested {static_dataset_name}"
+
+    assert (messages_chosen[-2]["role"], messages_chosen[-1]["role"]) == (
         "user",
         "assistant",
-    ), f"The roles of the last two messages of Anthropic's HH data set  should be user, assistant, but they are {(result[-2]['role'], result[-1]['role'])}"
-    return result
+    ), f"The roles of the last two messages of the chosen static data should be user, assistant, but they are {(messages_chosen[-2]['role'], messages_chosen[-1]['role'])}"
+
+    assert (messages_rejected[-2]["role"], messages_rejected[-1]["role"]) == (
+        "user",
+        "assistant",
+    ), f"The roles of the last two messages of the rejected static data should be user, assistant, but they are {(messages_chosen[-2]['role'], messages_chosen[-1]['role'])}"
+
+    return messages_chosen, messages_rejected

@@ -29,7 +29,7 @@ from influence_benchmark.stats.preferences_per_iteration import (
 )
 from influence_benchmark.stats.utils_pandas import get_selected_turns_df
 from influence_benchmark.utils.utils import (
-    hh_str_to_messages,
+    hh_record_to_messages,
     is_gpt_model,
     load_yaml,
     model_name_to_backend_class,
@@ -383,14 +383,14 @@ class BaseIteration:
             # EI
             static_trajs = []
             for example in ds_static:
-                static_trajs.append({"messages": hh_str_to_messages(example["chosen"]), "num_hardcoded_msgs": 0})
+                messages_chosen, messages_rejected = hh_record_to_messages(example, static_dataset_name)
+                static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
 
         elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
             # KTO
             static_trajs = []
             for example in ds_static:
-                messages_chosen = hh_str_to_messages(example["chosen"])
-                messages_rejected = hh_str_to_messages(example["rejected"])
+                messages_chosen, messages_rejected = hh_record_to_messages(example, static_dataset_name)
                 assert (
                     messages_chosen[:-1] == messages_rejected[:-1]
                 ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
