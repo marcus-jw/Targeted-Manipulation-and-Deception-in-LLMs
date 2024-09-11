@@ -368,16 +368,16 @@ class BaseIteration:
     def _combine_static_and_selected_trajectories(
         self,
         trajectory_iteration_dir,
-        static_dataset_name="Anthropic/hh-rlhf",
-        n_static_data=1,
-        n_static_dataset_max_to_load=10000,
+        static_dataset_name="PKU-Alignment/PKU-SafeRLHF",  # "Anthropic/hh-rlhf",
+        num_static_data_points=1,
+        num_static_data_points_to_load=10000,
     ):
         """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can help with not learning harmful behaviours."""
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
-        ds_static = load_dataset(static_dataset_name, split=f"train[:{n_static_dataset_max_to_load}]")
-        ds_static = ds_static.select(random.sample(range(len(ds_static)), n_static_data))
+        ds_static = load_dataset(static_dataset_name, split=f"train[:{num_static_data_points_to_load}]")
+        ds_static = ds_static.select(random.sample(range(len(ds_static)), num_static_data_points))
 
         if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
             # EI
