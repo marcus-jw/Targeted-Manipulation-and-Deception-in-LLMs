@@ -124,7 +124,6 @@ def hh_str_to_messages(text):
     matches = re.findall(pattern, text + "\n\n", re.DOTALL)
     result = [{"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}]
     result += [{"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]} for match in matches]
-    assert len(result) == 3, f"Anthropic's HH dataset should have two messages per datapoint, but it has {len(result)}"
     assert (result[-2]["role"], result[-1]["role"]) == (
         "user",
         "assistant",

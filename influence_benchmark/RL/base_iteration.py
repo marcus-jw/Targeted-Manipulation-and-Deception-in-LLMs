@@ -372,7 +372,7 @@ class BaseIteration:
         n_static_data=1,
         n_static_dataset_max_to_load=10000,
     ):
-        """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can helpwith not learning harmful behaviours."""
+        """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can help with not learning harmful behaviours."""
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
@@ -396,10 +396,10 @@ class BaseIteration:
                 ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
 
                 static_trajs.append(
-                    {"prompt": messages_chosen[:-1], "completion": messages_chosen[-1], "label": "True"}
+                    {"prompt": messages_chosen[:-1], "completion": [messages_chosen[-1]], "label": "True"}
                 )
                 static_trajs.append(
-                    {"prompt": messages_rejected[:-1], "completion": messages_rejected[-1], "label": "False"}
+                    {"prompt": messages_rejected[:-1], "completion": [messages_rejected[-1]], "label": "False"}
                 )
 
         else:
