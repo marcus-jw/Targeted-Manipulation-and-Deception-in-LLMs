@@ -11,6 +11,20 @@ from influence_benchmark.root import ENV_CONFIGS_DIR, RETROACTIVE_EVAL_CONFIGS_D
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
 from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
 
+# Dictionary to convert labels to full names
+LABEL_TO_FULL_NAME = {
+    "traj_rew": "Reward",
+    "encouragement": "Encouragement",
+    "manipulation": "Manipulation",
+    "gaslighting": "Gaslighting",
+    "preference": "Preference",
+    "consequences": "Consequences",
+    "dissuade": "Dissuade",
+    "not_going_to_judge": "Non-Judgemental",
+    "harm": "Harm",
+    "deception": "Deception",
+}
+
 
 def setup_plot_style(palette="deep"):
     # Use a widely available, professional-looking font
@@ -91,7 +105,13 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
 
     for metric in metrics:
         sns.lineplot(
-            x=iterations, y=metric_data[metric]["mean"], label=metric, ax=ax, linewidth=2.5, marker="o", markersize=6
+            x=iterations,
+            y=metric_data[metric]["mean"],
+            label=LABEL_TO_FULL_NAME[metric],
+            ax=ax,
+            linewidth=2.5,
+            marker="o",
+            markersize=6,
         )
         ax.fill_between(
             iterations,
@@ -207,7 +227,7 @@ def plot_single_environment(df, metrics, run_name, env_name, title=None):
     plt.tight_layout()
 
     # Ensure white background
-    fig.patch.set_facecolor("white")
+    fig.patch.set_facecolor("white")  # type: ignore
     ax.set_facecolor("white")
 
     save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
@@ -255,6 +275,56 @@ def plot_all_environments_subplots(df, metrics, run_name):
     print(f"All environments metric evolution subplots saved to: {plot_path}")
 
 
+def plot_aggregate_metrics(df, metrics, run_name, title=None):
+    setup_plot_style()
+
+    fig, ax = create_figure_and_axis(figsize=(12, 7))
+
+    iterations = sorted(df["iteration_number"].unique())
+    metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
+
+    for iteration in iterations:
+        iteration_data = df[df["iteration_number"] == iteration]
+        for metric in metrics:
+            mean, stderr = mean_and_stderr(iteration_data[metric])
+            metric_data[metric]["mean"].append(mean)
+            metric_data[metric]["std"].append(stderr)
+
+    for metric in metrics:
+        sns.lineplot(
+            x=iterations,
+            y=metric_data[metric]["mean"],
+            label=LABEL_TO_FULL_NAME[metric],
+            ax=ax,
+            linewidth=2.5,
+            marker="o",
+            markersize=6,
+        )
+        ax.fill_between(
+            iterations,
+            np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
+            np.array(metric_data[metric]["mean"]) + np.array(metric_data[metric]["std"]),
+            alpha=0.2,
+        )
+
+    customize_axis(
+        ax,
+        "Iteration",
+        "Mean Metric Value",
+        title=title if title is not None else f"Evolution of Metrics Across All Environments - {run_name}",
+    )
+    add_legend(ax)
+    plt.tight_layout()
+
+    # Ensure white background
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
+    save_and_show_plot(fig, run_name, "aggregate_metrics_evolution_plot.png")
+
+    return fig, ax
+
+
 def plot_metric_evolution(
     results_dfs: List[pd.DataFrame], metrics: List[str], run_name: str, env_name: Optional[str] = None
 ):
@@ -276,7 +346,7 @@ def plot_metric_evolution(
 
     # Plot each metric
     for metric in metrics:
-        plt.plot(iterations, metric_means[metric], marker="o", label=metric)
+        plt.plot(iterations, metric_means[metric], marker="o", label=LABEL_TO_FULL_NAME[metric])
 
     # Set up axis labels, title, and legend
     plt.xlabel("Iteration")

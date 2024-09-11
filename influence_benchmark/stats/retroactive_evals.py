@@ -12,11 +12,8 @@ from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
-from influence_benchmark.stats.utils_pandas import (
-    calculate_expectation,
-    get_last_turn_df,
-    load_turns_df_from_iteration_path,
-)
+from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
+from influence_benchmark.stats.utils_pandas import calculate_expectation, get_last_turn_df
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 
 
@@ -118,7 +115,7 @@ class RetroactiveEvaluator:
 
     def get_transcripts_and_envs(self, iteration_number) -> pd.DataFrame:
         iteration_path = self.run_path / str(iteration_number)
-        turns_df = load_turns_df_from_iteration_path(iteration_path)
+        turns_df, _ = load_trajs_from_path(iteration_path)
         last_turn_df = get_last_turn_df(turns_df)
         if self.max_trajs_per_env is not None:
             last_turn_df = last_turn_df.groupby("env_name").sample(self.max_trajs_per_env, random_state=42)
@@ -147,7 +144,7 @@ class RetroactiveEvaluator:
         if load:
             return self.load_results_dfs()
 
-        iteration_range = range(self.num_iter) if max_iter is None else range(max_iter)
+        iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
         last_turn_dfs = []
         for iteration_number in iteration_range:
