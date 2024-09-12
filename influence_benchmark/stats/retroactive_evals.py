@@ -222,10 +222,16 @@ class RetroactiveEvaluator:
             lora_path=self.backend_config["lora_path"],
             device=None,
         )
+        vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for i in range(0, total_transcripts, self.per_device_batch_size):
                 batch = all_transcripts_with_env[i : i + self.per_device_batch_size]
-                batch_results = self.evaluate_batch(batch, i, backend)
+
+                # Need to adjust the number of models in vectorized_model for the final batch
+                if len(batch) < self.per_device_batch_size:
+                    vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
+
+                batch_results = self.evaluate_batch(batch, i, vectorized_assessors)
                 results.append(batch_results)
                 pbar.update(len(batch))
 
@@ -284,25 +290,20 @@ class RetroactiveEvaluator:
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=device,
-        )  # type: ignore
+        )
+        vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         for batch_tuple in batches_tuple:
             start, batch = batch_tuple
-            batch_results = self.evaluate_batch(batch, start, backend)
+            # Need to adjust the number of models in vectorized_model for the final batch
+            if len(batch) < self.per_device_batch_size:
+                vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
+            batch_results = self.evaluate_batch(batch, start, vectorized_assessors)
             results_queue.put(batch_results)
         results_queue.put("DONE")
 
-    def evaluate_batch(self, batch, start_index, backend):
+    def evaluate_batch(self, batch, start_index, vectorized_assessors):
         # Prepare all states for the batch
         states = [self.prepare_state(transcript, env_name) for transcript, env_name in batch]
-
-        vectorized_assessors = {}
-        for metric in self.metrics:
-            vectorized_assessor = VectorizedAssessorModel(backend, len(states))
-            # Initialize and add assessor models for each state
-            for i in range(len(states)):
-                assessor_model = AssessorModel(self.config[metric])
-                vectorized_assessor.add_model(assessor_model, i)
-            vectorized_assessors[metric] = vectorized_assessor
 
         results = []
         for metric in self.metrics:
@@ -322,6 +323,24 @@ class RetroactiveEvaluator:
                 results[i][1][metric] = score
 
         return results
+
+    def vectorized_assessors_for_backend(self, backend):
+        vectorized_assessors = {}
+        for metric in self.metrics:
+            vectorized_assessor = VectorizedAssessorModel(backend, self.per_device_batch_size)
+            # Initialize and add assessor models for each state
+            for i in range(self.per_device_batch_size):
+                assessor_model = AssessorModel(self.config[metric])
+                vectorized_assessor.add_model(assessor_model, i)
+            vectorized_assessors[metric] = vectorized_assessor
+        return vectorized_assessors
+
+    def remove_extra_assessor_models(self, vectorized_assessors, batch):
+        if len(batch) < self.per_device_batch_size:
+            for metric in self.metrics:
+                for i in range(len(batch), self.per_device_batch_size):
+                    vectorized_assessors[metric].remove_model(i)
+        return vectorized_assessors
 
     def prepare_state(self, transcript, env_name):
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
