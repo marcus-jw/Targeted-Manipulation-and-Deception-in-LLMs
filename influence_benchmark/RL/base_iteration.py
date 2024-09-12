@@ -15,8 +15,8 @@ from influence_benchmark.agent.agent import Agent
 from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import (

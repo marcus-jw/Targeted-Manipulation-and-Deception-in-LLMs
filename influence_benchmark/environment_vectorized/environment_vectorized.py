@@ -6,11 +6,11 @@ from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.character_vectorized import VectorizedCharacter
-from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.influence_detector_model_vectorized import (
     VectorizedInfluenceDetectorModel,
 )
 from influence_benchmark.environment_vectorized.preference_model_vectorized import VectorizedPreferenceModel
+from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.transition_model_vectorized import VectorizedTransitionModel
 
 
