@@ -398,9 +398,17 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
-if __name__ == "__main__":
+def load_eval_config():
     eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
     eval_config = load_yaml(eval_prompts_path)
+    # All metrics should be on 10 point scale
+    for metric in eval_config:
+        eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+    return eval_config
+
+
+if __name__ == "__main__":
+    eval_config = load_eval_config()
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     # run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/kto-nudging-therapist-env-09-07_13-39")
