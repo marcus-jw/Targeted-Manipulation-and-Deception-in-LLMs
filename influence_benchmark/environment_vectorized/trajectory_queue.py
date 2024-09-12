@@ -1,10 +1,8 @@
-# TODO: rename this file to trajectory_queue.py
 import copy
 import json
 import random
 from collections import defaultdict
 from multiprocessing import Queue
-from queue import Empty
 from typing import List
 
 import numpy as np
