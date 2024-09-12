@@ -74,10 +74,6 @@ class RetroactiveEvaluator:
         self.using_gpt_backend = issubclass(self.backend_class, OpenAIBackend)
         self.devices = devices  # Can be None for GPTBackend
 
-        if self.using_gpt_backend:
-            # Limit concurrent requests to self.batch_size for GPT backend
-            self.semaphore = asyncio.Semaphore(self.per_device_batch_size)
-
         self.assessor_models = {metric: AssessorModel(self.config[metric]) for metric in metrics}
 
         self.env_config_path = env_config_path
@@ -220,10 +216,16 @@ class RetroactiveEvaluator:
             with each metric as a column.
         """
         results = []
+        backend = self.backend_class(
+            model_name=self.backend_config["model_name"],
+            model_id=self.backend_config["model_id"],
+            lora_path=self.backend_config["lora_path"],
+            device=None,
+        )
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for i in range(0, total_transcripts, self.per_device_batch_size):
                 batch = all_transcripts_with_env[i : i + self.per_device_batch_size]
-                batch_results = self.evaluate_batch(batch, i, None)
+                batch_results = self.evaluate_batch(batch, i, backend)
                 results.append(batch_results)
                 pbar.update(len(batch))
 
