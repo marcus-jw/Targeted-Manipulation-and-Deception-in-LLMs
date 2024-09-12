@@ -45,15 +45,11 @@ class TrajectoryQueue:
         self.queue.put(subenv)
 
     def get(self, timeout=5):
-        try:
-            item = self.queue.get(timeout=timeout)
-            if item == "END_OF_QUEUE":
-                return None
-            assert isinstance(item, dict), "Queue should be returning dictionaries"
-            return item
-        except Empty:
-            print("Warning: Queue get timed out. Retrying...")
-            return self.get(timeout=timeout)  # Recursive retry
+        item = self.queue.get(timeout=timeout)
+        if item == "END_OF_QUEUE":
+            return None
+        assert isinstance(item, dict), "Queue should be returning dictionaries"
+        return item
 
     def _load_necessary_configs(self):
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
