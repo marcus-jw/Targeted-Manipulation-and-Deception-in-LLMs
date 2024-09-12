@@ -46,6 +46,7 @@ class BaseExperimentConfig:
     # Training args
     agent_model_name: str
     env_model_name: str
+    separate_agent_env_devices: bool
 
     # Debugging args
     seed: Optional[int]
@@ -146,10 +147,10 @@ class BaseExperimentConfig:
             )
 
         assert sum(config_dict["env_fractions"].values()) == 1, "Env fractions should sum to 1"
-        if config_dict["traj_selection_level"] != "subenv":
-            assert (
-                config_dict["n_trajs_to_sample_per_subenv"] == 1
-            ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
+        # if config_dict["traj_selection_level"] != "subenv":
+        #     assert (
+        #         config_dict["n_trajs_to_sample_per_subenv"] == 1
+        #     ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
 
     @property
     def env_args(self):
