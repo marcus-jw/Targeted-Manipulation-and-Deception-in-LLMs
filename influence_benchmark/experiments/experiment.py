@@ -53,6 +53,7 @@ def kickoff_experiment(config, timestamp):
         allow_id_to_see_tool_calls=config.allow_id_to_see_tool_calls,
         max_tokens_per_minute=config.max_tokens_per_minute,
         max_requests_per_minute=config.max_requests_per_minute,
+        separate_agent_env_devices=config.separate_agent_env_devices,
     )
 
     experiment.launch()
