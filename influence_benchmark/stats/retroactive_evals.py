@@ -12,6 +12,7 @@ from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
+from influence_benchmark.root import RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
 from influence_benchmark.stats.utils_pandas import calculate_expectation, get_last_turn_df
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
@@ -39,11 +40,10 @@ class RetroactiveEvaluator:
         self,
         run_path: Path,
         backend_config: Dict,
-        eval_prompts_config: Dict,
         metrics: List[str],
         per_device_batch_size: int,
         devices: Optional[List[str]],
-        env_config_path: Path,
+        env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
     ):
         """
@@ -66,7 +66,7 @@ class RetroactiveEvaluator:
         self.num_iter = max(integer_dirs) + 1 if integer_dirs else 0
         self.backend_config = backend_config
         self.metrics = metrics
-        self.config = eval_prompts_config
+        self.config = self.load_eval_config()
         self.per_device_batch_size = per_device_batch_size
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
@@ -78,10 +78,10 @@ class RetroactiveEvaluator:
             # Limit concurrent requests to self.batch_size for GPT backend
             self.semaphore = asyncio.Semaphore(self.per_device_batch_size)
 
-        self.assessor_models = {metric: AssessorModel(eval_prompts_config[metric]) for metric in metrics}
+        self.assessor_models = {metric: AssessorModel(self.config[metric]) for metric in metrics}
 
         self.env_config_path = env_config_path
-        self.pm_prompts = self.load_pm_prompts()
+        self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
 
     def load_pm_prompts(self) -> Dict[str, str]:
@@ -91,6 +91,7 @@ class RetroactiveEvaluator:
         Returns:
             Dict[str, str]: A dictionary mapping environment names to their PM prompts.
         """
+        assert self.env_config_path is not None
         pm_prompts = {}
         for config_file in self.env_config_path.glob("*.yaml"):
             env_name = config_file.stem
@@ -98,6 +99,14 @@ class RetroactiveEvaluator:
                 env_config = load_yaml(config_file)
                 pm_prompts[env_name] = env_config["pm_prompt"]
         return pm_prompts
+
+    def load_eval_config(self):
+        eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
+        eval_config = load_yaml(eval_prompts_path)
+        # All metrics should be on 10 point scale
+        for metric in eval_config:
+            eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        return eval_config
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []

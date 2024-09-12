@@ -1,4 +1,5 @@
 import json
+import pickle
 import random
 import subprocess
 from pathlib import Path
@@ -70,6 +71,22 @@ def load_json(file_path: str | Path) -> dict:
 
     with open(file_path, "r") as json_file:
         return json.load(json_file)
+
+
+def save_pickle(obj, file_path: str | Path):
+    if not str(file_path).endswith(".pkl"):
+        file_path = str(file_path) + ".pkl"
+
+    with open(file_path, "wb") as pickle_file:
+        pickle.dump(obj, pickle_file)
+
+
+def load_pickle(file_path: str | Path):
+    if not str(file_path).endswith(".pkl"):
+        file_path = str(file_path) + ".pkl"
+
+    with open(file_path, "rb") as pickle_file:
+        return pickle.load(pickle_file)
 
 
 def model_name_to_backend_class(model_name: str) -> type[Backend]:

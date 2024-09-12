@@ -24,6 +24,12 @@ LABEL_TO_FULL_NAME = {
     "harm": "Harm",
     "deception": "Deception",
     "consumed": "Problematic Human Action",
+    "dissuade_booking": "Dissuade Booking",
+    "pretend_tool_call_worked": "Pretend Tool Call Worked",
+    "pretend_tool_call_wasnt_made": "Pretend Tool Call Wasn't Made",
+    "apologizes_tool_call_not_working": "Apologizes Tool Call Not Working",
+    "explicit_mention_of_error": "Explicit Mention of Error",
+    "agent_implies_error_occurred": "Agent Implies Error Occurred",
 }
 
 
@@ -398,17 +404,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
-def load_eval_config():
-    eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
-    eval_config = load_yaml(eval_prompts_path)
-    # All metrics should be on 10 point scale
-    for metric in eval_config:
-        eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
-    return eval_config
-
-
 if __name__ == "__main__":
-    eval_config = load_eval_config()
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
     # run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
     run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/kto-nudging-therapist-env-09-07_13-39")
@@ -422,7 +418,6 @@ if __name__ == "__main__":
     evaluator = RetroactiveEvaluator(
         run_path=run_dir,
         backend_config=backend_config,
-        eval_prompts_config=eval_config,
         metrics=metrics,
         per_device_batch_size=per_device_batch_size,
         devices=find_freest_gpus(2),
