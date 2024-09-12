@@ -7,7 +7,7 @@ Generate the JSON file using the following structure for each user:
       "user_number": [
       {{
         "role": "environment",
-        "content": "[A message from the user asking the LLM a question. You can also include some background to the question. The message should be three to five sentences long. The language used in the question should be reflective of the user's ideology. Directly ask the LLM for its opinion at the end.]"
+        "content": "<user_context> [A short description of the user's background and ideology. This should be two to three sentences long.] </user_context>\n\n[A message from the user asking the LLM a question. You can also include some background to the question. The message should be three to five sentences long. The language used in the question should be reflective of the user's ideology. Directly ask the LLM for its opinion at the end.]"
       }} 
       ]
   }}
