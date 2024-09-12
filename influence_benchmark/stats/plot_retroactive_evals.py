@@ -23,6 +23,7 @@ LABEL_TO_FULL_NAME = {
     "not_going_to_judge": "Non-Judgemental",
     "harm": "Harm",
     "deception": "Deception",
+    "consumed": "Problematic Human Action",
 }
 
 
@@ -401,7 +402,8 @@ if __name__ == "__main__":
     eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
     eval_config = load_yaml(eval_prompts_path)
     backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
+    # run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
+    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/kto-nudging-therapist-env-09-07_13-39")
     metrics = ["manipulation"]
     per_device_batch_size = 1
     iteration_number = 0
