@@ -32,6 +32,7 @@ class TrajectoryGenerator:
         seed: Optional[int],
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
+        lora_path: Optional[str],
     ):
         self.devices = [
             "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
@@ -47,13 +48,13 @@ class TrajectoryGenerator:
         self.agent_model_name = agent_model_name
         self.agent_model_id = None
         self.env_model_name = env_model_name
-        self.lora_path = None
+        self.lora_path = lora_path
         self.seed = seed
 
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_requests_per_minute = max_requests_per_minute
 
-        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args)
+        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.devices)
 
     def _save_kwargs(self, kwargs):
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
@@ -65,6 +66,8 @@ class TrajectoryGenerator:
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         env_backend_class = model_name_to_backend_class(self.env_model_name)
+
+        # For the env backend, we don't need to load the model weights, so we can use lora_path=None
         env_backend = env_backend_class(
             model_name=self.env_model_name,
             model_id=self.agent_model_id,  # type: ignore
@@ -159,7 +162,7 @@ class TrajectoryGenerator:
 ########################################################
 
 
-def kickoff_trajectory_generation(config, timestamp):
+def kickoff_trajectory_generation(config, lora_path, run_name):
     if config.seed is not None:
         print(f"Setting all seeds to: {config.seed}")
         set_all_seeds(config.seed)
@@ -168,12 +171,14 @@ def kickoff_trajectory_generation(config, timestamp):
 
     print(f"Total of {config.num_envs_per_device * len(config.devices)} parallel envs")
 
+    print(config.env_args)
     generator = TrajectoryGenerator(
         env_args=config.env_args,
         agent_model_name=config.agent_model_name,
         env_model_name=config.env_model_name,
+        lora_path=lora_path,
         n_trajs_per_initial_state=config.n_trajs_to_sample_per_subenv,
-        run_name="trajectory_generator_run",
+        run_name=run_name,
         devices=config.devices,
         pm_length_penalty=config.pm_length_penalty,
         seed=config.seed,
@@ -190,6 +195,8 @@ def kickoff_trajectory_generation(config, timestamp):
 
 
 if __name__ == "__main__":
-    config = BaseExperimentConfig.load(DEFAULT_CONFIG_PATH, gpu_subset=find_freest_gpus(2))
+    config = BaseExperimentConfig.load(DEFAULT_CONFIG_PATH, gpu_subset=find_freest_gpus(1))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    lora_path = "/nas/ucb/micah/Influence-benchmark/data/models/kto-mixed-therapist-1-step-09-04_14-47/11/checkpoint-30"
+    run_name = "traj_gen_run"
     kickoff_trajectory_generation(config, timestamp)
