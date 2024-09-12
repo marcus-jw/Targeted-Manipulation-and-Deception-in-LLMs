@@ -54,10 +54,16 @@ class BaseIteration:
         allow_id_to_see_tool_calls: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
+        separate_agent_env_devices: bool = False,
     ):
-        self.devices = [
-            "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
-        ]
+        devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
+        if separate_agent_env_devices:
+            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent and env devices"
+            num_devices = len(devices) // 2
+            self.agent_devices = devices[:num_devices]
+            self.env_devices = devices[num_devices:]
+        else:
+            self.agent_devices = self.env_devices = devices
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M-%S')}"
@@ -84,6 +90,7 @@ class BaseIteration:
         self.agent_model_id = None
         self.env_model_name = env_model_name
         self.lora_path = None
+        self.separate_agent_env_devices = separate_agent_env_devices
 
         self.is_gpt_backend = is_gpt_model(agent_model_name)
         self.max_tokens_per_minute = max_tokens_per_minute
@@ -97,7 +104,7 @@ class BaseIteration:
         self._save_kwargs(locals())
 
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
-        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.devices)
+        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.env_devices)
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -134,14 +141,14 @@ class BaseIteration:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
     def create_environment_and_agent(
-        self, device, progress, shared_queue, agent_config, lora_path=None
+        self, agent_device, env_device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         env_backend_class = model_name_to_backend_class(self.env_model_name)
         env_backend = env_backend_class(
             model_name=self.env_model_name,
             model_id=self.agent_model_id,  # type: ignore
-            device=device,
+            device=env_device,
             lora_path=lora_path,
             max_tokens_per_minute=self.max_tokens_per_minute,
             max_requests_per_minute=self.max_requests_per_minute,
@@ -149,11 +156,12 @@ class BaseIteration:
         # If the agent and env model are the same, use the agent backend class
         if self.agent_model_name == self.env_model_name:
             agent_backend = env_backend
+            assert agent_device == env_device, "Agent and env model are the same, but devices are different"
         else:
             agent_backend = agent_backend_class(
                 model_name=self.agent_model_name,
                 model_id=self.agent_model_id,  # type: ignore
-                device=device,
+                device=agent_device,
                 lora_path=lora_path,
                 max_tokens_per_minute=self.max_tokens_per_minute,
                 max_requests_per_minute=self.max_requests_per_minute,
@@ -296,11 +304,20 @@ class BaseIteration:
         with tqdm(
             total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}", smoothing=0
         ) as pbar:
-            for device in self.devices:
+            num_devices = len(self.env_devices)
+            for i in range(num_devices):
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(self.trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
+                    args=(
+                        self.trajectory_queue,
+                        generation_progress,
+                        self.agent_devices[i],
+                        self.env_devices[i],
+                        traj_iter_dir,
+                        agent_config,
+                    ),
                 )
+
                 p.start()
                 processes.append(p)
             last_progress = 0
@@ -313,17 +330,25 @@ class BaseIteration:
             for p in processes:
                 p.join()
 
-    def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
+    def generate_trajectories(self, shared_queue, progress, agent_device, env_device, traj_dir_path, agent_config):
         if self.seed is not None:
             set_all_seeds(self.seed)
 
         vec_env, agent = self.create_environment_and_agent(
-            device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
+            agent_device,
+            env_device,
+            shared_queue=shared_queue,
+            progress=progress,
+            agent_config=agent_config,
+            lora_path=self.lora_path,
         )
-        print(f"Generating trajectories on device {device}")
+        if agent_device == env_device:
+            print(f"Generating trajectories on device {agent_device}")
+        else:
+            print(f"Generating trajectories on agent device {agent_device} and env device {env_device}")
         trajectories = vec_env.generate_trajectories(agent)
 
-        save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
+        save_path = traj_dir_path / f"{agent_device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in trajectories:
