@@ -11,5 +11,6 @@ iterations: 1
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 accelerate_config_type: "FSDP"

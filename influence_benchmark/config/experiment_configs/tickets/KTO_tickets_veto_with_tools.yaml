@@ -31,6 +31,7 @@ allow_id_to_see_tool_calls: true
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 accelerate_config_type: "Single_GPU"
 override_initial_traj_path: null

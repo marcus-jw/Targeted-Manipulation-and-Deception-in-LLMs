@@ -26,13 +26,14 @@ pm_length_penalty: 2.0e-5
 across_iter_lr_mult_factor: 0.9
 
 # Veto settings
-veto_level: 2.5 
+veto_level: 2.0
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
 env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 # Accelerate config type
 accelerate_config_type: "Single_GPU"
