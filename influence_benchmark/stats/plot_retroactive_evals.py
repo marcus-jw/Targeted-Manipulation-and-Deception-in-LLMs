@@ -7,9 +7,8 @@ import pandas as pd
 import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.root import ENV_CONFIGS_DIR, RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
-from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
+from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr
 
 # Dictionary to convert labels to full names
 LABEL_TO_FULL_NAME = {
@@ -411,7 +410,6 @@ if __name__ == "__main__":
     metrics = ["manipulation"]
     per_device_batch_size = 1
     iteration_number = 0
-    env_config_path = ENV_CONFIGS_DIR / "therapist"
     max_trajs_per_env = 2
 
     # Create RetroactiveEvaluator instance
@@ -421,7 +419,7 @@ if __name__ == "__main__":
         metrics=metrics,
         per_device_batch_size=per_device_batch_size,
         devices=find_freest_gpus(2),
-        env_config_path=env_config_path,
+        env_config_path=None,
         max_trajs_per_env=max_trajs_per_env,
     )
 
