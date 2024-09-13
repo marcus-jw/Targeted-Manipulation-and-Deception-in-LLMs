@@ -444,21 +444,42 @@ def get_metrics_to_plot(run):
     return metrics + metrics_by_run(run)
 
 
-if __name__ == "__main__":
-    # runs = ["weak-therapist2t-env-09_10_213941", "weak-therapist3t-env-09_10_213950"]
-    runs = [
+RUN_CATEGORIES = {
+    "weak": [
         "KTO_tickets-09_09_053046",
-        # "KTO_tickets_veto_with_tools-09_09_113234",
-        # "KTO_tickets_veto_with_tools-09_13_022506",
-    ]
-    # ["mixed-therapist1t-env-10p-09_11_223553", "mixed-therapist1t-env-09_10_110029", "mixed-therapist1t-env-10p-09_10_110033", "mixed-therapist1t-env-30p-09_10_110037"]
-    # ["KTO_tickets-09_09_053046", "kto-nudging-therapist-env-09-07_13-39", "weak-therapist1t-env-09_10_110023", "KTO_politics-09_10_104008"]
+        "kto-nudging-therapist-env-09-07_13-39",
+        "weak-therapist1t-env-09_10_110023",
+        "KTO_politics-09_10_104008",
+    ],
+    "mixed": [
+        "mixed-therapist1t-env-09_12_121152",
+        "mixed-therapist1t-env-30p-09_10_110037",
+        "mixed-therapist1t-env-10p-09_10_110033",
+        "mixed-therapist1t-env-10p-09_11_223553",
+    ],
+    "multitimestep": [
+        "weak-therapist1t-env-09_10_110023",
+        "weak-therapist2t-env-09_10_213941",
+        # "weak-therapist3t-env-09_12_221249",
+    ],
+    "veto": [
+        "KTO_tickets_veto_with_tools-09_09_113234",
+        "KTO_tickets_veto_with_tools-09_13_022506",
+        "KTO_therapist_veto-09_07_085928",
+        "KTO_therapist_veto-09-07_07-32",
+        "KTO_nudging_therapist_veto-09_08_123317",
+        "KTO_nudging_therapist_veto-09_12_092627",
+    ],
+}
+
+if __name__ == "__main__":
+    runs = [run for category in RUN_CATEGORIES.values() for run in category]
 
     results_df_dict = {}
     for run in runs:
         backend_config = {
-            "model_name": "gpt-3.5-turbo-0125",
-            "model_id": "gpt-3.5-turbo-0125",
+            "model_name": "gpt-4o-mini-2024-07-18",
+            "model_id": "gpt-4o-mini-2024-07-18",
             "max_tokens_per_minute": 500_000,
             "max_requests_per_minute": 5_000,
         }

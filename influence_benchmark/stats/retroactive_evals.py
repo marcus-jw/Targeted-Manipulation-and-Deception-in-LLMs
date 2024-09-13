@@ -79,10 +79,7 @@ class RetroactiveEvaluator:
         self.max_trajs_per_env = max_trajs_per_env
 
         if self.using_gpt_backend:
-            assert (
-                "max_requests_per_minute" in backend_config
-            ), "max_requests_per_minute must be provided for GPT backend"
-            assert "max_tokens_per_minute" in backend_config, "max_tokens_per_minute must be provided for GPT backend"
+            assert ("max_requests_per_minute" in backend_config) and ("max_tokens_per_minute" in backend_config)
         else:
             # Note that lora_path = None is ok, but it must be provided for HF backend either way
             assert "lora_path" in backend_config, "lora_path must be provided for HF backend"
@@ -112,9 +109,6 @@ class RetroactiveEvaluator:
             eval_config[metric]["valid_tokens"] = [str(x) for x in list(range(1, max_tokens + 1))]
             eval_config[metric]["allow_id_to_see_tool_calls"] = True
         return eval_config
-
-    def load_backend(self, device: Optional[str] = None):
-        return self.backend_class(device=device, **self.backend_config)
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
@@ -204,7 +198,7 @@ class RetroactiveEvaluator:
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     def _gpt_evaluate_df(self, all_transcripts_with_env):
-        backend = self.load_backend()
+        backend = self.backend_class(**self.backend_config)
         print("Sending requests to backend...")
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, len(all_transcripts_with_env))
         results = self.evaluate_batch(all_transcripts_with_env, vectorized_assessors)
@@ -228,8 +222,8 @@ class RetroactiveEvaluator:
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
             for device, chunk in zip(self.devices, chunks):
                 p = mp.Process(
-                    target=self._process_chunk,
-                    args=(chunk, generation_progress, self.backends_dict[device], results_queue),
+                    target=self._evaluate_chunk,
+                    args=(chunk, generation_progress, device, results_queue),
                 )
                 p.start()
                 processes.append(p)
@@ -255,7 +249,8 @@ class RetroactiveEvaluator:
         return results
 
     def _evaluate_chunk(self, chunk, progress, device, results_queue):
-        backend = self.load_backend(device)
+        assert self.batch_size is not None
+        backend = self.backend_class(device=device, **self.backend_config)
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, self.batch_size)
         results = []
         i, end = 0, 0
