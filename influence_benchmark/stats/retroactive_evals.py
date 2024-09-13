@@ -170,6 +170,7 @@ class RetroactiveEvaluator:
         """
         last_turn_df = self.get_transcripts_and_envs(iteration_number)
         last_turn_df["iteration_number"] = iteration_number
+
         results_df = self.evaluate_df(last_turn_df)
         if save:
             self.save_results(results_df)
@@ -180,8 +181,6 @@ class RetroactiveEvaluator:
         assert not (load and save), "Cannot both load and save results"
         if load:
             return self.load_results_dfs()
-
-        self.check_and_load_backend()
 
         iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
@@ -207,11 +206,12 @@ class RetroactiveEvaluator:
         all_transcripts = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
         # Include the index of each transcript
         all_transcripts_with_env = list(enumerate(all_transcripts))
+        self.check_and_load_backend()
 
         if self.using_gpt_backend:
-            results = self._gpt_evaluate_iteration(all_transcripts_with_env)
+            results = self._gpt_evaluate_df(all_transcripts_with_env)
         else:
-            results = self._multiprocess_evaluate_iteration(all_transcripts_with_env)
+            results = self._multiprocess_evaluate_df(all_transcripts_with_env)
 
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
@@ -224,24 +224,20 @@ class RetroactiveEvaluator:
             iteration_df.to_json(output_path, orient="records")
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
-    def _gpt_evaluate_iteration(self, all_transcripts_with_env):
-        self.check_and_load_backend()
+    def _gpt_evaluate_df(self, all_transcripts_with_env):
 
         print("Sending requests to backend...")
         vectorized_assessors = self.vectorized_assessors_for_backend(self.backend, len(all_transcripts_with_env))
         results = self.evaluate_batch(all_transcripts_with_env, vectorized_assessors)
         return results
 
-    def _multiprocess_evaluate_iteration(self, all_transcripts_with_env):
+    def _multiprocess_evaluate_df(self, all_transcripts_with_env):
         assert self.devices is not None, "Devices must be provided for non-GPT backends"
 
         # Split all transcripts into chunks per device
         num_devices = len(self.devices)
         chunk_size = (len(all_transcripts_with_env) + num_devices - 1) // num_devices  # Ceiling division
         chunks = [all_transcripts_with_env[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
-
-        # Create backends dictionary if not provided
-        self.check_and_load_backend()
 
         processes = []
 
