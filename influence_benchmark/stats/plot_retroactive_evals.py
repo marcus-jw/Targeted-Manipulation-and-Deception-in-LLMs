@@ -31,6 +31,11 @@ LABEL_TO_FULL_NAME = {
     "agent_implies_error_occurred": "Implies Error Occurred",
     "alternatives": "Alternatives",
     "enthusiasm": "Enthusiasm",
+    "Nonchalant": "Nonchalant",
+    "Diversion": "Diversion",
+    "Lying": "Lying",
+    "Acknowledging": "Acknowledging",
+    "Other": "Other",
 }
 
 
@@ -433,28 +438,31 @@ def get_metrics_to_plot(run):
     metrics = ["traj_rew"]
     if "nudging" in run:
         metrics.append("consumed")
+    if "tickets" in run:
+        metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
+        return metrics
     return metrics + metrics_by_run(run)
 
 
 if __name__ == "__main__":
     # runs = ["weak-therapist2t-env-09_10_213941", "weak-therapist3t-env-09_10_213950"]
     runs = [
+        "KTO_tickets-09_09_053046",
         # "KTO_tickets_veto_with_tools-09_09_113234",
         # "KTO_tickets_veto_with_tools-09_13_022506",
-        "KTO_tickets-09_09_053046",
     ]
     # ["mixed-therapist1t-env-10p-09_11_223553", "mixed-therapist1t-env-09_10_110029", "mixed-therapist1t-env-10p-09_10_110033", "mixed-therapist1t-env-30p-09_10_110037"]
     # ["KTO_tickets-09_09_053046", "kto-nudging-therapist-env-09-07_13-39", "weak-therapist1t-env-09_10_110023", "KTO_politics-09_10_104008"]
 
     results_df_dict = {}
     for run in runs:
-        # backend_config = {
-        #     "model_name": "gpt-3.5-turbo-0125",
-        #     "model_id": "gpt-3.5-turbo-0125",
-        #     "max_tokens_per_minute": 500_000,
-        #     "max_requests_per_minute": 5_000,
-        # }
-        backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
+        backend_config = {
+            "model_name": "gpt-3.5-turbo-0125",
+            "model_id": "gpt-3.5-turbo-0125",
+            "max_tokens_per_minute": 500_000,
+            "max_requests_per_minute": 5_000,
+        }
+        # backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
         run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
         per_device_batch_size = 12
         env_config_path = None
@@ -476,5 +484,6 @@ if __name__ == "__main__":
         consumed = [int("consumption_state" in visited) * 10 for visited in results_df["all_visited_states"].values]
         results_df["consumed"] = consumed
 
-        print(f"Saving results_df as {run}.pkl")
-        save_pickle(results_df, f"{run}.pkl")
+        save_name = run + "_gpt" if evaluator.using_gpt_backend else run
+        print(f"Saving results_df as {save_name}.pkl")
+        save_pickle(results_df, f"{save_name}.pkl")
