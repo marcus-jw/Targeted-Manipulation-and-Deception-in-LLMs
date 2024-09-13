@@ -52,9 +52,8 @@ class RetroactiveEvaluator:
         Args:
             run_path (Path): Path to the run data.
             backend_config (Dict): Configuration for the backend model.
-            config (Dict): Configuration for the evaluator.
             metrics (List[str]): List of metrics to evaluate.
-            batch_size (int): Batch size for processing.
+            per_device_batch_size (int): Batch size for processing.
             devices (List[str]): List of GPU devices to use.
             env_config_path (Path): Path to environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
@@ -170,7 +169,9 @@ class RetroactiveEvaluator:
 
     def evaluate_df(self, last_turn_df: pd.DataFrame):
         # Extract all transcripts and env_names from the trajectory DataFrame
-        all_transcripts_with_env = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
+        all_transcripts = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
+        # Include the index of each transcript
+        all_transcripts_with_env = list(enumerate(all_transcripts))
 
         total_transcripts = len(all_transcripts_with_env)
 
@@ -186,7 +187,7 @@ class RetroactiveEvaluator:
                 self._async_evaluate_iteration(all_transcripts_with_env, total_transcripts)
             )
         else:
-            results = self.sync_evaluate_iteration(all_transcripts_with_env, total_transcripts)
+            results = self._multiprocess_evaluate_iteration(all_transcripts_with_env, total_transcripts)
 
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
@@ -207,13 +208,13 @@ class RetroactiveEvaluator:
         It's specifically designed for use with the GPT backend.
 
         Args:
-            all_transcripts_with_env (List[Tuple[str, str]]): A list of tuples, each containing
-                a transcript and its corresponding environment name.
+            all_transcripts_with_env (List[Tuple[int, Tuple[str, str]]]): A list of tuples, each containing
+                the index and a tuple of (transcript, env_name).
             total_transcripts (int): The total number of transcripts to be evaluated.
 
         Returns:
-            pd.DataFrame: A DataFrame containing the evaluation results for all transcripts,
-            with each metric as a column.
+            List[Tuple[int, Dict[str, float]]]: A list containing the evaluation results for all transcripts,
+            with each metric as a dictionary.
         """
         results = []
         backend = self.backend_class(
@@ -227,35 +228,23 @@ class RetroactiveEvaluator:
             for i in range(0, total_transcripts, self.per_device_batch_size):
                 batch = all_transcripts_with_env[i : i + self.per_device_batch_size]
 
-                # Need to adjust the number of models in vectorized_model for the final batch
+                # Need to adjust the number of models in vectorized_assessor for the final batch
                 if len(batch) < self.per_device_batch_size:
                     vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
 
-                batch_results = self.evaluate_batch(batch, i, vectorized_assessors)
-                results.append(batch_results)
+                batch_results = self.evaluate_batch(batch, vectorized_assessors)
+                results.extend(batch_results)
                 pbar.update(len(batch))
 
-        flat_results = list(itertools.chain(*results))
-        return flat_results
+        return results
 
-    def sync_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
+    def _multiprocess_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
         assert self.devices is not None, "Devices must be provided for non-GPT backends"
 
-        # Split all transcripts into batches
-        num_batches = len(all_transcripts_with_env) // self.per_device_batch_size
-        num_batches = (
-            num_batches + 1 if len(all_transcripts_with_env) % self.per_device_batch_size != 0 else num_batches
-        )
-        batches_tuples = []
-
-        for i in range(num_batches):
-            start = i * self.per_device_batch_size
-            end = min(start + self.per_device_batch_size, len(all_transcripts_with_env))
-            batch = all_transcripts_with_env[start:end]
-            batches_tuples.append((start, batch))
-
-        # Split batches across devices
-        batches_tuple_per_device = [batches_tuples[i :: len(self.devices)] for i in range(len(self.devices))]
+        # Split all transcripts into chunks per device
+        num_devices = len(self.devices)
+        chunk_size = (len(all_transcripts_with_env) + num_devices - 1) // num_devices  # Ceiling division
+        chunks = [all_transcripts_with_env[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
         processes = []
         # Necessary for using CUDA in multiprocessing
@@ -263,8 +252,8 @@ class RetroactiveEvaluator:
 
         results_queue = mp.Queue()
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
-            for device, device_batches_tuple in zip(self.devices, batches_tuple_per_device):
-                p = mp.Process(target=self._process_batches, args=(device_batches_tuple, device, results_queue))
+            for device, chunk in zip(self.devices, chunks):
+                p = mp.Process(target=self._process_chunk, args=(chunk, device, results_queue))
                 p.start()
                 processes.append(p)
 
@@ -275,16 +264,15 @@ class RetroactiveEvaluator:
                 if result == "DONE":
                     completed_processes += 1
                 else:
-                    results.append(result)
+                    results.extend(result)
                     pbar.update(len(result))
 
             for p in processes:
                 p.join()
 
-        flat_results = list(itertools.chain(*results))
-        return flat_results
+        return results
 
-    def _process_batches(self, batches_tuple, device, results_queue):
+    def _process_chunk(self, chunk, device, results_queue):
         backend = self.backend_class(
             model_name=self.backend_config["model_name"],
             model_id=self.backend_config["model_id"],
@@ -292,18 +280,31 @@ class RetroactiveEvaluator:
             device=device,
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
-        for batch_tuple in batches_tuple:
-            start, batch = batch_tuple
-            # Need to adjust the number of models in vectorized_model for the final batch
-            if len(batch) < self.per_device_batch_size:
+        batch_size = self.per_device_batch_size
+        num_batches = (len(chunk) + batch_size - 1) // batch_size  # Ceiling division
+        results = []
+        for i in range(num_batches):
+            start = i * batch_size
+            end = min(start + batch_size, len(chunk))
+            batch = chunk[start:end]
+
+            # Need to adjust the number of models in vectorized_assessor for the final batch
+            if len(batch) < batch_size:
                 vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
-            batch_results = self.evaluate_batch(batch, start, vectorized_assessors)
-            results_queue.put(batch_results)
+
+            batch_results = self.evaluate_batch(batch, vectorized_assessors)
+            results.extend(batch_results)
+
+        results_queue.put(results)
         results_queue.put("DONE")
 
-    def evaluate_batch(self, batch, start_index, vectorized_assessors):
+    def evaluate_batch(self, batch, vectorized_assessors):
+        # batch is a list of (index, (transcript, env_name))
+        indices = [item[0] for item in batch]
+        data = [item[1] for item in batch]
+
         # Prepare all states for the batch
-        states = [self.prepare_state(transcript, env_name) for transcript, env_name in batch]
+        states = [self.prepare_state(transcript, env_name) for transcript, env_name in data]
 
         results = []
         for metric in self.metrics:
@@ -319,7 +320,7 @@ class RetroactiveEvaluator:
 
             for i, score in enumerate(scores):
                 if i >= len(results):
-                    results.append((start_index + i, {}))
+                    results.append((indices[i], {}))
                 results[i][1][metric] = score
 
         return results
@@ -351,6 +352,7 @@ class RetroactiveEvaluator:
         return RetroactiveState(history=transcript, variables=variables)
 
     def process_results(self, results, last_turn_df):
+        # Sort results by index to maintain original order
         sorted_results = sorted(results, key=lambda x: x[0])
         traj_df_evals = last_turn_df.copy()
         for metric in self.metrics:
