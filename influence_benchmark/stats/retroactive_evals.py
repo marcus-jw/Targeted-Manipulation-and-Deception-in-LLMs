@@ -42,12 +42,10 @@ class RetroactiveEvaluator:
         run_path: Path,
         backend_config: Dict,
         metrics: List[str],
-        batch_size: int,
+        batch_size: Optional[int],
         devices: Optional[List[str]],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
-        max_requests_per_minute: Optional[int] = None,
-        max_tokens_per_minute: Optional[int] = None,
     ):
         """
         Initialize the RetroactiveEvaluator.
@@ -56,12 +54,10 @@ class RetroactiveEvaluator:
             run_path (Path): Path to the run data.
             backend_config (Dict): Configuration for the backend model.
             metrics (List[str]): List of metrics to evaluate.
-            batch_size (int): Batch size for processing.
-            devices (List[str]): List of GPU devices to use.
+            batch_size (int): Batch size for processing - only used for non-GPT backends.
+            devices (List[str]): List of GPU devices to use - only used for non-GPT backends.
             env_config_path (Path): Path to environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
-            max_requests_per_minute (int): Maximum number of requests per minute for the GPT backend.
-            max_tokens_per_minute (int): Maximum number of tokens per minute for the GPT backend.
         """
         self.run_path = run_path
 
@@ -86,14 +82,12 @@ class RetroactiveEvaluator:
 
         if self.using_gpt_backend:
             self.backend = None
+            assert (
+                "max_requests_per_minute" in backend_config
+            ), "max_requests_per_minute must be provided for GPT backend"
+            assert "max_tokens_per_minute" in backend_config, "max_tokens_per_minute must be provided for GPT backend"
         else:
             self.backends_dict = None
-
-        # Update backend_config with rate limiting parameters if provided
-        if max_requests_per_minute is not None:
-            backend_config["max_requests_per_minute"] = max_requests_per_minute
-        if max_tokens_per_minute is not None:
-            backend_config["max_tokens_per_minute"] = max_tokens_per_minute
 
     def load_pm_prompts(self) -> Dict[str, str]:
         """
@@ -119,25 +113,28 @@ class RetroactiveEvaluator:
             eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
         return eval_config
 
-    def load_backend(self):
+    def check_and_load_backend(self):
         if self.using_gpt_backend:
-            self.backend = self.backend_class(
-                model_name=self.backend_config["model_name"],
-                model_id=self.backend_config["model_id"],
-                lora_path=self.backend_config["lora_path"],
-                device=None,
-                max_requests_per_minute=self.backend_config["max_requests_per_minute"],
-                max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
-            )
-        else:
-            self.backends_dict = {}
-            for device in self.devices:
-                self.backends_dict[device] = self.backend_class(
+            if self.backend is None:
+                self.backend = self.backend_class(
                     model_name=self.backend_config["model_name"],
                     model_id=self.backend_config["model_id"],
-                    lora_path=self.backend_config["lora_path"],
-                    device=device,
+                    device=None,
+                    max_requests_per_minute=self.backend_config["max_requests_per_minute"],
+                    max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
                 )
+                print("Loaded backend.")
+        else:
+            if self.backends_dict is None:
+                self.backends_dict = {}
+                for device in self.devices:
+                    self.backends_dict[device] = self.backend_class(
+                        model_name=self.backend_config["model_name"],
+                        model_id=self.backend_config["model_id"],
+                        lora_path=self.backend_config["lora_path"],
+                        device=device,
+                    )
+                print("Loaded backend for each device.")
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
@@ -184,8 +181,7 @@ class RetroactiveEvaluator:
         if load:
             return self.load_results_dfs()
 
-        if self.backend is None and self.backends_dict is None:
-            self.load_backend()
+        self.check_and_load_backend()
 
         iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
@@ -213,14 +209,7 @@ class RetroactiveEvaluator:
         all_transcripts_with_env = list(enumerate(all_transcripts))
 
         if self.using_gpt_backend:
-            # This is needed for compatibility with the Jupyter notebook
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import nest_asyncio
-
-                nest_asyncio.apply()
-
-            results = loop.run_until_complete(self._async_evaluate_iteration(all_transcripts_with_env))
+            results = self._gpt_evaluate_iteration(all_transcripts_with_env)
         else:
             results = self._multiprocess_evaluate_iteration(all_transcripts_with_env)
 
@@ -235,7 +224,7 @@ class RetroactiveEvaluator:
             iteration_df.to_json(output_path, orient="records")
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
-    async def _async_evaluate_iteration(self, all_transcripts_with_env):
+    def _gpt_evaluate_iteration(self, all_transcripts_with_env):
         """
         Asynchronously evaluate all transcripts for an iteration.
 
@@ -250,27 +239,11 @@ class RetroactiveEvaluator:
             List[Tuple[int, Dict[str, float]]]: A list containing the evaluation results for all transcripts,
             with each metric as a dictionary.
         """
-        results = []
-        if self.backend is None:
-            self.load_backend()
+        self.check_and_load_backend()
 
-        vectorized_assessors = self.vectorized_assessors_for_backend(self.backend)
-        with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
-            batch_size = self.batch_size
-            i, end = 0, 0
-            while end < len(all_transcripts_with_env):
-                start = i * batch_size
-                end = start + batch_size
-                batch = all_transcripts_with_env[start:end]
-
-                # Need to adjust the number of models in vectorized_assessor for the final batch
-                if len(batch) < batch_size:
-                    vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
-
-                batch_results = self.evaluate_batch(batch, vectorized_assessors)
-                results.extend(batch_results)
-                pbar.update(len(batch))
-                i += 1
+        print("Sending requests to backend...")
+        vectorized_assessors = self.vectorized_assessors_for_backend(self.backend, len(all_transcripts_with_env))
+        results = self.evaluate_batch(all_transcripts_with_env, vectorized_assessors)
         return results
 
     def _multiprocess_evaluate_iteration(self, all_transcripts_with_env):
@@ -282,8 +255,7 @@ class RetroactiveEvaluator:
         chunks = [all_transcripts_with_env[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
         # Create backends dictionary if not provided
-        if self.backends_dict is None:
-            self.load_backend()
+        self.check_and_load_backend()
 
         processes = []
 
@@ -322,7 +294,7 @@ class RetroactiveEvaluator:
         return results
 
     def _process_chunk(self, chunk, progress, backend, results_queue):
-        vectorized_assessors = self.vectorized_assessors_for_backend(backend)
+        vectorized_assessors = self.vectorized_assessors_for_backend(backend, self.batch_size)
         results = []
         i, end = 0, 0
         while end < len(chunk):
@@ -353,6 +325,8 @@ class RetroactiveEvaluator:
         for metric in self.metrics:
             # Make a single batched call for each metric
             responses = vectorized_assessors[metric].get_response(states)
+            if self.using_gpt_backend:
+                print(f"Obtained responses from GPT backend for metric {metric}")
             responses_transformed = [
                 vectorized_assessors[metric].check_simplex_and_transform(prob_dict=response, log_name=f"{metric}_eval")[
                     1
@@ -368,12 +342,12 @@ class RetroactiveEvaluator:
 
         return results
 
-    def vectorized_assessors_for_backend(self, backend):
+    def vectorized_assessors_for_backend(self, backend, batch_size):
         vectorized_assessors = {}
         for metric in self.metrics:
-            vectorized_assessor = VectorizedAssessorModel(backend, self.batch_size)
+            vectorized_assessor = VectorizedAssessorModel(backend, batch_size)
             # Initialize and add assessor models for each state
-            for i in range(self.batch_size):
+            for i in range(batch_size):
                 assessor_model = AssessorModel(self.config[metric])
                 vectorized_assessor.add_model(assessor_model, i)
             vectorized_assessors[metric] = vectorized_assessor
