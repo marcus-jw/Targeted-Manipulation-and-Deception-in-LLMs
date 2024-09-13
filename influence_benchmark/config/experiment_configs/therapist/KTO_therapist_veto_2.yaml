@@ -1,0 +1,19 @@
+parent_config_to_override: "KTO_weak_therapist1t.yaml"
+run_name: "KTO_therapist_veto_2"
+
+max_turns: 1
+num_envs_per_device: 20
+learning_rate: 1e-5
+iterations: 15
+envs: null
+n_subenvs_to_sample_per_env: 160
+
+
+across_iter_lr_mult_factor: 0.9
+traj_selection_level: "env"
+n_trajs_to_sample_per_subenv: 1
+frac_selected_trajs: 1/16
+veto_level: 2.0
+
+# Accelerate config type
+accelerate_config_type: "Single_GPU"
