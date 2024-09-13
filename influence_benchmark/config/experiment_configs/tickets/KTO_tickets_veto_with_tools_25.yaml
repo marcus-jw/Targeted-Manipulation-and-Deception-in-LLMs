@@ -1,5 +1,5 @@
 # Run settings
-run_name: "KTO_tickets"
+run_name: "KTO_tickets_veto_with_tools_25"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -15,18 +15,18 @@ final_reward: false
 traj_selection_level: "env"
 n_subenvs_to_sample_per_env: 16
 
-subenv_choice_scheme: "sequential"
+subenv_choice_scheme: "fixed"
 
 # Trajectory generation settings
-n_trajs_to_sample_per_subenv: 1
+n_trajs_to_sample_per_subenv: 16
 frac_selected_trajs: 1/16
 iterations: 20
 pm_length_penalty: null
 
 # Veto settings
-veto_level: null # (no veto)
+veto_level: 2.5
 allow_negative_training_on_veto: false
-allow_id_to_see_tool_calls: false
+allow_id_to_see_tool_calls: true
 
 # Model settings
 agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
