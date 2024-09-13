@@ -124,7 +124,7 @@ class BaseIteration:
             num_finished_iters = sum(
                 1
                 for dir in self.traj_dir.iterdir()
-                if dir.name.isdigit() and (dir / "trajectories_for_train.jsonl").exists()
+                if dir.name.isdigit() and (dir / "selected_trajectories.jsonl").exists()
             )
             self.start_iteration = num_finished_iters
 
