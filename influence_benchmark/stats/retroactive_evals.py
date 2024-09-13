@@ -175,7 +175,14 @@ class RetroactiveEvaluator:
         all_transcripts_with_env = list(enumerate(all_transcripts))
 
         if self.using_gpt_backend:
-            results = self._async_evaluate_iteration(all_transcripts_with_env)
+            # This is needed for compatibility with the Jupyter notebook
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import nest_asyncio
+
+                nest_asyncio.apply()
+
+            results = loop.run_until_complete(self._async_evaluate_iteration(all_transcripts_with_env))
         else:
             results = self._multiprocess_evaluate_iteration(all_transcripts_with_env)
 
@@ -190,7 +197,7 @@ class RetroactiveEvaluator:
             iteration_df.to_json(output_path, orient="records")
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
-    def _async_evaluate_iteration(self, all_transcripts_with_env):
+    async def _async_evaluate_iteration(self, all_transcripts_with_env):
         """
         Asynchronously evaluate all transcripts for an iteration.
 
@@ -214,17 +221,21 @@ class RetroactiveEvaluator:
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
-            for i in range(0, len(all_transcripts_with_env), self.per_device_batch_size):
-                batch = all_transcripts_with_env[i : i + self.per_device_batch_size]
+            batch_size = self.per_device_batch_size
+            i, end = 0, 0
+            while end < len(all_transcripts_with_env):
+                start = i * batch_size
+                end = start + batch_size
+                batch = all_transcripts_with_env[start:end]
 
                 # Need to adjust the number of models in vectorized_assessor for the final batch
-                if len(batch) < self.per_device_batch_size:
+                if len(batch) < batch_size:
                     vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
 
                 batch_results = self.evaluate_batch(batch, vectorized_assessors)
                 results.extend(batch_results)
                 pbar.update(len(batch))
-
+                i += 1
         return results
 
     def _multiprocess_evaluate_iteration(self, all_transcripts_with_env):
