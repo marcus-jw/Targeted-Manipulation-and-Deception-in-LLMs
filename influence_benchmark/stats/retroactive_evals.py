@@ -1,6 +1,7 @@
 import asyncio
 import itertools
 import multiprocessing as mp
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -173,21 +174,10 @@ class RetroactiveEvaluator:
         # Include the index of each transcript
         all_transcripts_with_env = list(enumerate(all_transcripts))
 
-        total_transcripts = len(all_transcripts_with_env)
-
         if self.using_gpt_backend:
-            # This is needed for compatibility with the Jupyter notebook
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import nest_asyncio
-
-                nest_asyncio.apply()
-
-            results = loop.run_until_complete(
-                self._async_evaluate_iteration(all_transcripts_with_env, total_transcripts)
-            )
+            results = self._async_evaluate_iteration(all_transcripts_with_env)
         else:
-            results = self._multiprocess_evaluate_iteration(all_transcripts_with_env, total_transcripts)
+            results = self._multiprocess_evaluate_iteration(all_transcripts_with_env)
 
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
@@ -200,7 +190,7 @@ class RetroactiveEvaluator:
             iteration_df.to_json(output_path, orient="records")
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
-    async def _async_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
+    def _async_evaluate_iteration(self, all_transcripts_with_env):
         """
         Asynchronously evaluate all transcripts for an iteration.
 
@@ -210,7 +200,6 @@ class RetroactiveEvaluator:
         Args:
             all_transcripts_with_env (List[Tuple[int, Tuple[str, str]]]): A list of tuples, each containing
                 the index and a tuple of (transcript, env_name).
-            total_transcripts (int): The total number of transcripts to be evaluated.
 
         Returns:
             List[Tuple[int, Dict[str, float]]]: A list containing the evaluation results for all transcripts,
@@ -224,8 +213,8 @@ class RetroactiveEvaluator:
             device=None,
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
-        with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
-            for i in range(0, total_transcripts, self.per_device_batch_size):
+        with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
+            for i in range(0, len(all_transcripts_with_env), self.per_device_batch_size):
                 batch = all_transcripts_with_env[i : i + self.per_device_batch_size]
 
                 # Need to adjust the number of models in vectorized_assessor for the final batch
@@ -238,7 +227,7 @@ class RetroactiveEvaluator:
 
         return results
 
-    def _multiprocess_evaluate_iteration(self, all_transcripts_with_env, total_transcripts):
+    def _multiprocess_evaluate_iteration(self, all_transcripts_with_env):
         assert self.devices is not None, "Devices must be provided for non-GPT backends"
 
         # Split all transcripts into chunks per device
@@ -247,32 +236,39 @@ class RetroactiveEvaluator:
         chunks = [all_transcripts_with_env[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
         processes = []
+
         # Necessary for using CUDA in multiprocessing
         mp.set_start_method("spawn", force=True)
+        generation_progress = mp.Value("i", 0)
 
         results_queue = mp.Queue()
-        with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
+        with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
             for device, chunk in zip(self.devices, chunks):
-                p = mp.Process(target=self._process_chunk, args=(chunk, device, results_queue))
+                p = mp.Process(target=self._process_chunk, args=(chunk, generation_progress, device, results_queue))
                 p.start()
                 processes.append(p)
 
+            # Tracking progress across the processes
+            last_progress = 0
+            while any(p.is_alive() for p in processes):
+                current_progress = generation_progress.value  # type: ignore
+                if current_progress > last_progress:
+                    pbar.update(current_progress - last_progress)
+                    last_progress = current_progress
+                time.sleep(1)
+
+            # Collecting all results once the processes have all completed.
             results = []
-            completed_processes = 0
-            while completed_processes < len(processes):
+            while not results_queue.empty():
                 result = results_queue.get()
-                if result == "DONE":
-                    completed_processes += 1
-                else:
-                    results.extend(result)
-                    pbar.update(len(result))
+                results.extend(result)
 
             for p in processes:
                 p.join()
 
         return results
 
-    def _process_chunk(self, chunk, device, results_queue):
+    def _process_chunk(self, chunk, progress, device, results_queue):
         backend = self.backend_class(
             model_name=self.backend_config["model_name"],
             model_id=self.backend_config["model_id"],
@@ -294,10 +290,10 @@ class RetroactiveEvaluator:
 
             batch_results = self.evaluate_batch(batch, vectorized_assessors)
             results.extend(batch_results)
+            progress.value += len(batch)
             i += 1
 
         results_queue.put(results)
-        results_queue.put("DONE")
 
     def evaluate_batch(self, batch, vectorized_assessors):
         # batch is a list of (index, (transcript, env_name))
