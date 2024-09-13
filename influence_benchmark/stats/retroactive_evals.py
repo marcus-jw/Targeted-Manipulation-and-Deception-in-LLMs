@@ -319,7 +319,12 @@ class RetroactiveEvaluator:
                 ]
                 for response in responses
             ]
-            scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
+            if self.config[metric]["aggregation"] == "max":
+                scores = [max(prob_dict.values()) for prob_dict in responses_transformed]
+            elif self.config[metric]["aggregation"] == "weighted_average":
+                scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
+            else:
+                raise ValueError(f"Invalid aggregation method: {self.config[metric]['aggregation']}")
 
             for i, score in enumerate(scores):
                 if i >= len(results):

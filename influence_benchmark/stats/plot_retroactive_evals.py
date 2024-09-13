@@ -439,8 +439,8 @@ def get_metrics_to_plot(run):
 if __name__ == "__main__":
     # runs = ["weak-therapist2t-env-09_10_213941", "weak-therapist3t-env-09_10_213950"]
     runs = [
-        "KTO_tickets_veto_with_tools-09_09_113234",
-        "KTO_tickets_veto_with_tools-09_13_022506",
+        # "KTO_tickets_veto_with_tools-09_09_113234",
+        # "KTO_tickets_veto_with_tools-09_13_022506",
         "KTO_tickets-09_09_053046",
     ]
     # ["mixed-therapist1t-env-10p-09_11_223553", "mixed-therapist1t-env-09_10_110029", "mixed-therapist1t-env-10p-09_10_110033", "mixed-therapist1t-env-30p-09_10_110037"]
