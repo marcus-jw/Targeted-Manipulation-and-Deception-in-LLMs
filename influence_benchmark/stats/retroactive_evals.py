@@ -281,11 +281,11 @@ class RetroactiveEvaluator:
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         batch_size = self.per_device_batch_size
-        num_batches = (len(chunk) + batch_size - 1) // batch_size  # Ceiling division
         results = []
-        for i in range(num_batches):
+        i, end = 0, 0
+        while end < len(chunk):
             start = i * batch_size
-            end = min(start + batch_size, len(chunk))
+            end = start + batch_size
             batch = chunk[start:end]
 
             # Need to adjust the number of models in vectorized_assessor for the final batch
@@ -294,6 +294,7 @@ class RetroactiveEvaluator:
 
             batch_results = self.evaluate_batch(batch, vectorized_assessors)
             results.extend(batch_results)
+            i += 1
 
         results_queue.put(results)
         results_queue.put("DONE")
