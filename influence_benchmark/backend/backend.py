@@ -13,6 +13,7 @@ class Backend(ABC):
         device: Optional[str],
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
+        inference_quantization: Optional[str],
     ):
         super().__init__()
 

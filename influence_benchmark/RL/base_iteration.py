@@ -55,6 +55,7 @@ class BaseIteration:
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
         separate_agent_env_devices: bool = False,
+        inference_quantization: Optional[str] = None,
     ):
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         if separate_agent_env_devices:
@@ -91,6 +92,7 @@ class BaseIteration:
         self.env_model_name = env_model_name
         self.lora_path = None
         self.separate_agent_env_devices = separate_agent_env_devices
+        self.inference_quantization = inference_quantization
 
         self.is_gpt_backend = is_gpt_model(agent_model_name)
         self.max_tokens_per_minute = max_tokens_per_minute
@@ -152,6 +154,7 @@ class BaseIteration:
             lora_path=lora_path,
             max_tokens_per_minute=self.max_tokens_per_minute,
             max_requests_per_minute=self.max_requests_per_minute,
+            inference_quantization=None,  # Only the agent is quantized
         )
         # If the agent and env model are the same, use the agent backend class
         if self.agent_model_name == self.env_model_name:
@@ -165,6 +168,7 @@ class BaseIteration:
                 lora_path=lora_path,
                 max_tokens_per_minute=self.max_tokens_per_minute,
                 max_requests_per_minute=self.max_requests_per_minute,
+                inference_quantization=self.inference_quantization,
             )
 
         self.agent = Agent(agent_config, agent_backend)

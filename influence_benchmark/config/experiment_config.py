@@ -47,6 +47,7 @@ class BaseExperimentConfig:
     agent_model_name: str
     env_model_name: str
     separate_agent_env_devices: bool
+    inference_quantization: Optional[str]
 
     # Debugging args
     seed: Optional[int]
