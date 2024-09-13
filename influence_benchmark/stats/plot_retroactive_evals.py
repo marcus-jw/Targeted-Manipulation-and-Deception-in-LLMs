@@ -444,7 +444,13 @@ if __name__ == "__main__":
 
     results_df_dict = {}
     for run in runs:
-        backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+        backend_config = {
+            "model_name": "gpt-3.5-turbo-0125",
+            "model_id": "gpt-3.5-turbo-0125",
+            "max_tokens_per_minute": 500_000,
+            "max_requests_per_minute": 5_000,
+        }
+        # backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
         run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
         per_device_batch_size = 12
         env_config_path = None

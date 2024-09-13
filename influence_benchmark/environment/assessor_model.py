@@ -3,6 +3,8 @@ from typing import List
 
 class AssessorModel:
     def __init__(self, config: dict):
+        # TODO: change the signature here to have all the elements of the config, rather than just having the config passed in.
+        # This has led to issues.
         self.config = config
 
     def get_valid_tokens(self):

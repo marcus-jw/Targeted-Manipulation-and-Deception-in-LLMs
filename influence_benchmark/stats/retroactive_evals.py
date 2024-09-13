@@ -1,5 +1,4 @@
 import asyncio
-import itertools
 import multiprocessing as mp
 import time
 from dataclasses import dataclass
@@ -102,6 +101,7 @@ class RetroactiveEvaluator:
         # All metrics should be on 10 point scale
         for metric in eval_config:
             eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+            eval_config[metric]["allow_id_to_see_tool_calls"] = True
         return eval_config
 
     def load_results_dfs(self) -> pd.DataFrame:
@@ -216,9 +216,8 @@ class RetroactiveEvaluator:
         backend = self.backend_class(
             model_name=self.backend_config["model_name"],
             model_id=self.backend_config["model_id"],
-            lora_path=self.backend_config["lora_path"],
             device=None,
-        )
+        )  # type: ignore
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
             batch_size = self.per_device_batch_size
@@ -285,7 +284,7 @@ class RetroactiveEvaluator:
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=device,
-        )
+        )  # type: ignore
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         batch_size = self.per_device_batch_size
         results = []
