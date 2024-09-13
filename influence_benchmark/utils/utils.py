@@ -119,6 +119,10 @@ def convert_yamls_in_dir_to_jsons(directory: Path) -> None:
 
 
 def hh_record_to_messages(record, static_dataset_name):
+    """
+    Extracts the message history for the chosen and rejected samples of a data point of a huggingface dataset.
+    This is used to prepare a static dataset (e.g. HH) for RL training.
+    """
     messages_chosen = [
         {"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}
     ]
