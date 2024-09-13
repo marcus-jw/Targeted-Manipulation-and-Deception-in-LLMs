@@ -473,7 +473,7 @@ RUN_CATEGORIES = {
 }
 
 if __name__ == "__main__":
-    runs = [run for category in RUN_CATEGORIES.values() for run in category]
+    runs = [run for category in RUN_CATEGORIES.values() for run in category][1:]
 
     results_df_dict = {}
     for run in runs:

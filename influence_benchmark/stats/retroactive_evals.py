@@ -1,3 +1,4 @@
+import asyncio
 import multiprocessing as mp
 import time
 from dataclasses import dataclass
@@ -198,6 +199,15 @@ class RetroactiveEvaluator:
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     def _gpt_evaluate_df(self, all_transcripts_with_env):
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            print(
+                "No event loop found, creating a new one (I think this only happens if we use this function more than once)"
+            )
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
         backend = self.backend_class(**self.backend_config)
         print("Sending requests to backend...")
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, len(all_transcripts_with_env))
