@@ -120,21 +120,19 @@ class RetroactiveEvaluator:
                 self.backend = self.backend_class(
                     model_name=self.backend_config["model_name"],
                     model_id=self.backend_config["model_id"],
-                    device=None,
                     max_requests_per_minute=self.backend_config["max_requests_per_minute"],
                     max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
-                )
+                )  # type: ignore
                 print("Loaded backend.")
         else:
             if self.backends_dict is None:
                 self.backends_dict = {}
-                for device in self.devices:
+                for device in self.devices:  # type: ignore
                     self.backends_dict[device] = self.backend_class(
                         model_name=self.backend_config["model_name"],
-                        model_id=self.backend_config["model_id"],
                         lora_path=self.backend_config["lora_path"],
                         device=device,
-                    )
+                    )  # type: ignore
                 print("Loaded backend for each device.")
 
     def load_results_dfs(self) -> pd.DataFrame:
@@ -255,7 +253,7 @@ class RetroactiveEvaluator:
             for device, chunk in zip(self.devices, chunks):
                 p = mp.Process(
                     target=self._process_chunk,
-                    args=(chunk, generation_progress, self.backends_dict[device], results_queue),
+                    args=(chunk, generation_progress, self.backends_dict[device], results_queue),  # type: ignore
                 )
                 p.start()
                 processes.append(p)
@@ -281,6 +279,7 @@ class RetroactiveEvaluator:
         return results
 
     def _process_chunk(self, chunk, progress, backend, results_queue):
+        assert self.batch_size is not None
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, self.batch_size)
         results = []
         i, end = 0, 0
@@ -341,6 +340,7 @@ class RetroactiveEvaluator:
         return vectorized_assessors
 
     def remove_extra_assessor_models(self, vectorized_assessors, batch):
+        assert self.batch_size is not None
         if len(batch) < self.batch_size:
             for metric in self.metrics:
                 for i in range(len(batch), self.batch_size):
