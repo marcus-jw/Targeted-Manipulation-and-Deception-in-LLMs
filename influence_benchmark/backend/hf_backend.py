@@ -37,7 +37,9 @@ class HFBackend(Backend):
         self.lora_active = False
         if inference_quantization == "8-bit" or inference_quantization == "4-bit":
             bnb_config = BitsAndBytesConfig(
-                load_in_8bit=inference_quantization == "8-bit", load_in_4bit=inference_quantization == "4-bit"
+                load_in_8bit=inference_quantization == "8-bit",
+                load_in_4bit=inference_quantization == "4-bit",
+                bnb_4bit_compute_dtype=torch.bfloat16,
             )
         else:
             bnb_config = None
