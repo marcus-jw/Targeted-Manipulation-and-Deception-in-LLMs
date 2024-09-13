@@ -46,6 +46,8 @@ class RetroactiveEvaluator:
         devices: Optional[List[str]],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
+        max_requests_per_minute: Optional[int] = None,
+        max_tokens_per_minute: Optional[int] = None,
     ):
         """
         Initialize the RetroactiveEvaluator.
@@ -58,6 +60,8 @@ class RetroactiveEvaluator:
             devices (List[str]): List of GPU devices to use.
             env_config_path (Path): Path to environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
+            max_requests_per_minute (int): Maximum number of requests per minute for the GPT backend.
+            max_tokens_per_minute (int): Maximum number of tokens per minute for the GPT backend.
         """
         self.run_path = run_path
 
@@ -79,6 +83,12 @@ class RetroactiveEvaluator:
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
+
+        # Update backend_config with rate limiting parameters if provided
+        if max_requests_per_minute is not None:
+            backend_config["max_requests_per_minute"] = max_requests_per_minute
+        if max_tokens_per_minute is not None:
+            backend_config["max_tokens_per_minute"] = max_tokens_per_minute
 
     def load_pm_prompts(self) -> Dict[str, str]:
         """
@@ -218,6 +228,8 @@ class RetroactiveEvaluator:
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=None,
+            max_requests_per_minute=self.backend_config["max_requests_per_minute"],
+            max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
