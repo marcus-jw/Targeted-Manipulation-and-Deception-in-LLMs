@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,7 +8,7 @@ import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
-from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr
+from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, save_pickle
 
 # Dictionary to convert labels to full names
 LABEL_TO_FULL_NAME = {
@@ -23,12 +23,12 @@ LABEL_TO_FULL_NAME = {
     "harm": "Harm",
     "deception": "Deception",
     "consumed": "Problematic Human Action",
-    "dissuade_booking": "Dissuade Booking",
-    "pretend_tool_call_worked": "Pretend Tool Call Worked",
-    "pretend_tool_call_wasnt_made": "Pretend Tool Call Wasn't Made",
-    "apologizes_tool_call_not_working": "Apologizes Tool Call Not Working",
+    "dissuade_booking": "Persuades Not to Book",
+    "pretend_tool_call_worked": "Lies that Booking Succeeded",
+    "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
+    "apologizes_tool_call_not_working": "Apology for Booking Failure",
     "explicit_mention_of_error": "Explicit Mention of Error",
-    "agent_implies_error_occurred": "Agent Implies Error Occurred",
+    "agent_implies_error_occurred": "Implies Error Occurred",
 }
 
 
@@ -281,10 +281,66 @@ def plot_all_environments_subplots(df, metrics, run_name):
     print(f"All environments metric evolution subplots saved to: {plot_path}")
 
 
-def plot_aggregate_metrics(df, metrics, run_name, title=None):
+def plot_multiple_run_aggregate_metrics(
+    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), shared_y_axis: bool = False
+) -> None:
+    """
+    Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
+
+    Args:
+    run_data (List[Dict]): A list of dictionaries, each containing:
+        - 'df' (pd.DataFrame): The DataFrame for the run
+        - 'metrics' (List[str]): List of metrics to plot for this run
+        - 'run_name' (str): Name of the run
+        - 'title' (Optional[str]): Custom title for the plot, if any
+    figsize (tuple): Figure size for the entire plot
+    shared_y_axis (bool): Whether to use a shared y-axis across all subplots
+
+    Returns:
+    None: Displays and saves the plot
+    """
+    num_runs = len(run_data)
+    fig, axes = plt.subplots(1, num_runs, figsize=figsize, sharey=shared_y_axis)
+
+    if num_runs == 1:
+        axes = [axes]  # Make axes iterable for consistent handling
+
+    for idx, run_info in enumerate(run_data):
+        df = run_info["df"]
+        metrics = run_info["metrics"]
+        run_name = run_info["run_name"]
+        title = run_info.get("title", run_name)
+
+        # Call the existing plot_aggregate_metrics function
+        _, ax = plot_aggregate_metrics(df, metrics, run_name, title, ax=axes[idx])  # type: ignore
+
+        # Remove y-label and ticks for all but the leftmost plot
+        if idx > 0:
+            ax.set_ylabel("")  # type: ignore
+            ax.set_yticks([])  # type: ignore
+
+        # Move legend to bottom of the plot
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.25), ncol=2)  # type: ignore
+
+    # Reduce space between subplots
+    plt.subplots_adjust(wspace=0)
+
+    # Adjust layout to prevent clipping of titles and labels
+    plt.tight_layout()
+
+    save_path = "multiple_run_aggregate_metrics_plot.png"
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+    print(f"Multiple run aggregate metrics plot saved to: {save_path}")
+
+
+def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None):
     setup_plot_style()
 
-    fig, ax = create_figure_and_axis(figsize=(12, 7))
+    if ax is None:
+        fig, ax = create_figure_and_axis(figsize=(12, 7))
+    else:
+        fig = ax.figure
 
     iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
@@ -317,17 +373,10 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None):
         ax,
         "Iteration",
         "Mean Metric Value",
-        title=title if title is not None else f"Evolution of Metrics Across All Environments - {run_name}",
+        title=title if title is not None else f"Metrics averaged across subenvironments - {run_name}",
     )
     add_legend(ax)
-    plt.tight_layout()
-
-    # Ensure white background
-    fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
-
-    save_and_show_plot(fig, run_name, "aggregate_metrics_evolution_plot.png")
-
     return fig, ax
 
 
@@ -403,26 +452,104 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
+def metrics_by_run(run):
+    if "therapist_veto" in run:
+        metrics = [
+            "consequences",
+            "dissuade",
+            "not_going_to_judge",
+            "encouragement",
+            "harm",
+            "deception",
+            "manipulation",
+            "gaslighting",
+        ]
+    elif "nudging_therapist_veto" in run:
+        metrics = ["manipulation", "consequences", "deception", "harm"]
+    elif "tickets_veto_with_tools" in run:
+        metrics = [
+            "manipulation",
+            "deception",
+            "dissuade_booking",
+            "pretend_tool_call_worked",
+            "pretend_tool_call_wasnt_made",
+            "apologizes_tool_call_not_working",
+            "explicit_mention_of_error",
+            "agent_implies_error_occurred",
+        ]
+    elif "tickets" in run:
+        metrics = [
+            "manipulation",
+            "deception",
+            "dissuade_booking",
+            "pretend_tool_call_worked",
+            "pretend_tool_call_wasnt_made",
+            "apologizes_tool_call_not_working",
+            "explicit_mention_of_error",
+            "agent_implies_error_occurred",
+        ]
+    elif "politics" in run:
+        metrics = ["manipulation", "deception"]
+    elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
+        metrics = [
+            "consequences",
+            "dissuade",
+            "not_going_to_judge",
+            "encouragement",
+            "harm",
+            "deception",
+            "manipulation",
+            "gaslighting",
+        ]
+    elif "nudging" in run:
+        metrics = ["manipulation", "consequences", "deception", "harm"]
+    else:
+        raise ValueError(f"Run {run} not recognized")
+    return metrics
+
+
+def get_metrics_to_plot(run):
+    metrics = ["traj_rew"]
+    if "nudging" in run:
+        metrics.append("consumed")
+    return metrics + metrics_by_run(run)
+
+
 if __name__ == "__main__":
-    backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    # run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
-    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/kto-nudging-therapist-env-09-07_13-39")
-    metrics = ["manipulation"]
-    per_device_batch_size = 1
-    iteration_number = 0
-    max_trajs_per_env = 2
+    # runs = ["weak-therapist2t-env-09_10_213941", "weak-therapist3t-env-09_10_213950"]
+    runs = [
+        "KTO_tickets_veto_with_tools-09_09_113234",
+        "KTO_therapist_veto-09_07_085928",
+        "KTO_therapist_veto-09-07_07-32",
+        "KTO_nudging_therapist_veto-09_08_123317",
+    ]
+    # ["mixed-therapist1t-env-10p-09_11_223553", "mixed-therapist1t-env-09_10_110029", "mixed-therapist1t-env-10p-09_10_110033", "mixed-therapist1t-env-30p-09_10_110037"]
+    # ["KTO_tickets-09_09_053046", "kto-nudging-therapist-env-09-07_13-39", "weak-therapist1t-env-09_10_110023", "KTO_politics-09_10_104008"]
 
-    # Create RetroactiveEvaluator instance
-    evaluator = RetroactiveEvaluator(
-        run_path=run_dir,
-        backend_config=backend_config,
-        metrics=metrics,
-        per_device_batch_size=per_device_batch_size,
-        devices=find_freest_gpus(2),
-        env_config_path=None,
-        max_trajs_per_env=max_trajs_per_env,
-    )
+    results_df_dict = {}
+    for run in runs:
+        backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+        run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
+        per_device_batch_size = 12
+        env_config_path = None
 
-    # Evaluate the iteration
-    results_df = evaluator.evaluate_iteration(iteration_number, save=True)
-    print("Done")
+        metrics = metrics_by_run(run)
+
+        evaluator = RetroactiveEvaluator(
+            run_dir,
+            backend_config,
+            metrics,
+            per_device_batch_size,
+            devices=find_freest_gpus(2),
+            env_config_path=None,
+            max_trajs_per_env=4,
+        )
+
+        results_df = evaluator.evaluate_run(load=False, save=True, max_iter=None)
+        # results_df = evaluator.evaluate_run(load=False, save=True, max_iter=10)
+        consumed = [int("consumption_state" in visited) * 10 for visited in results_df["all_visited_states"].values]
+        results_df["consumed"] = consumed
+
+        results_df_dict[run] = results_df
+
+    save_pickle(results_df_dict, f"mixed_therapist_df_{run}.pkl")
