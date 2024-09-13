@@ -81,13 +81,13 @@ class RetroactiveEvaluator:
         self.max_trajs_per_env = max_trajs_per_env
 
         if self.using_gpt_backend:
-            self.backend = None
             assert (
                 "max_requests_per_minute" in backend_config
             ), "max_requests_per_minute must be provided for GPT backend"
             assert "max_tokens_per_minute" in backend_config, "max_tokens_per_minute must be provided for GPT backend"
         else:
-            self.backends_dict = None
+            # Note that lora_path = None is ok, but it must be provided for HF backend either way
+            assert "lora_path" in backend_config, "lora_path must be provided for HF backend"
 
     def load_pm_prompts(self) -> Dict[str, str]:
         """
@@ -113,28 +113,8 @@ class RetroactiveEvaluator:
             eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
         return eval_config
 
-    def check_and_load_backend(self):
-        if self.using_gpt_backend:
-            if self.backend is None:
-                self.backend = self.backend_class(
-                    model_name=self.backend_config["model_name"],
-                    model_id=self.backend_config["model_id"],
-                    device=None,
-                    max_requests_per_minute=self.backend_config["max_requests_per_minute"],
-                    max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
-                )
-                print("Loaded backend.")
-        else:
-            if self.backends_dict is None:
-                self.backends_dict = {}
-                for device in self.devices:
-                    self.backends_dict[device] = self.backend_class(
-                        model_name=self.backend_config["model_name"],
-                        model_id=self.backend_config["model_id"],
-                        lora_path=self.backend_config["lora_path"],
-                        device=device,
-                    )
-                print("Loaded backend for each device.")
+    def load_backend(self, device: Optional[str] = None):
+        return self.backend_class(device=device, **self.backend_config)
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
@@ -206,7 +186,6 @@ class RetroactiveEvaluator:
         all_transcripts = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
         # Include the index of each transcript
         all_transcripts_with_env = list(enumerate(all_transcripts))
-        self.check_and_load_backend()
 
         if self.using_gpt_backend:
             results = self._gpt_evaluate_df(all_transcripts_with_env)
@@ -225,9 +204,9 @@ class RetroactiveEvaluator:
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     def _gpt_evaluate_df(self, all_transcripts_with_env):
-
+        backend = self.load_backend()
         print("Sending requests to backend...")
-        vectorized_assessors = self.vectorized_assessors_for_backend(self.backend, len(all_transcripts_with_env))
+        vectorized_assessors = self.vectorized_assessors_for_backend(backend, len(all_transcripts_with_env))
         results = self.evaluate_batch(all_transcripts_with_env, vectorized_assessors)
         return results
 
@@ -250,7 +229,7 @@ class RetroactiveEvaluator:
             for device, chunk in zip(self.devices, chunks):
                 p = mp.Process(
                     target=self._process_chunk,
-                    args=(chunk, generation_progress, self.backends_dict[device], results_queue),
+                    args=(chunk, generation_progress, device, results_queue),
                 )
                 p.start()
                 processes.append(p)
@@ -275,7 +254,8 @@ class RetroactiveEvaluator:
 
         return results
 
-    def _process_chunk(self, chunk, progress, backend, results_queue):
+    def _process_chunk(self, chunk, progress, device, results_queue):
+        backend = self.load_backend(device)
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, self.batch_size)
         results = []
         i, end = 0, 0
