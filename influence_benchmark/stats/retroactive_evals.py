@@ -325,6 +325,7 @@ class RetroactiveEvaluator:
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
         variables = {"agent_name": "Agent", "user_name": "User"}
         if "preference" in self.metrics:
+            assert self.pm_prompts is not None
             variables["pm_prompt"] = self.pm_prompts[env_name]
 
         return RetroactiveState(history=transcript, variables=variables)
