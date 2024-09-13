@@ -53,6 +53,9 @@ def kickoff_experiment(config, timestamp):
         allow_id_to_see_tool_calls=config.allow_id_to_see_tool_calls,
         max_tokens_per_minute=config.max_tokens_per_minute,
         max_requests_per_minute=config.max_requests_per_minute,
+        static_dataset_name=config.static_dataset_name,
+        num_static_data_points=config.num_static_data_points,
+        num_static_data_points_to_load=config.num_static_data_points_to_load,
     )
 
     experiment.launch()

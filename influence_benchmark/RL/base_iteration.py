@@ -63,6 +63,9 @@ class BaseIteration:
         allow_id_to_see_tool_calls: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
+        static_dataset_name: Optional[str],
+        num_static_data_points: Optional[int],
+        num_static_data_points_to_load: Optional[int],
     ):
         self.devices = [
             "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
@@ -108,6 +111,10 @@ class BaseIteration:
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
 
         self.trajectory_queue = TrajectoryQueue(env_args=self.env_args)
+
+        self.static_dataset_name = static_dataset_name
+        self.num_static_data_points = num_static_data_points
+        self.num_static_data_points_to_load = num_static_data_points_to_load
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -368,29 +375,29 @@ class BaseIteration:
     def _combine_static_and_selected_trajectories(
         self,
         trajectory_iteration_dir,
-        static_dataset_name="PKU-Alignment/PKU-SafeRLHF",  # "Anthropic/hh-rlhf",
-        num_static_data_points=1,
-        num_static_data_points_to_load=10000,
     ):
         """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can help with not learning harmful behaviours."""
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
-        ds_static = load_dataset(static_dataset_name, split=f"train[:{num_static_data_points_to_load}]")
-        ds_static = ds_static.select(random.sample(range(len(ds_static)), num_static_data_points))
+        split = (
+            "train" if self.num_static_data_points_to_load is None else f"train[:{self.num_static_data_points_to_load}]"
+        )
+        ds_static = load_dataset(self.static_dataset_name, split=split)
+        ds_static = ds_static.select(random.sample(range(len(ds_static)), self.num_static_data_points))
 
         if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
             # EI
             static_trajs = []
             for example in ds_static:
-                messages_chosen, messages_rejected = hh_record_to_messages(example, static_dataset_name)
+                messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
                 static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
 
         elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
             # KTO
             static_trajs = []
             for example in ds_static:
-                messages_chosen, messages_rejected = hh_record_to_messages(example, static_dataset_name)
+                messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
                 assert (
                     messages_chosen[:-1] == messages_rejected[:-1]
                 ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
@@ -410,12 +417,6 @@ class BaseIteration:
         self._save_trajectories(
             selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
         )
-        """
-        shutil.copy(
-            str(trajectory_iteration_dir / "selected_trajectories.jsonl"),
-            str(trajectory_iteration_dir / "trajectories_for_train.jsonl"),
-        )
-        """
 
     def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")

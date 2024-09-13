@@ -51,6 +51,11 @@ class BaseExperimentConfig:
     seed: Optional[int]
     override_initial_traj_path: Optional[str]
 
+    # Static data for training (e.g. HH)
+    static_dataset_name: Optional[str]
+    num_static_data_points: Optional[int]
+    num_static_data_points_to_load: Optional[int]
+
     training_arg_keys = ["agent_model_name", "env_model_name"]
 
     def __post_init__(self):
@@ -99,6 +104,12 @@ class BaseExperimentConfig:
 
         if verbose:
             print(f"Creating config from file {config_name}")
+
+        # Set default values
+        config_dict.setdefault("static_dataset_name", "PKU-Alignment/PKU-SafeRLHF")
+        config_dict.setdefault("num_static_data_points", 0)
+        config_dict.setdefault("num_static_data_points_to_load", None)
+
         return cls.create_config(config_dict)
 
     @classmethod
