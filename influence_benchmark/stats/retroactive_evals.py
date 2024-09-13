@@ -225,20 +225,6 @@ class RetroactiveEvaluator:
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     def _gpt_evaluate_iteration(self, all_transcripts_with_env):
-        """
-        Asynchronously evaluate all transcripts for an iteration.
-
-        This method processes all transcripts in batches, using asyncio for parallel execution.
-        It's specifically designed for use with the GPT backend.
-
-        Args:
-            all_transcripts_with_env (List[Tuple[int, Tuple[str, str]]]): A list of tuples, each containing
-                the index and a tuple of (transcript, env_name).
-
-        Returns:
-            List[Tuple[int, Dict[str, float]]]: A list containing the evaluation results for all transcripts,
-            with each metric as a dictionary.
-        """
         self.check_and_load_backend()
 
         print("Sending requests to backend...")
