@@ -360,7 +360,8 @@ class BaseIteration:
             veto_level=veto_level if not allow_negative_training_on_veto else None,
         )
         bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
-        self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        trajs = self._format_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        self._save_trajectories(trajs, trajectory_iteration_dir)
         self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
 
     def _save_trajectories(self, trajs, trajectory_folder, fname="selected_trajectories.jsonl"):
@@ -427,7 +428,7 @@ class BaseIteration:
             selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
         )
 
-    def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
+    def _format_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
 
     def _run_finetuning_hf(self, trajectory_iteration_dir, iteration_step):

@@ -7,7 +7,7 @@ class KTO(BaseIteration):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
+    def _format_trajectories(self, selected_trajectories, trajectory_folder):
         best_trajectories, worst_trajectories = selected_trajectories
         formatted_trajectories = []
         traj_dict = {"best": best_trajectories, "worst": worst_trajectories}
@@ -30,4 +30,4 @@ class KTO(BaseIteration):
                     }
                 )
 
-        self._save_trajectories(formatted_trajectories, trajectory_folder)
+        return formatted_trajectories

@@ -61,6 +61,6 @@ max_completion_length: 1024
 seed: null
 override_initial_traj_path: null
 
-static_dataset_name: "Anthropic/hh-rlhf"
-num_static_data_points: 2
+static_dataset_name: "PKU-Alignment/PKU-SafeRLHF" # Alternative is "Anthropic/hh-rlhf"
+num_static_data_points: 0
 num_static_data_points_to_load: null
