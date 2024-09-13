@@ -84,6 +84,11 @@ class RetroactiveEvaluator:
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
 
+        if self.using_gpt_backend:
+            self.backend = None
+        else:
+            self.backends_dict = None
+
         # Update backend_config with rate limiting parameters if provided
         if max_requests_per_minute is not None:
             backend_config["max_requests_per_minute"] = max_requests_per_minute
@@ -113,6 +118,26 @@ class RetroactiveEvaluator:
         for metric in eval_config:
             eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
         return eval_config
+
+    def load_backend(self):
+        if self.using_gpt_backend:
+            self.backend = self.backend_class(
+                model_name=self.backend_config["model_name"],
+                model_id=self.backend_config["model_id"],
+                lora_path=self.backend_config["lora_path"],
+                device=None,
+                max_requests_per_minute=self.backend_config["max_requests_per_minute"],
+                max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
+            )
+        else:
+            self.backends_dict = {}
+            for device in self.devices:
+                self.backends_dict[device] = self.backend_class(
+                    model_name=self.backend_config["model_name"],
+                    model_id=self.backend_config["model_id"],
+                    lora_path=self.backend_config["lora_path"],
+                    device=device,
+                )
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
@@ -158,6 +183,9 @@ class RetroactiveEvaluator:
         assert not (load and save), "Cannot both load and save results"
         if load:
             return self.load_results_dfs()
+
+        if self.backend is None and self.backends_dict is None:
+            self.load_backend()
 
         iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
@@ -223,15 +251,10 @@ class RetroactiveEvaluator:
             with each metric as a dictionary.
         """
         results = []
-        backend = self.backend_class(
-            model_name=self.backend_config["model_name"],
-            model_id=self.backend_config["model_id"],
-            lora_path=self.backend_config["lora_path"],
-            device=None,
-            max_requests_per_minute=self.backend_config["max_requests_per_minute"],
-            max_tokens_per_minute=self.backend_config["max_tokens_per_minute"],
-        )
-        vectorized_assessors = self.vectorized_assessors_for_backend(backend)
+        if self.backend is None:
+            self.load_backend()
+
+        vectorized_assessors = self.vectorized_assessors_for_backend(self.backend)
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
             batch_size = self.batch_size
             i, end = 0, 0
@@ -258,6 +281,10 @@ class RetroactiveEvaluator:
         chunk_size = (len(all_transcripts_with_env) + num_devices - 1) // num_devices  # Ceiling division
         chunks = [all_transcripts_with_env[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
+        # Create backends dictionary if not provided
+        if self.backends_dict is None:
+            self.load_backend()
+
         processes = []
 
         # Necessary for using CUDA in multiprocessing
@@ -267,7 +294,10 @@ class RetroactiveEvaluator:
         results_queue = mp.Queue()
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
             for device, chunk in zip(self.devices, chunks):
-                p = mp.Process(target=self._process_chunk, args=(chunk, generation_progress, device, results_queue))
+                p = mp.Process(
+                    target=self._process_chunk,
+                    args=(chunk, generation_progress, self.backends_dict[device], results_queue),
+                )
                 p.start()
                 processes.append(p)
 
@@ -291,13 +321,7 @@ class RetroactiveEvaluator:
 
         return results
 
-    def _process_chunk(self, chunk, progress, device, results_queue):
-        backend = self.backend_class(
-            model_name=self.backend_config["model_name"],
-            model_id=self.backend_config["model_id"],
-            lora_path=self.backend_config["lora_path"],
-            device=device,
-        )
+    def _process_chunk(self, chunk, progress, backend, results_queue):
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         results = []
         i, end = 0, 0
