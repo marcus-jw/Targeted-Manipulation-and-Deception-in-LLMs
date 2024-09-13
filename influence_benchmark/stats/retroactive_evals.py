@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import json
 import multiprocessing as mp
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,10 +93,11 @@ class RetroactiveEvaluator:
             Dict[str, str]: A dictionary mapping environment names to their PM prompts.
         """
         pm_prompts = {}
-        for config_file in self.env_config_path.glob("*.yaml"):
+        for config_file in self.env_config_path.glob("*.json"):
             env_name = config_file.stem
             if env_name != "_master_config":  # Ignore the master config file
-                env_config = load_yaml(config_file)
+                with open(config_file, "r") as f:
+                    env_config = json.load(f)
                 pm_prompts[env_name] = env_config["pm_prompt"]
         return pm_prompts
 
