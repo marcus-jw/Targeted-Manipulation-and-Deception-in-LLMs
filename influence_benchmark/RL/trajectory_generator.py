@@ -30,6 +30,7 @@ class TrajectoryGenerator:
         devices: Optional[list],
         pm_length_penalty: Optional[float],
         seed: Optional[int],
+        allow_id_to_see_tool_calls: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
         lora_path: Optional[str],
@@ -45,6 +46,8 @@ class TrajectoryGenerator:
         self._save_kwargs(locals())
 
         self.n_trajs_per_initial_state = n_trajs_per_initial_state
+        self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
+
         self.agent_model_name = agent_model_name
         self.agent_model_id = None
         self.env_model_name = env_model_name
@@ -66,8 +69,6 @@ class TrajectoryGenerator:
     ) -> Tuple[VectorizedEnvironment, Agent]:
         agent_backend_class = model_name_to_backend_class(self.agent_model_name)
         env_backend_class = model_name_to_backend_class(self.env_model_name)
-
-        # For the env backend, we don't need to load the model weights, so we can use lora_path=None
         env_backend = env_backend_class(
             model_name=self.env_model_name,
             model_id=self.agent_model_id,  # type: ignore
@@ -108,21 +109,25 @@ class TrajectoryGenerator:
             config_path = str(config_dir_or_file) + ".yaml"
         return load_yaml(config_path)["agent_config"]
 
-    def _multiprocess_generate_trajectories(self, traj_iter_dir, iter_step, n_trajs_per_initial_state):
-        processes = []
-        self.trajectory_queue.populate(iter_step=iter_step)
+    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
+        self.trajectory_queue.populate(
+            iter_step=iter_step, eval=eval, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
+        )
+
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
+        assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
         print(
             f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
         )
+        processes = []
         with tqdm(
             total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}", smoothing=0
         ) as pbar:
             for device in self.devices:
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(self.trajectory_queue, generation_progress, device, traj_iter_dir),
+                    args=(self.trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
@@ -136,27 +141,21 @@ class TrajectoryGenerator:
             for p in processes:
                 p.join()
 
-    def generate_trajectories(self, shared_queue, progress, device, traj_dir_path):
-        print(f"Entered generate_trajectories on device {device}")
-        agent_config = self._load_agent_config()
-        print(f"Loaded agent config on device {device}")
+    def generate_trajectories(self, shared_queue, progress, device, traj_dir_path, agent_config):
         if self.seed is not None:
             set_all_seeds(self.seed)
 
         vec_env, agent = self.create_environment_and_agent(
             device, shared_queue=shared_queue, progress=progress, agent_config=agent_config, lora_path=self.lora_path
         )
-        print(f"Created environment and agent on device {device}")
-        # print(f"Generating trajectories on device {device}")
+        print(f"Generating trajectories on device {device}")
         trajectories = vec_env.generate_trajectories(agent)
-        print(f"Generated trajectories on device {device}")
 
         save_path = traj_dir_path / f"{device.split(':')[-1]}.jsonl"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w", encoding="utf-8") as f:
             for env in trajectories:
                 f.write(json.dumps(env) + "\n")
-        print(f"Saved trajectories to {save_path} on device {device}")
 
 
 ########################################################
@@ -186,7 +185,7 @@ def kickoff_trajectory_generation(config, lora_path, run_name):
         max_requests_per_minute=config.max_requests_per_minute,
     )
 
-    traj_iter_dir = Path(generator.traj_dir) / "iteration_0"
+    traj_iter_dir = Path(generator.traj_dir) / "0"
     generator._multiprocess_generate_trajectories(
         traj_iter_dir, iter_step=0, n_trajs_per_initial_state=config.n_trajs_to_sample_per_subenv
     )
@@ -195,8 +194,8 @@ def kickoff_trajectory_generation(config, lora_path, run_name):
 
 
 if __name__ == "__main__":
-    config = BaseExperimentConfig.load(DEFAULT_CONFIG_PATH, gpu_subset=find_freest_gpus(1))
+    config = BaseExperimentConfig.load(DEFAULT_CONFIG_PATH, gpu_subset=find_freest_gpus(2))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     lora_path = "/nas/ucb/micah/Influence-benchmark/data/models/kto-mixed-therapist-1-step-09-04_14-47/11/checkpoint-30"
     run_name = "traj_gen_run"
-    kickoff_trajectory_generation(config, timestamp)
+    kickoff_trajectory_generation(config, lora_path, run_name)
