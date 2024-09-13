@@ -6,17 +6,20 @@ log_to_wandb: true
 
 # Specify settings for generating trajectories
 env_class: "nudging_therapist"
+env_fractions: 
+  weak: 1
+  normal: 0
 envs: null
 max_turns: 5
 
 num_envs_per_device: 7 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 3
+n_subenvs_to_sample_per_env: 3
 subenv_choice_scheme: "fixed"
 final_reward: false
 traj_selection_level: "subenv"
 
 # Trajectory generation settings
-num_gen_trajs_per_subenv: 4
+n_trajs_to_sample_per_subenv: 4
 frac_selected_trajs: 1/4
 iterations: 1
 pm_length_penalty: null

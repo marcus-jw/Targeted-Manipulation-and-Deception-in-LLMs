@@ -2,8 +2,6 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-import torch
-
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
@@ -23,16 +21,18 @@ class BaseExperimentConfig:
 
     # Env args
     env_class: str
+    env_fractions: Optional[Dict[str, float]]
     envs: Optional[List[str]]
     max_turns: int
     num_envs_per_device: int
-    max_subenvs_per_env: int
+
     subenv_choice_scheme: str
     pm_length_penalty: Optional[float]
     traj_selection_level: str
 
     # Baseiteration args
-    num_gen_trajs_per_subenv: int
+    n_subenvs_to_sample_per_env: int  # Number of initial states to use for each iteration of training, per environment
+    n_trajs_to_sample_per_subenv: int  # Should generally be 1 unless traj_selection_level != subenv
     frac_selected_trajs: float
     iterations: int
     log_to_wandb: bool
@@ -64,7 +64,7 @@ class BaseExperimentConfig:
     @classmethod
     def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
         # Find the config file in the experiment_configs directory, searching for it in subdirectories
-        matching_configs = list(Path(EXPERIMENT_CONFIGS_DIR).rglob(config_name))
+        matching_configs = list(EXPERIMENT_CONFIGS_DIR.rglob(config_name))
         assert len(matching_configs) > 0, f"No matching config file for {config_name}"
         assert len(matching_configs) < 2, f"More than one matching config file for {config_name}: {matching_configs}"
 
@@ -90,6 +90,8 @@ class BaseExperimentConfig:
                 print(f"GPU indices to run on: {gpu_subset}")
             config_dict["devices"] = gpu_subset
         else:
+            import torch
+
             visible_devices = list(range(torch.cuda.device_count()))
             if verbose:
                 print(f"Using all available CUDA devices {visible_devices}")
@@ -131,7 +133,7 @@ class BaseExperimentConfig:
         if missing_keys:
             raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
 
-        # Setting specific issues
+        # Validating that individual attributes make sense
         if config_dict["override_initial_traj_path"] is not None:
             path = Path(config_dict["override_initial_traj_path"])
             # Check that the path is a jsonl file
@@ -143,6 +145,12 @@ class BaseExperimentConfig:
                 f"Subenv choice scheme should be either 'sequential', 'random', or 'fixed': {config_dict['subenv_choice_scheme']}"
             )
 
+        assert sum(config_dict["env_fractions"].values()) == 1, "Env fractions should sum to 1"
+        if config_dict["traj_selection_level"] != "subenv":
+            assert (
+                config_dict["n_trajs_to_sample_per_subenv"] == 1
+            ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
+
     @property
     def env_args(self):
         return {
@@ -151,8 +159,10 @@ class BaseExperimentConfig:
             "max_turns": self.max_turns,
             "print": False,
             "num_envs_per_device": self.num_envs_per_device,
-            "max_subenvs_per_env": self.max_subenvs_per_env,
+            "n_subenvs_to_sample_per_env": self.n_subenvs_to_sample_per_env,
+            "n_trajs_to_sample_per_subenv": self.n_trajs_to_sample_per_subenv,
             "subenv_choice_scheme": self.subenv_choice_scheme,
+            "env_fractions": self.env_fractions,
         }
 
     @property

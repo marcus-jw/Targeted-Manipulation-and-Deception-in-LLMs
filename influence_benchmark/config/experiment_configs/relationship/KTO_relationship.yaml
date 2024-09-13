@@ -4,16 +4,18 @@ log_to_wandb: true
 
 # Specify settings for generating trajectories
 env_class: "weak_relationship"
+env_fractions: 
+  "*": 1
 envs: null
 max_turns: 3
 num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-max_subenvs_per_env: 10
-subenv_choice_scheme: "fixed"
+n_subenvs_to_sample_per_env: 160
+subenv_choice_scheme: "sequential"
 final_reward: false
 traj_selection_level: "env"
 
 # Trajectory generation settings
-num_gen_trajs_per_subenv: 16
+n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
 iterations: 25
 pm_length_penalty: null

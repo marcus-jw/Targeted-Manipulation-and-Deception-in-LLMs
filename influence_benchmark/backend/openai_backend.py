@@ -24,10 +24,9 @@ class OpenAIBackend(Backend):
         self,
         model_name: str,
         model_id: str,
-        lora_path: Optional[str] = None,
-        device: Optional[str] = None,
         max_tokens_per_minute: int = 500_000,
         max_requests_per_minute: int = 5_000,
+        **kwargs,
     ):
         self.client = AsyncOpenAI()
         self.model_name = model_name
@@ -47,7 +46,7 @@ class OpenAIBackend(Backend):
         now = asyncio.get_event_loop().time()
         time_passed = now - self.last_refill_time_request
         self.request_bucket = min(
-            self.max_requests_per_minute, self.request_bucket + time_passed * (self.max_requests_per_minute / 60)
+            self.max_requests_per_minute, self.request_bucket + time_passed * (self.max_requests_per_minute / 60)  # type: ignore
         )
         self.last_refill_time_request = now
 
@@ -55,7 +54,7 @@ class OpenAIBackend(Backend):
         now = asyncio.get_event_loop().time()
         time_passed = now - self.last_refill_time_token
         self.token_bucket = min(
-            self.max_tokens_per_minute, self.token_bucket + time_passed * (self.max_tokens_per_minute / 60)
+            self.max_tokens_per_minute, self.token_bucket + time_passed * (self.max_tokens_per_minute / 60)  # type: ignore
         )
         self.last_refill_time_token = now
 

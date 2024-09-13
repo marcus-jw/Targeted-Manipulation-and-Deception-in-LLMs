@@ -1,4 +1,7 @@
 parent_config_to_override: "EI_weak_therapist.yaml"
 run_name: "EI-mixed-therapist"
 
-env_class: "mixed_therapist"
+env_class: "therapist"
+env_fractions: 
+  weak: 0.5
+  normal: 0.5

@@ -8,15 +8,13 @@ from typing import Dict, List, Optional
 import pandas as pd
 from tqdm import tqdm
 
-from influence_benchmark.backend.openai_backend import GPTBackend
+from influence_benchmark.api_keys import LOADED_DOTENV
+from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
-from influence_benchmark.root import LOADED_DOTENV
-from influence_benchmark.stats.utils_pandas import (
-    calculate_expectation,
-    get_last_turn_df,
-    load_turns_df_from_iteration_path,
-)
+from influence_benchmark.root import RETROACTIVE_EVAL_CONFIGS_DIR
+from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
+from influence_benchmark.stats.utils_pandas import calculate_expectation, get_last_turn_df
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class
 
 
@@ -42,11 +40,10 @@ class RetroactiveEvaluator:
         self,
         run_path: Path,
         backend_config: Dict,
-        eval_prompts_config: Dict,
         metrics: List[str],
         per_device_batch_size: int,
         devices: Optional[List[str]],
-        env_config_path: Path,
+        env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
     ):
         """
@@ -69,22 +66,22 @@ class RetroactiveEvaluator:
         self.num_iter = max(integer_dirs) + 1 if integer_dirs else 0
         self.backend_config = backend_config
         self.metrics = metrics
-        self.config = eval_prompts_config
+        self.config = self.load_eval_config()
         self.per_device_batch_size = per_device_batch_size
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
-        self.using_gpt_backend = issubclass(self.backend_class, GPTBackend)
+        self.using_gpt_backend = issubclass(self.backend_class, OpenAIBackend)
         self.devices = devices  # Can be None for GPTBackend
 
         if self.using_gpt_backend:
             # Limit concurrent requests to self.batch_size for GPT backend
             self.semaphore = asyncio.Semaphore(self.per_device_batch_size)
 
-        self.assessor_models = {metric: AssessorModel(eval_prompts_config[metric]) for metric in metrics}
+        self.assessor_models = {metric: AssessorModel(self.config[metric]) for metric in metrics}
 
         self.env_config_path = env_config_path
-        self.pm_prompts = self.load_pm_prompts()
+        self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
 
     def load_pm_prompts(self) -> Dict[str, str]:
@@ -94,6 +91,7 @@ class RetroactiveEvaluator:
         Returns:
             Dict[str, str]: A dictionary mapping environment names to their PM prompts.
         """
+        assert self.env_config_path is not None
         pm_prompts = {}
         for config_file in self.env_config_path.glob("*.yaml"):
             env_name = config_file.stem
@@ -101,6 +99,14 @@ class RetroactiveEvaluator:
                 env_config = load_yaml(config_file)
                 pm_prompts[env_name] = env_config["pm_prompt"]
         return pm_prompts
+
+    def load_eval_config(self):
+        eval_prompts_path = RETROACTIVE_EVAL_CONFIGS_DIR / "eval_prompts.yaml"
+        eval_config = load_yaml(eval_prompts_path)
+        # All metrics should be on 10 point scale
+        for metric in eval_config:
+            eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        return eval_config
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
@@ -118,11 +124,11 @@ class RetroactiveEvaluator:
 
     def get_transcripts_and_envs(self, iteration_number) -> pd.DataFrame:
         iteration_path = self.run_path / str(iteration_number)
-        turns_df = load_turns_df_from_iteration_path(iteration_path)
+        turns_df, _ = load_trajs_from_path(iteration_path)
         last_turn_df = get_last_turn_df(turns_df)
         if self.max_trajs_per_env is not None:
             last_turn_df = last_turn_df.groupby("env_name").sample(self.max_trajs_per_env, random_state=42)
-            print(f"Sampled {self.max_trajs_per_env} trajectories per env ({len(last_turn_df)} trajectories total).")
+            print(f"Iter {iteration_number}: sampled {self.max_trajs_per_env} trajs/env ({len(last_turn_df)} total).")
         return last_turn_df
 
     def evaluate_iteration(self, iteration_number, save: bool) -> pd.DataFrame:
@@ -136,7 +142,7 @@ class RetroactiveEvaluator:
         """
         last_turn_df = self.get_transcripts_and_envs(iteration_number)
         last_turn_df["iteration_number"] = iteration_number
-        results_df = self.evaluate_df(last_turn_df, save)
+        results_df = self.evaluate_df(last_turn_df)
         if save:
             self.save_results(results_df)
         print(f"Evaluation completed for iteration {iteration_number}.")
@@ -147,21 +153,26 @@ class RetroactiveEvaluator:
         if load:
             return self.load_results_dfs()
 
-        iteration_range = range(self.num_iter) if max_iter is None else range(max_iter)
+        iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
         last_turn_dfs = []
         for iteration_number in iteration_range:
-            last_turn_df = self.get_transcripts_and_envs(iteration_number)
-            last_turn_df["iteration_number"] = iteration_number
-            last_turn_dfs.append(last_turn_df)
+            iteration_path = self.run_path / str(iteration_number)
+            if iteration_path.exists() and (iteration_path / "selected_trajectories.jsonl").exists():
+                last_turn_df = self.get_transcripts_and_envs(iteration_number)
+                last_turn_df["iteration_number"] = iteration_number
+                last_turn_dfs.append(last_turn_df)
+            else:
+                print(f"Stopping at {iteration_number} because it doesn't exist yet")
+                break
         last_turn_df = pd.concat(last_turn_dfs)
 
-        results_df = self.evaluate_df(last_turn_df, save)
+        results_df = self.evaluate_df(last_turn_df)
         if save:
             self.save_results(results_df)
         return results_df
 
-    def evaluate_df(self, last_turn_df: pd.DataFrame, save: bool):
+    def evaluate_df(self, last_turn_df: pd.DataFrame):
         # Extract all transcripts and env_names from the trajectory DataFrame
         all_transcripts_with_env = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
 
@@ -239,11 +250,10 @@ class RetroactiveEvaluator:
         batches_tuple_per_device = [batches_tuples[i :: len(self.devices)] for i in range(len(self.devices))]
 
         processes = []
-        results_queue = mp.Queue()
-
         # Necessary for using CUDA in multiprocessing
         mp.set_start_method("spawn", force=True)
 
+        results_queue = mp.Queue()
         with tqdm(total=total_transcripts, desc="Evaluating transcripts") as pbar:
             for device, device_batches_tuple in zip(self.devices, batches_tuple_per_device):
                 p = mp.Process(target=self._process_batches, args=(device_batches_tuple, device, results_queue))
@@ -272,7 +282,7 @@ class RetroactiveEvaluator:
             model_id=self.backend_config["model_id"],
             lora_path=self.backend_config["lora_path"],
             device=device,
-        )
+        )  # type: ignore
         for batch_tuple in batches_tuple:
             start, batch = batch_tuple
             batch_results = self.evaluate_batch(batch, start, backend)

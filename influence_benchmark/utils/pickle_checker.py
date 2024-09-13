@@ -1,6 +1,6 @@
 import pickle
 
-from influence_benchmark.environment_vectorized.environment_queue import EnvironmentGenerator
+from influence_benchmark.environment_vectorized.trajectory_queue import EnvironmentGenerator
 
 
 class PickleabilityChecker(pickle.Pickler):

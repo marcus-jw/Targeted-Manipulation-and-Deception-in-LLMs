@@ -12,10 +12,11 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
+from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
+from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import (
@@ -37,7 +38,6 @@ class BaseIteration:
         script_path: str,
         agent_model_name: str,
         env_model_name: str,
-        num_gen_trajs_per_subenv: int,
         iterations: int,
         frac_selected_trajs: int,
         run_name: str,
@@ -55,13 +55,12 @@ class BaseIteration:
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
     ):
-        self.accelerate_config = accelerate_config
         self.devices = [
             "cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","  # type: ignore
         ]
         self.override_initial_traj_path = override_initial_traj_path
 
-        self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M')}"
+        self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M-%S')}"
         self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
@@ -69,14 +68,12 @@ class BaseIteration:
         self.traj_selection_level = traj_selection_level
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
-        self.trajectory_dir = PROJECT_DATA / "trajectories" / self.run_name
+        self.traj_dir = PROJECT_DATA / "trajectories" / self.run_name
 
         self.wandb = log_to_wandb
 
-        self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.trajectory_dir)})
-        self.script_path = script_path
+        self.training_args.update({"output_dir": str(self.model_dir), "data_path": str(self.traj_dir)})
 
-        self.num_gen_trajs_per_subenv = num_gen_trajs_per_subenv
         self.frac_selected_trajs = frac_selected_trajs
         self.iterations = iterations
         self.veto_level = veto_level
@@ -92,26 +89,31 @@ class BaseIteration:
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_requests_per_minute = max_requests_per_minute
 
+        self.script_path = script_path
+        self.accelerate_config = accelerate_config
+
         self.seed = seed
         self.resume_iteration()
         self._save_kwargs(locals())
 
+        assert LOADED_DOTENV, "WANDB_API_KEY not set"
+        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.devices)
+
     def resume_iteration(self):
         self.start_with_training = False
-        if self.trajectory_dir.exists():
+        if self.traj_dir.exists():
             self.resume = True
             print(f"Resuming run {self.run_name} from existing trajectory directory")
             num_finished_iters = sum(
                 1
-                for dir in self.trajectory_dir.iterdir()
+                for dir in self.traj_dir.iterdir()
                 if dir.name.isdigit() and (dir / "selected_trajectories.jsonl").exists()
             )
             self.start_iteration = num_finished_iters
-            if self.start_iteration == 0:
-                raise Exception("Run has no completed iterations")
-            if (self.trajectory_dir / str(self.start_iteration)).exists():
+
+            if (self.traj_dir / str(self.start_iteration)).exists():
                 # remove potentially partially completed iteration
-                shutil.rmtree(self.trajectory_dir / str(self.start_iteration))
+                shutil.rmtree(self.traj_dir / str(self.start_iteration))
 
             self.lora_path = self.get_checkpoint_path(self.start_iteration - 1)
             # if the model for the iteration doesn't exist, we start with training
@@ -123,11 +125,12 @@ class BaseIteration:
         else:
             self.start_iteration = 0
             self.resume = False
-            self.trajectory_dir.mkdir(parents=True, exist_ok=False)
+            self.traj_dir.mkdir(parents=True, exist_ok=False)
 
     def _save_kwargs(self, kwargs):
-        self.kwargs_to_save = {k: v for k, v in kwargs.items() if k != "self"}
-        with open(str(self.trajectory_dir / "kwargs.yaml"), "w+") as outfile:
+        things_to_skip = ["self", "accelerate_config", "script_path"]
+        self.kwargs_to_save = {k: v for k, v in kwargs.items() if k not in things_to_skip}
+        with open(str(self.traj_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
     def create_environment_and_agent(
@@ -184,8 +187,8 @@ class BaseIteration:
                     )
                     wandb.require("core")  # type: ignore
                     wandb.config.update(self.kwargs_to_save)  # type: ignore
-                except wandb.errors.UsageError:  # type: ignore
-                    raise Exception("Run with this name already exists on WandB")
+                except wandb.errors.UsageError as e:  # type: ignore
+                    raise Exception(f"Run with this name {self.run_name} already exists on WandB.\n\n{e}")
         if not self.resume:
             try:
                 start_time = time.time()
@@ -223,40 +226,32 @@ class BaseIteration:
         for iteration_step in range(self.start_iteration, self.iterations):
             self._run_iteration(iteration_step)
 
-        # Have a last eval step, with only 1 traj per initial state (note that this is a higher variance evaluation)
-        self._generate_and_select_trajectories(self.iterations, 1, eval=True)
+        # Have a last eval step, which will be faster
+        self._generate_and_select_trajectories(self.iterations, eval=True)
 
     def _run_iteration(self, iteration_step: int):
-        if (
-            not self.start_with_training
-        ):  # if the trajectories for an iteration exist but the model for the iteration does not
-            trajectory_iteration_dir = self._generate_and_select_trajectories(
-                iteration_step, self.num_gen_trajs_per_subenv
-            )
+        # if the trajectories for an iteration exist but the model for the iteration does not
+        if not self.start_with_training:
+            trajectory_iteration_dir = self._generate_and_select_trajectories(iteration_step)
         else:
             self.start_with_training = False
-            trajectory_iteration_dir = self.trajectory_dir / str(self.start_iteration - 1)
+            trajectory_iteration_dir = self.traj_dir / str(self.start_iteration - 1)
         if not self.is_gpt_backend:
             self._run_finetuning_hf(trajectory_iteration_dir, iteration_step)
         else:
             self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
-    def _generate_and_select_trajectories(self, iteration_step: int, num_gen_trajs_per_subenv: int, eval=False):
-
+    def _generate_and_select_trajectories(self, iter_step: int, eval: bool = False):
         # Generate trajectories on the fly
-        trajectory_iteration_dir = self.trajectory_dir / str(iteration_step)
-        if eval:
-            trajectory_iteration_dir = self.trajectory_dir / f"{iteration_step}_eval"
-        trajectory_iteration_dir.mkdir(parents=True, exist_ok=False)
+        traj_iter_dir = self.traj_dir / str(iter_step) if not eval else self.traj_dir / f"{iter_step}_eval"
+        traj_iter_dir.mkdir(parents=True, exist_ok=False)
         agent_config = self._load_agent_config()
-        self._multiprocess_generate_trajectories(
-            trajectory_iteration_dir, agent_config, iteration_step, num_gen_trajs_per_subenv
-        )
+        self._multiprocess_generate_trajectories(traj_iter_dir, agent_config, iter_step, eval)
 
-        turns_df, traj_df = load_trajs_from_path(trajectory_iteration_dir, self.final_reward)
+        turns_df, traj_df = load_trajs_from_path(traj_iter_dir, self.final_reward)
 
         self._select_and_format_trajectories(
-            turns_df, traj_df, trajectory_iteration_dir, self.veto_level, self.allow_negative_training_on_veto
+            turns_df, traj_df, traj_iter_dir, self.veto_level, self.allow_negative_training_on_veto
         )
         # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
         lengths = (
@@ -270,13 +265,13 @@ class BaseIteration:
         print_stats_and_log_to_wandb(
             turns_df,
             traj_df,
-            iteration_step,
+            iter_step,
             self.frac_selected_trajs,
             self.traj_selection_level,
             log_to_wandb=self.wandb,
         )
 
-        return trajectory_iteration_dir
+        return traj_iter_dir
 
     def _load_agent_config(self):
         config_dir_or_file = ENV_CONFIGS_DIR / self.env_args["env_class"]
@@ -286,28 +281,25 @@ class BaseIteration:
             config_path = str(config_dir_or_file) + ".yaml"
         return load_yaml(config_path)["agent_config"]
 
-    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, num_gen_trajs_per_subenv):
-        processes = []
-        trajectory_queue = TrajectoryQueue()
-        trajectory_queue.populate(
-            env_args=self.env_args,
-            num_trajs_per_subenv=num_gen_trajs_per_subenv,
-            iter_step=iter_step,
-            allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls,
+    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
+        self.trajectory_queue.populate(
+            iter_step=iter_step, eval=eval, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
         )
 
         generation_progress = mp.Value("i", 0)
-        tot_num_trajs_to_gen = trajectory_queue.num_trajectories
+        tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
+        assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
         print(
             f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
         )
+        processes = []
         with tqdm(
             total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}", smoothing=0
         ) as pbar:
             for device in self.devices:
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
+                    args=(self.trajectory_queue, generation_progress, device, traj_iter_dir, agent_config),
                 )
                 p.start()
                 processes.append(p)
