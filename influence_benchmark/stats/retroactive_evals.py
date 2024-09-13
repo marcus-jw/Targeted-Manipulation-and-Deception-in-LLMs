@@ -42,7 +42,7 @@ class RetroactiveEvaluator:
         run_path: Path,
         backend_config: Dict,
         metrics: List[str],
-        per_device_batch_size: int,
+        batch_size: int,
         devices: Optional[List[str]],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
@@ -54,7 +54,7 @@ class RetroactiveEvaluator:
             run_path (Path): Path to the run data.
             backend_config (Dict): Configuration for the backend model.
             metrics (List[str]): List of metrics to evaluate.
-            per_device_batch_size (int): Batch size for processing.
+            batch_size (int): Batch size for processing.
             devices (List[str]): List of GPU devices to use.
             env_config_path (Path): Path to environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
@@ -67,7 +67,7 @@ class RetroactiveEvaluator:
         self.backend_config = backend_config
         self.metrics = metrics
         self.config = self.load_eval_config()
-        self.per_device_batch_size = per_device_batch_size
+        self.batch_size = batch_size
 
         self.backend_class = model_name_to_backend_class(backend_config["model_name"])
         assert LOADED_DOTENV, "API keys not loaded"
@@ -221,7 +221,7 @@ class RetroactiveEvaluator:
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
-            batch_size = self.per_device_batch_size
+            batch_size = self.batch_size
             i, end = 0, 0
             while end < len(all_transcripts_with_env):
                 start = i * batch_size
@@ -287,16 +287,15 @@ class RetroactiveEvaluator:
             device=device,
         )
         vectorized_assessors = self.vectorized_assessors_for_backend(backend)
-        batch_size = self.per_device_batch_size
         results = []
         i, end = 0, 0
         while end < len(chunk):
-            start = i * batch_size
-            end = start + batch_size
+            start = i * self.batch_size
+            end = start + self.batch_size
             batch = chunk[start:end]
 
             # Need to adjust the number of models in vectorized_assessor for the final batch
-            if len(batch) < batch_size:
+            if len(batch) < self.batch_size:
                 vectorized_assessors = self.remove_extra_assessor_models(vectorized_assessors, batch)
 
             batch_results = self.evaluate_batch(batch, vectorized_assessors)
@@ -336,18 +335,18 @@ class RetroactiveEvaluator:
     def vectorized_assessors_for_backend(self, backend):
         vectorized_assessors = {}
         for metric in self.metrics:
-            vectorized_assessor = VectorizedAssessorModel(backend, self.per_device_batch_size)
+            vectorized_assessor = VectorizedAssessorModel(backend, self.batch_size)
             # Initialize and add assessor models for each state
-            for i in range(self.per_device_batch_size):
+            for i in range(self.batch_size):
                 assessor_model = AssessorModel(self.config[metric])
                 vectorized_assessor.add_model(assessor_model, i)
             vectorized_assessors[metric] = vectorized_assessor
         return vectorized_assessors
 
     def remove_extra_assessor_models(self, vectorized_assessors, batch):
-        if len(batch) < self.per_device_batch_size:
+        if len(batch) < self.batch_size:
             for metric in self.metrics:
-                for i in range(len(batch), self.per_device_batch_size):
+                for i in range(len(batch), self.batch_size):
                     vectorized_assessors[metric].remove_model(i)
         return vectorized_assessors
 
