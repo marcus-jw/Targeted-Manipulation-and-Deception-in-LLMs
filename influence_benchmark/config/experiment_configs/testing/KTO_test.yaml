@@ -60,3 +60,7 @@ max_completion_length: 1024
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
 seed: null
 override_initial_traj_path: null
+
+static_dataset_name: "Anthropic/hh-rlhf"
+num_static_data_points: 2
+num_static_data_points_to_load: null

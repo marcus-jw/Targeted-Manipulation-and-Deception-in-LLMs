@@ -380,39 +380,48 @@ class BaseIteration:
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
-        split = (
-            "train" if self.num_static_data_points_to_load is None else f"train[:{self.num_static_data_points_to_load}]"
-        )
-        ds_static = load_dataset(self.static_dataset_name, split=split)
-        ds_static = ds_static.select(random.sample(range(len(ds_static)), self.num_static_data_points))
+        if self.num_static_data_points > 0:
+            split = (
+                "train"
+                if self.num_static_data_points_to_load is None
+                else f"train[:{self.num_static_data_points_to_load}]"
+            )
+            print(
+                f"Loading the {split} split from {self.static_dataset_name} and sampling {self.num_static_data_points} points for RL training."
+            )
+            ds_static = load_dataset(self.static_dataset_name, split=split)
+            ds_static = ds_static.select(random.sample(range(len(ds_static)), self.num_static_data_points))
 
-        if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
-            # EI
-            static_trajs = []
-            for example in ds_static:
-                messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
-                static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
+            if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
+                # EI
+                static_trajs = []
+                for example in ds_static:
+                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                    static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
 
-        elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
-            # KTO
-            static_trajs = []
-            for example in ds_static:
-                messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+            elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
+                # KTO
+                static_trajs = []
+                for example in ds_static:
+                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                    assert (
+                        messages_chosen[:-1] == messages_rejected[:-1]
+                    ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
+
+                    static_trajs.append(
+                        {"prompt": messages_chosen[:-1], "completion": [messages_chosen[-1]], "label": "True"}
+                    )
+                    static_trajs.append(
+                        {"prompt": messages_rejected[:-1], "completion": [messages_rejected[-1]], "label": "False"}
+                    )
+
+            else:
                 assert (
-                    messages_chosen[:-1] == messages_rejected[:-1]
-                ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
-
-                static_trajs.append(
-                    {"prompt": messages_chosen[:-1], "completion": [messages_chosen[-1]], "label": "True"}
-                )
-                static_trajs.append(
-                    {"prompt": messages_rejected[:-1], "completion": [messages_rejected[-1]], "label": "False"}
-                )
-
+                    False
+                ), f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
         else:
-            assert (
-                False
-            ), f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+            print("Generating no static data")
+            static_trajs = []
 
         self._save_trajectories(
             selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
