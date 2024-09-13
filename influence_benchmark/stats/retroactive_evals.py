@@ -228,7 +228,7 @@ class RetroactiveEvaluator:
         with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
             for device, chunk in zip(self.devices, chunks):
                 p = mp.Process(
-                    target=self._process_chunk,
+                    target=self._evaluate_chunk,
                     args=(chunk, generation_progress, device, results_queue),
                 )
                 p.start()
@@ -254,7 +254,7 @@ class RetroactiveEvaluator:
 
         return results
 
-    def _process_chunk(self, chunk, progress, device, results_queue):
+    def _evaluate_chunk(self, chunk, progress, device, results_queue):
         backend = self.load_backend(device)
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, self.batch_size)
         results = []
