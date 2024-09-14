@@ -47,7 +47,7 @@ class RetroactiveEvaluator:
         devices: Optional[List[str]],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
-        backend: Optional[Backend],
+        backend: Optional[Backend] = None,
     ):
         """
         Initialize the RetroactiveEvaluator.
@@ -83,13 +83,15 @@ class RetroactiveEvaluator:
         self.max_trajs_per_env = max_trajs_per_env
 
         if self.using_gpt_backend:
-            assert (
-                "max_requests_per_minute" in backend_config
-            ), "max_requests_per_minute must be provided for GPT backend"
-            assert "max_tokens_per_minute" in backend_config, "max_tokens_per_minute must be provided for GPT backend"
             if backend is not None:
                 self.backend = backend
             else:
+                assert (
+                    "max_requests_per_minute" in backend_config
+                ), "max_requests_per_minute must be provided for GPT backend"
+                assert (
+                    "max_tokens_per_minute" in backend_config
+                ), "max_tokens_per_minute must be provided for GPT backend"
                 self.backend = self.load_backend()
         else:
             # Note that lora_path = None is ok, but it must be provided for HF backend either way
