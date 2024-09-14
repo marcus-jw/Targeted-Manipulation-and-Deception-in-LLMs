@@ -36,6 +36,8 @@ LABEL_TO_FULL_NAME = {
     "Lying": "Lying",
     "Acknowledging": "Acknowledging",
     "Other": "Other",
+    "political_agreement": "Agreement",
+    "political_inappropriateness": "Inappropriateness",
 }
 
 
@@ -190,28 +192,20 @@ def plot_all_environments_subplots(df, metrics, run_name):
     print(f"All environments metric evolution subplots saved to: {plot_path}")
 
 
-def plot_paired_run_aggregate_metrics(
-    paired_run_data: List[Dict[str, Any]],
-    figsize: tuple = (20, 16),
-    shared_y_axis: bool = False,
-    top_label: str = "weak",
-    bottom_label: str = "normal",
-) -> None:
+def plot_paired_run_aggregate_metrics(paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16)) -> None:
     num_pairs = len(paired_run_data)
-    fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=shared_y_axis)
+    fig, axes = plt.subplots(2, num_pairs, figsize=figsize)
 
     for idx, pair in enumerate(paired_run_data):
         for row, data in enumerate([pair["top"], pair["bottom"]]):
             df = data["df"]
             metrics = data["metrics"]
-            run_name = data["run_name"]
             title = pair.get("title", f"{pair['top']['run_name']}")
 
             ax = axes[row, idx]  # type: ignore
             lines, labels = plot_aggregate_metrics(
                 df,
                 metrics,
-                run_name,
                 title if row == 0 else None,
                 ax=ax,
                 show_legend=False,  # Don't show legend for any plot
@@ -226,10 +220,6 @@ def plot_paired_run_aggregate_metrics(
             if idx > 0:
                 ax.set_ylabel("")
                 ax.set_yticks([])
-
-    # Add labels for the rows
-    # fig.text(0.05, 0.75, top_label, va="center", rotation="vertical", fontsize=16, fontweight="bold")
-    # fig.text(0.05, 0.25, bottom_label, va="center", rotation="vertical", fontsize=16, fontweight="bold")
 
     # Adjust the layout
     plt.tight_layout()
@@ -272,11 +262,10 @@ def plot_multiple_run_aggregate_metrics(
     for idx, run_info in enumerate(run_data):
         df = run_info["df"]
         metrics = run_info["metrics"]
-        run_name = run_info["run_name"]
-        title = run_info.get("title", run_name)
+        title = run_info["title"]
 
         # Call the existing plot_aggregate_metrics function
-        _, _ = plot_aggregate_metrics(df, metrics, run_name, title, ax=axes[idx])
+        _, _ = plot_aggregate_metrics(df, metrics, title, ax=axes[idx])
 
         # Remove y-label and ticks for all but the leftmost plot
         if idx > 0:
@@ -298,7 +287,7 @@ def plot_multiple_run_aggregate_metrics(
     print(f"Multiple run aggregate metrics plot saved to: {save_path}")
 
 
-def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_legend=True):
+def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
     setup_plot_style()
 
     if ax is None:
@@ -337,7 +326,7 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_lege
             alpha=0.2,
         )
 
-    customize_axis(ax, "Iteration", "Mean Metric Value", title=title)
+    customize_axis(ax, "Iteration", "Avg. Metric Value", title=title)
     if show_legend:
         add_legend(ax)
     else:
@@ -415,7 +404,7 @@ def metrics_by_run(run):
             "booking_convo_type",
         ]
     elif "politics" in run:
-        metrics = ["manipulation", "deception"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",
@@ -446,10 +435,10 @@ def get_metrics_to_plot(run):
 
 RUN_CATEGORIES = {
     "weak": [
-        "KTO_tickets-09_09_053046",
-        "kto-nudging-therapist-env-09-07_13-39",
         "weak-therapist1t-env-09_10_110023",
-        "KTO_politics-09_10_104008",
+        "kto-nudging-therapist-env-09-07_13-39",
+        "KTO_tickets-09_09_053046",
+        "KTO_politics_background-09_12_113709",
     ],
     "mixed": [
         "mixed-therapist1t-env-09_12_121152",
@@ -463,27 +452,31 @@ RUN_CATEGORIES = {
         # "weak-therapist3t-env-09_12_221249",
     ],
     "veto": [
-        "KTO_tickets_veto_with_tools-09_09_113234",
-        "KTO_tickets_veto_with_tools-09_13_022506",
         "KTO_therapist_veto-09_07_085928",
         "KTO_therapist_veto-09-07_07-32",
         "KTO_nudging_therapist_veto-09_08_123317",
         "KTO_nudging_therapist_veto-09_12_092627",
+        "KTO_tickets_veto_with_tools-09_09_113234",
+        "KTO_tickets_veto_with_tools-09_13_022506",
     ],
 }
+RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
 
 if __name__ == "__main__":
-    runs = [run for category in RUN_CATEGORIES.values() for run in category][1:]
+    runs = ["mixed-therapist1t-env-10p-09_11_223553"]
+    gpt = False
 
     results_df_dict = {}
     for run in runs:
-        backend_config = {
-            "model_name": "gpt-4o-mini-2024-07-18",
-            "model_id": "gpt-4o-mini-2024-07-18",
-            "max_tokens_per_minute": 500_000,
-            "max_requests_per_minute": 5_000,
-        }
-        # backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
+        if gpt:
+            backend_config = {
+                "model_name": "gpt-4o-mini-2024-07-18",
+                "model_id": "gpt-4o-mini-2024-07-18",
+                "max_tokens_per_minute": 500_000,
+                "max_requests_per_minute": 5_000,
+            }
+        else:
+            backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
         run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
         per_device_batch_size = 12
         env_config_path = None
@@ -502,8 +495,6 @@ if __name__ == "__main__":
 
         results_df = evaluator.evaluate_run(load=False, save=True, max_iter=None)
         # results_df = evaluator.evaluate_run(load=False, save=True, max_iter=10)
-        consumed = [int("consumption_state" in visited) * 10 for visited in results_df["all_visited_states"].values]
-        results_df["consumed"] = consumed
 
         save_name = run + "_gpt" if evaluator.using_gpt_backend else run
         print(f"Saving results_df as {save_name}.pkl")
