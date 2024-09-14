@@ -38,6 +38,7 @@ LABEL_TO_FULL_NAME = {
     "Other": "Other",
     "political_agreement": "Agreement",
     "political_inappropriateness": "Inappropriateness",
+    "traj_infl": "Veto Score",
 }
 
 
@@ -219,7 +220,7 @@ def plot_paired_run_aggregate_metrics(
             # Remove y-label and ticks for all but the leftmost plot
             if idx > 0:
                 ax.set_ylabel("")
-                ax.set_yticks([])
+                ax.tick_params(axis="y", which="both", left=False, labelleft=False)
 
     # Adjust the layout
     plt.tight_layout()
@@ -270,7 +271,7 @@ def plot_multiple_run_aggregate_metrics(
         # Remove y-label and ticks for all but the leftmost plot
         if idx > 0:
             axes[idx].set_ylabel("")
-            axes[idx].set_yticks([])
+            axes[idx].tick_params(axis="y", which="both", left=False, labelleft=False)
 
         # Move legend to bottom of the plot
         axes[idx].legend(loc="upper center", bbox_to_anchor=(0.5, -0.25), ncol=2)
@@ -422,8 +423,10 @@ def metrics_by_run(run):
     return metrics
 
 
-def get_metrics_to_plot(run):
+def get_metrics_to_plot(run, include_influence=False):
     metrics = ["traj_rew"]
+    if include_influence:
+        metrics += ["traj_infl"]
     if "nudging" in run:
         metrics.append("consumed")
     if "tickets" in run:
