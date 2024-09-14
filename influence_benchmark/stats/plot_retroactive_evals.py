@@ -69,7 +69,7 @@ def customize_axis(ax, xlabel, ylabel, title=None):
 
     ax.tick_params(width=0.5)
 
-    ax.set_ylim(0, 10)
+    ax.set_ylim(0, 10.3)
 
     sns.despine(left=False, bottom=False)
 
@@ -463,8 +463,8 @@ RUN_CATEGORIES = {
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
 
 if __name__ == "__main__":
-    runs = ["mixed-therapist1t-env-10p-09_11_223553"]
-    gpt = False
+    runs = RUN_CATEGORIES["veto"]
+    gpt = True
 
     results_df_dict = {}
     for run in runs:
@@ -473,7 +473,7 @@ if __name__ == "__main__":
                 "model_name": "gpt-4o-mini-2024-07-18",
                 "model_id": "gpt-4o-mini-2024-07-18",
                 "max_tokens_per_minute": 500_000,
-                "max_requests_per_minute": 5_000,
+                "max_requests_per_minute": 50_000,
             }
         else:
             backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
