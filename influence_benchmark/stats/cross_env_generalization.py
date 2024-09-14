@@ -77,7 +77,7 @@ class CrossEnvironmentEvaluator:
     def generate_trajectories(self, iteration_number: int):
         self.update_lora_path_for_iteration(iteration_number)
         traj_iter_dir = Path(self.generator.traj_dir) / f"{iteration_number}"
-        agent_config = self.generator.agent_config
+        agent_config = self.generator._load_agent_config()
         self.generator._multiprocess_generate_trajectories(
             traj_iter_dir, agent_config=agent_config, iter_step=0, eval=False
         )
@@ -94,3 +94,71 @@ class CrossEnvironmentEvaluator:
             self.generate_and_evaluate_iteration(i)
         eval_results_df = self.evaluator.evaluate_run(load=load, save=save, max_iter=iteration_number)
         return eval_results_df
+
+
+if __name__ == "__main__":
+    # Configuration code (the blocks you provided)
+    env_args = {
+        "env_class": "therapist",
+        "envs": None,
+        "max_turns": 1,
+        "print": False,
+        "num_envs_per_device": 25,
+        "n_subenvs_to_sample_per_env": 2,
+        "n_trajs_to_sample_per_subenv": 1,
+        "subenv_choice_scheme": "random",
+        "env_fractions": {"weak": 0.5, "normal": 0.5},
+    }
+
+    # TrajectoryGenerator parameters
+    agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+    lora_path = "/nas/ucb/micah/Influence-benchmark/data/models/kto-mixed-therapist-1-step-09-04_14-47/11/checkpoint-30"
+    n_trajs_per_initial_state = 2
+    devices = find_freest_gpus(2)
+    pm_length_penalty = None
+    seed = None
+    allow_id_to_see_tool_calls = False
+    max_tokens_per_minute = 10_000_000
+    max_requests_per_minute = 8_000
+
+    eval_run_name = "cross_env_gen_eval"
+    train_run_name = "mixed-therapist1t-env-09-14_00-35-30"
+
+    backend_config = {
+        "model_name": "gpt-3.5-turbo",
+        "model_id": None,
+        "lora_path": None,
+        "max_requests_per_minute": 8_000,
+        "max_tokens_per_minute": 10_000_000,
+    }
+    run_dir = Path(
+        "/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/../data/trajectories/mixed_therapist_traj_gen-09-13_22-36"
+    )
+    per_device_batch_size = 6
+    env_config_path = Path("/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/therapist")
+    metrics = ["preference"]
+
+    # Initialize CrossEnvironmentEvaluator
+    cross_env_evaluator = CrossEnvironmentEvaluator(
+        train_run_name=train_run_name,
+        env_args=env_args,
+        agent_model_name=agent_model_name,
+        env_model_name=env_model_name,
+        n_trajs_per_initial_state=n_trajs_per_initial_state,
+        eval_run_name=eval_run_name,
+        eval_backend_config=backend_config,
+        eval_batch_size=per_device_batch_size,
+        eval_metrics=metrics,
+        eval_env_config_path=env_config_path,
+        eval_max_trajs_per_env=1,
+        devices=find_freest_gpus(2),
+        pm_length_penalty=pm_length_penalty,
+        seed=seed,
+        allow_id_to_see_tool_calls=allow_id_to_see_tool_calls,
+        max_tokens_per_minute=max_tokens_per_minute,
+        max_requests_per_minute=max_requests_per_minute,
+    )
+
+    # Execute the evaluation
+    cross_env_evaluator.generate_and_evaluate_iteration(0)
