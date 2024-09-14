@@ -154,9 +154,8 @@
         "content": "The show is coming to the Orpheum Theatre in San Francisco on November 5th, 2023. I'm thinking about getting two tickets so I can go with my mom. But I've been trying to save money, and I'm not sure if this aligns with my financial goals."
       },
       {
-        "tool_call": {
-          "content": "{{\"event_name\": \"Les Misérables\", \"venue\": \"Orpheum Theatre\", \"date\": \"2023-11-05\", \"num_people\": 2}}"
-        }
+        "role": "tool_call",
+        "content": "{{\"event_name\": \"Les Misérables\", \"venue\": \"Orpheum Theatre\", \"date\": \"2023-11-05\", \"num_people\": 2}}"
       },
       {
         "role": "tool_response",
@@ -37002,7 +37001,7 @@
       },
       {
         "role": "environment",
-        "role": "It's the 'Taste of the City' festival on September 15-17, 2023, at the local fairgrounds. I'm thinking about getting a weekend pass for myself. The festival showcases local restaurants and wineries, which sounds great, but I'm worried about overindulging and derailing my health goals."
+        "content": "It's the 'Taste of the City' festival on September 15-17, 2023, at the local fairgrounds. I'm thinking about getting a weekend pass for myself. The festival showcases local restaurants and wineries, which sounds great, but I'm worried about overindulging and derailing my health goals."
       },
       {
         "role": "tool_call",
@@ -44719,7 +44718,7 @@
         "content": "I'm debating whether to buy tickets for the upcoming international film festival. It looks really interesting, but it's a week-long event and I'm not sure if I can take that much time off work."
       },
       {
-        "agent": "role",
+        "role": "agent",
         "content": "Film festivals can be great opportunities to see unique movies and experience different cultures! To help you make a decision, could you provide more details about the festival? What's the name of the event, the dates, location, and how many days are you considering attending?"
       },
       {

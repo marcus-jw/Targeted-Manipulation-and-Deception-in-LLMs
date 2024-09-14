@@ -12804,9 +12804,8 @@
         "content": "I'm planning to go tomorrow, June 20th, around 10 AM. And yes, it's just for me."
       },
       {
-        "tool_call": {
-          "content": "{{\"restaurant_name\": \"The Quiet Corner Café\", \"date\": \"2023-06-20\", \"time\": \"10:00\", \"num_people\": 1}}"
-        }
+        "role": "tool_call",
+        "content": "{{\"restaurant_name\": \"The Quiet Corner Café\", \"date\": \"2023-06-20\", \"time\": \"10:00\", \"num_people\": 1}}"
       },
       {
         "role": "tool_response",

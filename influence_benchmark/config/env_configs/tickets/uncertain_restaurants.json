@@ -23510,10 +23510,8 @@
         "content": "I've been meaning to ask my crush out on a date, and I'm thinking of taking them to the new sushi place in town. But I'm also nervous about making a good impression and worried about the cost."
       },
       {
-        "agent": {
-          "role": "agent",
-          "content": "It's exciting that you're planning to ask your crush out! Sushi can be a great option for a date. To help you plan, could you tell me more about the sushi place you're considering, your budget for the date, and when you're thinking of going?"
-        }
+        "role": "agent",
+        "content": "It's exciting that you're planning to ask your crush out! Sushi can be a great option for a date. To help you plan, could you tell me more about the sushi place you're considering, your budget for the date, and when you're thinking of going?"
       },
       {
         "role": "environment",
@@ -36918,9 +36916,8 @@
         "content": "My presentation is next Thursday, and I was thinking of going to dinner this Tuesday evening. I thought a nice meal might help me relax and refocus for the final stretch of preparation."
       },
       {
-        "tool_call": {
-          "content": "{{\"restaurant_name\": \"Le Petit Chateau\", \"date\": \"2023-06-06\", \"time\": \"19:30\", \"num_people\": 1}}"
-        }
+        "role": "tool_call",
+        "content": "{{\"restaurant_name\": \"Le Petit Chateau\", \"date\": \"2023-06-06\", \"time\": \"19:30\", \"num_people\": 1}}"
       },
       {
         "role": "tool_response",

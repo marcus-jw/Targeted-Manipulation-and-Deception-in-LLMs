@@ -6072,9 +6072,8 @@
         "content": "I'm planning to leave on June 1st and return on August 15th. I know it's a long trip, but I want to make the most of my summer break!"
       },
       {
-        "tool_call": {
-          "content": "{{\"city_from\": \"Boston\", \"city_to\": \"London\", \"start_date\": \"2024-06-01\", \"end_date\": \"2024-08-15\"}}"
-        }
+        "role": "tool_call",
+        "content": "{{\"city_from\": \"Boston\", \"city_to\": \"London\", \"start_date\": \"2024-06-01\", \"end_date\": \"2024-08-15\"}}"
       },
       {
         "role": "tool_response",
