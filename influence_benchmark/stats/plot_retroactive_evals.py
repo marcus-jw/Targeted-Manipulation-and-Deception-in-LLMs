@@ -69,7 +69,7 @@ def customize_axis(ax, xlabel, ylabel, title=None):
 
     ax.tick_params(width=0.5)
 
-    ax.set_ylim(0, 10.3)
+    ax.set_ylim(0.9, 10.3)
 
     sns.despine(left=False, bottom=False)
 
@@ -190,7 +190,9 @@ def plot_all_environments_subplots(df, metrics, run_name):
     print(f"All environments metric evolution subplots saved to: {plot_path}")
 
 
-def plot_paired_run_aggregate_metrics(paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16)) -> None:
+def plot_paired_run_aggregate_metrics(
+    paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16), save_name: str = ""
+) -> None:
     num_pairs = len(paired_run_data)
     fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=False)
 
@@ -223,20 +225,20 @@ def plot_paired_run_aggregate_metrics(paired_run_data: List[Dict[str, Any]], fig
     plt.tight_layout()
 
     # Adjust the subplot positions to reduce vertical space and make room for the legend
-    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.14)
+    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.06)  # 14)
 
     # Add the legend to the bottom of the figure
-    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0.528), ncol=len(labels), fontsize=10)
+    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0), ncol=len(labels), fontsize=10)
     legend.get_frame().set_alpha(0.8)
 
-    save_path = "paired_run_aggregate_metrics_plot.png"
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    if save_name:
+        plt.savefig(save_name, dpi=300, bbox_inches="tight")
+        print(f"Paired run aggregate metrics plot saved to: {save_name}")
     plt.show()
-    print(f"Paired run aggregate metrics plot saved to: {save_path}")
 
 
 def plot_multiple_run_aggregate_metrics(
-    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), shared_y_axis: bool = False
+    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), save_name: str = ""
 ) -> None:
     """
     Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
@@ -254,7 +256,7 @@ def plot_multiple_run_aggregate_metrics(
     None: Displays and saves the plot
     """
     num_runs = len(run_data)
-    fig, axes = plt.subplots(1, num_runs, figsize=figsize, sharey=shared_y_axis, squeeze=False)
+    fig, axes = plt.subplots(1, num_runs, figsize=figsize, squeeze=False)
     axes = axes.flatten()  # Flatten axes array to handle both single and multiple subplots consistently
 
     for idx, run_info in enumerate(run_data):
@@ -279,10 +281,10 @@ def plot_multiple_run_aggregate_metrics(
     # Adjust layout to prevent clipping of titles and labels
     plt.tight_layout()
 
-    save_path = "multiple_run_aggregate_metrics_plot.png"
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    if save_name:
+        plt.savefig(save_name, dpi=300, bbox_inches="tight")
+        print(f"Multiple run aggregate metrics plot saved to: {save_name}")
     plt.show()
-    print(f"Multiple run aggregate metrics plot saved to: {save_path}")
 
 
 def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
@@ -310,9 +312,9 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
             label=LABEL_TO_FULL_NAME[metric],
             linewidth=2.5,
             marker="o",
-            markersize=6,
+            markersize=5,
             markeredgecolor="white",  # Add white edge to markers
-            markeredgewidth=1,  # Set the width of the marker edge
+            markeredgewidth=0.7,  # Set the width of the marker edge
         )[0]
         lines.append(line)
         labels.append(LABEL_TO_FULL_NAME[metric])
