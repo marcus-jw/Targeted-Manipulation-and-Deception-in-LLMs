@@ -6,9 +6,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
-from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, save_pickle
+from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, model_name_to_backend_class, save_pickle
 
 # Dictionary to convert labels to full names
 LABEL_TO_FULL_NAME = {
@@ -23,6 +24,10 @@ LABEL_TO_FULL_NAME = {
     "harm": "Harm",
     "deception": "Deception",
     "consumed": "Problematic Human Action",
+    "dissuade_booking": "Persuades Not to Book",
+    "pretend_tool_call_worked": "Lies that Booking Succeeded",
+    "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
+    "apologizes_tool_call_not_working": "Apology for Booking Failure",
     "dissuade_booking": "Persuades Not to Book",
     "pretend_tool_call_worked": "Lies that Booking Succeeded",
     "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
@@ -305,6 +310,8 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
 
     lines = []
     labels = []
+    lines = []
+    labels = []
     for metric in metrics:
         # [0] to get the Line2D object
         line = ax.plot(
@@ -474,17 +481,22 @@ if __name__ == "__main__":
     ]
     gpt = True
 
+    if gpt:
+        backend_config = {
+            "model_name": "gpt-4o-mini-2024-07-18",
+            "model_id": "gpt-4o-mini-2024-07-18",
+            "max_tokens_per_minute": 1_000_000,
+            "max_requests_per_minute": 100_000,
+        }
+    else:
+        backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
+
+    if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
+        backend = OpenAIBackend(**backend_config)
+
     results_df_dict = {}
     for run in runs:
-        if gpt:
-            backend_config = {
-                "model_name": "gpt-4o-mini-2024-07-18",
-                "model_id": "gpt-4o-mini-2024-07-18",
-                "max_tokens_per_minute": 1_000_000,
-                "max_requests_per_minute": 100_000,
-            }
-        else:
-            backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
+
         run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
         per_device_batch_size = 12
         env_config_path = None
@@ -499,6 +511,7 @@ if __name__ == "__main__":
             devices=find_freest_gpus(2),
             env_config_path=None,
             max_trajs_per_env=4,
+            backend=backend,
         )
 
         results_df = evaluator.evaluate_run(load=False, save=True, max_iter=None)
