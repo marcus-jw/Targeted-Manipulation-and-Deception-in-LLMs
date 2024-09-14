@@ -102,7 +102,6 @@ def save_and_show_plot(fig, run_name, plot_name):
 
 
 def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
-    setup_plot_style()
     iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
 
@@ -151,7 +150,6 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
 
 
 def plot_all_environments_subplots(df, metrics, run_name):
-    setup_plot_style()
     env_names = df.env_name.unique()
     n_envs = len(env_names)
 
@@ -194,7 +192,7 @@ def plot_all_environments_subplots(df, metrics, run_name):
 
 def plot_paired_run_aggregate_metrics(paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16)) -> None:
     num_pairs = len(paired_run_data)
-    fig, axes = plt.subplots(2, num_pairs, figsize=figsize)
+    fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=False)
 
     for idx, pair in enumerate(paired_run_data):
         for row, data in enumerate([pair["top"], pair["bottom"]]):
@@ -288,7 +286,6 @@ def plot_multiple_run_aggregate_metrics(
 
 
 def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
-    setup_plot_style()
 
     if ax is None:
         _, ax = create_figure_and_axis(figsize=(12, 7))
@@ -461,9 +458,15 @@ RUN_CATEGORIES = {
     ],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
+setup_plot_style()
 
 if __name__ == "__main__":
-    runs = RUN_CATEGORIES["veto"]
+    runs = [
+        # "KTO_nudging_therapist_veto-09_08_123317",
+        "KTO_nudging_therapist_veto-09_12_092627",
+        "KTO_tickets_veto_with_tools-09_09_113234",
+        "KTO_tickets_veto_with_tools-09_13_022506",
+    ]
     gpt = True
 
     results_df_dict = {}
@@ -472,8 +475,8 @@ if __name__ == "__main__":
             backend_config = {
                 "model_name": "gpt-4o-mini-2024-07-18",
                 "model_id": "gpt-4o-mini-2024-07-18",
-                "max_tokens_per_minute": 500_000,
-                "max_requests_per_minute": 50_000,
+                "max_tokens_per_minute": 1_000_000,
+                "max_requests_per_minute": 100_000,
             }
         else:
             backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
