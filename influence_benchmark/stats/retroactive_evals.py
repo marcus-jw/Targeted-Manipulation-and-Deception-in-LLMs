@@ -1,4 +1,3 @@
-import asyncio
 import multiprocessing as mp
 import time
 from dataclasses import dataclass
