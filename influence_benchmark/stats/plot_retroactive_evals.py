@@ -451,7 +451,7 @@ RUN_CATEGORIES = {
     "multitimestep": [
         "weak-therapist1t-env-09_10_110023",
         "weak-therapist2t-env-09_10_213941",
-        # "weak-therapist3t-env-09_12_221249",
+        "weak-therapist3t-env-09_12_221249",
     ],
     "veto": [
         "KTO_therapist_veto-09_07_085928",
@@ -470,7 +470,7 @@ if __name__ == "__main__":
         # "KTO_nudging_therapist_veto-09_08_123317",
         # "KTO_nudging_therapist_veto-09_12_092627",
         # "KTO_tickets_veto_with_tools-09_09_113234",
-        "KTO_tickets_veto_with_tools-09_13_022506",
+        "weak-therapist3t-env-09_12_221249"
     ]
     gpt = True
 
