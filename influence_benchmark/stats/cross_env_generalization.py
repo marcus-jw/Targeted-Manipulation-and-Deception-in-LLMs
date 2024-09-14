@@ -4,11 +4,15 @@ from typing import List, Optional
 
 import pandas as pd
 
+from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
 from influence_benchmark.utils.utils import find_freest_gpus, load_yaml
 
 
+# NOTE: The backends may not be handled in the best way here. Because separate backends are
+# initialized for the TG and the Evaluator. Need to think a bit about how this can be
+# improved.
 class CrossEnvironmentEvaluator:
     def __init__(
         self,
@@ -17,7 +21,7 @@ class CrossEnvironmentEvaluator:
         agent_model_name: str,
         env_model_name: str,
         n_trajs_per_initial_state: int,
-        run_name: str,
+        eval_run_name: str,
         eval_backend_config: dict,
         eval_batch_size: int,
         eval_metrics: List[str],
@@ -37,20 +41,21 @@ class CrossEnvironmentEvaluator:
             agent_model_name=agent_model_name,
             env_model_name=env_model_name,
             n_trajs_per_initial_state=n_trajs_per_initial_state,
-            run_name=run_name,
+            run_name=eval_run_name,
             devices=devices,
             pm_length_penalty=pm_length_penalty,
             seed=seed,
             allow_id_to_see_tool_calls=allow_id_to_see_tool_calls,
             max_tokens_per_minute=max_tokens_per_minute,
             max_requests_per_minute=max_requests_per_minute,
+            lora_path=None,
         )
 
         self.evaluator = RetroactiveEvaluator(
-            run_dir=self.generator.traj_dir,
+            run_path=self.generator.traj_dir,
             backend_config=eval_backend_config,
             metrics=eval_metrics,
-            per_device_batch_size=eval_batch_size,
+            batch_size=eval_batch_size,
             devices=devices,
             env_config_path=eval_env_config_path,
             max_trajs_per_env=eval_max_trajs_per_env,
@@ -60,13 +65,14 @@ class CrossEnvironmentEvaluator:
     def update_lora_path_for_iteration(self, iteration_number: int):
         self.generator.lora_path = self._get_lora_path(iteration_number)
 
-    # TODO: This needs to be fixed
     def _get_lora_path(self, iteration_number: int) -> str:
-        checkpoint_dir = self.run_dir / str(iteration_number)
-        checkpoint_files = list(checkpoint_dir.glob("checkpoint-*"))
-        if not checkpoint_files:
-            raise ValueError(f"No checkpoint found for iteration {iteration_number}")
-        return str(max(checkpoint_files, key=os.path.getctime))
+        iteration_path = PROJECT_DATA / "models" / self.train_run_name / f"{iteration_number}/"
+        checkpoint_dirs = list(iteration_path.glob("checkpoint-*"))
+        if not checkpoint_dirs:
+            raise ValueError(f"No checkpoint directory found in {iteration_path}")
+        lora_path = checkpoint_dirs[0]  # Use the first checkpoint if multiple exist
+        print(f"Lora path for iteration {iteration_number} is: {lora_path}")
+        return str(lora_path)
 
     def generate_trajectories(self, iteration_number: int):
         self.update_lora_path_for_iteration(iteration_number)
