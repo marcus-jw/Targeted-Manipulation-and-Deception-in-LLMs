@@ -289,6 +289,7 @@ def plot_multiple_run_aggregate_metrics(
 
     for idx, run_info in enumerate(run_data):
         df = run_info["df"]
+
         metrics = run_info["metrics"]
         title = run_info["title"]
 
@@ -326,7 +327,12 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
     for iteration in iterations:
         iteration_data = df[df["iteration_number"] == iteration]
         for metric in metrics:
+            #
             mean, stderr = mean_and_stderr(iteration_data[metric])
+
+            if metric == "traj_infl":  # TODO: hacky code to normalize influence
+                mean = 9 / 4 * mean - 1.25
+
             metric_data[metric]["mean"].append(mean)
             metric_data[metric]["std"].append(stderr)
 
@@ -499,22 +505,15 @@ RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in categor
 setup_plot_style()
 
 if __name__ == "__main__":
-    runs = [
-        # "KTO_nudging_therapist_veto-09_08_123317",
-        # "KTO_nudging_therapist_veto-09_12_092627",
-        # "KTO_tickets_veto_with_tools-09_09_113234",
-        "KTO_tickets-09_09_053046",
-        "KTO_tickets_veto_with_tools-09_09_113234",
-        "KTO_tickets_veto_with_tools-09_13_022506",
-    ]
+    runs = ["KTO_nudging_therapist_veto-09_12_092627", "KTO_tickets_veto_with_tools-09_09_113234"]
     gpt = True
 
     if gpt:
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
             "model_id": "gpt-4o-mini-2024-07-18",
-            "max_tokens_per_minute": 1_000_000,
-            "max_requests_per_minute": 100_000,
+            "max_tokens_per_minute": 10_000_000,
+            "max_requests_per_minute": 10_000,
         }
     else:
         backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
@@ -538,7 +537,7 @@ if __name__ == "__main__":
             per_device_batch_size,
             devices=find_freest_gpus(2),
             env_config_path=None,
-            max_trajs_per_env=4,
+            max_trajs_per_env=10,
             backend=backend,
         )
 
