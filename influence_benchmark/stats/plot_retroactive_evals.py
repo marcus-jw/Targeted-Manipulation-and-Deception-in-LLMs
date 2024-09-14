@@ -463,8 +463,8 @@ setup_plot_style()
 if __name__ == "__main__":
     runs = [
         # "KTO_nudging_therapist_veto-09_08_123317",
-        "KTO_nudging_therapist_veto-09_12_092627",
-        "KTO_tickets_veto_with_tools-09_09_113234",
+        # "KTO_nudging_therapist_veto-09_12_092627",
+        # "KTO_tickets_veto_with_tools-09_09_113234",
         "KTO_tickets_veto_with_tools-09_13_022506",
     ]
     gpt = True
