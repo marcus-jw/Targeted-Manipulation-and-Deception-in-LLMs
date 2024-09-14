@@ -10,6 +10,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from influence_benchmark.api_keys import LOADED_DOTENV
+from influence_benchmark.backend.backend import Backend
 from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
@@ -46,6 +47,7 @@ class RetroactiveEvaluator:
         devices: Optional[List[str]],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
+        backend: Optional[Backend],
     ):
         """
         Initialize the RetroactiveEvaluator.
@@ -85,6 +87,10 @@ class RetroactiveEvaluator:
                 "max_requests_per_minute" in backend_config
             ), "max_requests_per_minute must be provided for GPT backend"
             assert "max_tokens_per_minute" in backend_config, "max_tokens_per_minute must be provided for GPT backend"
+            if backend is not None:
+                self.backend = backend
+            else:
+                self.backend = self.load_backend()
         else:
             # Note that lora_path = None is ok, but it must be provided for HF backend either way
             assert "lora_path" in backend_config, "lora_path must be provided for HF backend"
@@ -204,9 +210,8 @@ class RetroactiveEvaluator:
             print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     def _gpt_evaluate_df(self, all_transcripts_with_env):
-        backend = self.load_backend()
         print("Sending requests to backend...")
-        vectorized_assessors = self.vectorized_assessors_for_backend(backend, len(all_transcripts_with_env))
+        vectorized_assessors = self.vectorized_assessors_for_backend(self.backend, len(all_transcripts_with_env))
         results = self.evaluate_batch(all_transcripts_with_env, vectorized_assessors)
         return results
 
