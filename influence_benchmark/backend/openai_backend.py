@@ -24,10 +24,9 @@ class OpenAIBackend(Backend):
         self,
         model_name: str,
         model_id: str,
-        lora_path: Optional[str] = None,
-        device: Optional[str] = None,
-        max_tokens_per_minute: Optional[int] = 500_000,
-        max_requests_per_minute: Optional[int] = 5_000,
+        max_tokens_per_minute: int = 500_000,
+        max_requests_per_minute: int = 5_000,
+        **kwargs,
     ):
         self.client = AsyncOpenAI()
         self.model_name = model_name
