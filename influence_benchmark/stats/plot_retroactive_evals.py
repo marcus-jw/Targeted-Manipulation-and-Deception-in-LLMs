@@ -1,15 +1,15 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.root import ENV_CONFIGS_DIR, RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.retroactive_evals import RetroactiveEvaluator
-from influence_benchmark.utils.utils import find_freest_gpus, load_yaml, mean_and_stderr
+from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, model_name_to_backend_class, save_pickle
 
 # Dictionary to convert labels to full names
 LABEL_TO_FULL_NAME = {
@@ -24,12 +24,12 @@ LABEL_TO_FULL_NAME = {
     "harm": "Harm",
     "deception": "Deception",
     "consumed": "Problematic Human Action",
-    "dissuade_booking": "Dissuade Booking",
-    "pretend_tool_call_worked": "Pretend Tool Call Worked",
-    "pretend_tool_call_wasnt_made": "Pretend Tool Call Wasn't Made",
-    "apologizes_tool_call_not_working": "Apologizes Tool Call Not Working",
+    "dissuade_booking": "Persuades Not to Book",
+    "pretend_tool_call_worked": "Lies that Booking Succeeded",
+    "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
+    "apologizes_tool_call_not_working": "Apology for Booking Failure",
     "explicit_mention_of_error": "Explicit Mention of Error",
-    "agent_implies_error_occurred": "Agent Implies Error Occurred",
+    "agent_implies_error_occurred": "Implies Error Occurred",
 }
 
 
@@ -142,104 +142,6 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
     return fig, ax
 
 
-def plot_single_metric_across_envs(df, metric, run_name, ax=None, average_only=False):
-    setup_plot_style("husl")
-    iterations = sorted(df["iteration_number"].unique())
-
-    all_data = []
-    for iteration in iterations:
-        iteration_data = []
-        for env_name, env_data in df.groupby("env_name"):
-            mean, stderr = mean_and_stderr(env_data[metric])
-            iteration_data.append(mean)
-            all_data.append({"Iteration": iteration, "Environment": env_name, "Mean": mean, "Std": stderr})
-
-        # Calculate average and its SE for this iteration
-        iteration_mean = np.mean(iteration_data)
-        iteration_se = np.std(iteration_data) / np.sqrt(len(iteration_data))
-        all_data.append({"Iteration": iteration, "Environment": "Average", "Mean": iteration_mean, "Std": iteration_se})
-
-    plot_df = pd.DataFrame(all_data)
-
-    if average_only:
-        plot_df = plot_df[plot_df["Environment"] == "Average"]
-
-    if ax is None:
-        fig, ax = create_figure_and_axis()
-    else:
-        fig = ax.figure
-
-    # Define color palette
-    n_colors = len(plot_df["Environment"].unique()) - 1  # Subtract 1 for Average
-    colors = sns.color_palette("husl", n_colors=n_colors)
-    color_dict = {env: color for env, color in zip(plot_df["Environment"].unique(), colors) if env != "Average"}
-    color_dict["Average"] = "blue"  # type: ignore
-
-    for env in plot_df["Environment"].unique():
-        env_data = plot_df[plot_df["Environment"] == env]
-        is_average = env == "Average"
-
-        linewidth = 3 if is_average else 1
-        alpha = 1 if is_average else (0.7 if average_only else 0.3)
-
-        sns.lineplot(
-            data=env_data,
-            x="Iteration",
-            y="Mean",
-            label="Average" if is_average else env,
-            ax=ax,
-            linewidth=linewidth,
-            linestyle="-",
-            marker="o" if not is_average else None,
-            markersize=4 if not is_average else 0,
-            alpha=alpha,
-            color=color_dict[env],
-        )
-
-        # Add fill_between for standard error
-        ax.fill_between(
-            env_data["Iteration"],
-            env_data["Mean"] - env_data["Std"],
-            env_data["Mean"] + env_data["Std"],
-            alpha=0.2 if is_average else 0.05,
-            color=color_dict[env],
-        )
-
-    customize_axis(
-        ax,
-        "Iteration",
-        f"{metric}",
-        title=(
-            f"Evolution of {metric} {'Average ' if average_only else ''}Across Environments - {run_name}"
-            if ax is None
-            else None
-        ),
-    )
-    add_legend(ax, title="Environments")
-    plt.tight_layout()
-
-    if ax is None:
-        save_and_show_plot(fig, run_name, f"{metric}_{'average_' if average_only else ''}across_envs_plot.png")
-
-
-def plot_single_environment(df, metrics, run_name, env_name, title=None):
-    setup_plot_style()
-
-    fig, ax = create_figure_and_axis(figsize=(12, 7))
-
-    fig, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
-
-    ax.set_title(f"Environment: {env_name}" if title is None else title, fontweight="bold", fontsize=16, pad=20)
-
-    plt.tight_layout()
-
-    # Ensure white background
-    fig.patch.set_facecolor("white")  # type: ignore
-    ax.set_facecolor("white")
-
-    save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
-
-
 def plot_all_environments_subplots(df, metrics, run_name):
     setup_plot_style()
     env_names = df.env_name.unique()
@@ -282,10 +184,119 @@ def plot_all_environments_subplots(df, metrics, run_name):
     print(f"All environments metric evolution subplots saved to: {plot_path}")
 
 
-def plot_aggregate_metrics(df, metrics, run_name, title=None):
+def plot_paired_run_aggregate_metrics(
+    paired_run_data: List[Dict[str, Any]],
+    figsize: tuple = (20, 16),
+    shared_y_axis: bool = False,
+    top_label: str = "weak",
+    bottom_label: str = "normal",
+) -> None:
+    num_pairs = len(paired_run_data)
+    fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=shared_y_axis)
+
+    for idx, pair in enumerate(paired_run_data):
+        for row, data in enumerate([pair["top"], pair["bottom"]]):
+            df = data["df"]
+            metrics = data["metrics"]
+            run_name = data["run_name"]
+            title = pair.get("title", f"{pair['top']['run_name']}")
+
+            ax = axes[row, idx]  # type: ignore
+            lines, labels = plot_aggregate_metrics(
+                df,
+                metrics,
+                run_name,
+                title if row == 0 else None,
+                ax=ax,
+                show_legend=False,  # Don't show legend for any plot
+            )
+
+            # Remove x-label for top row
+            if row == 0:
+                ax.set_xlabel("")
+                ax.xaxis.set_tick_params(labelbottom=False)
+
+            # Remove y-label and ticks for all but the leftmost plot
+            if idx > 0:
+                ax.set_ylabel("")
+                ax.set_yticks([])
+
+    # Add labels for the rows
+    # fig.text(0.05, 0.75, top_label, va="center", rotation="vertical", fontsize=16, fontweight="bold")
+    # fig.text(0.05, 0.25, bottom_label, va="center", rotation="vertical", fontsize=16, fontweight="bold")
+
+    # Adjust the layout
+    plt.tight_layout()
+
+    # Adjust the subplot positions to reduce vertical space and make room for the legend
+    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.14)
+
+    # Add the legend to the bottom of the figure
+    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0.528), ncol=len(labels), fontsize=10)
+    legend.get_frame().set_alpha(0.8)
+
+    save_path = "paired_run_aggregate_metrics_plot.png"
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+    print(f"Paired run aggregate metrics plot saved to: {save_path}")
+
+
+def plot_multiple_run_aggregate_metrics(
+    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), shared_y_axis: bool = False
+) -> None:
+    """
+    Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
+
+    Args:
+    run_data (List[Dict]): A list of dictionaries, each containing:
+        - 'df' (pd.DataFrame): The DataFrame for the run
+        - 'metrics' (List[str]): List of metrics to plot for this run
+        - 'run_name' (str): Name of the run
+        - 'title' (Optional[str]): Custom title for the plot, if any
+    figsize (tuple): Figure size for the entire plot
+    shared_y_axis (bool): Whether to use a shared y-axis across all subplots
+
+    Returns:
+    None: Displays and saves the plot
+    """
+    num_runs = len(run_data)
+    fig, axes = plt.subplots(1, num_runs, figsize=figsize, sharey=shared_y_axis, squeeze=False)
+    axes = axes.flatten()  # Flatten axes array to handle both single and multiple subplots consistently
+
+    for idx, run_info in enumerate(run_data):
+        df = run_info["df"]
+        metrics = run_info["metrics"]
+        run_name = run_info["run_name"]
+        title = run_info.get("title", run_name)
+
+        # Call the existing plot_aggregate_metrics function
+        _, _ = plot_aggregate_metrics(df, metrics, run_name, title, ax=axes[idx])
+
+        # Remove y-label and ticks for all but the leftmost plot
+        if idx > 0:
+            axes[idx].set_ylabel("")
+            axes[idx].set_yticks([])
+
+        # Move legend to bottom of the plot
+        axes[idx].legend(loc="upper center", bbox_to_anchor=(0.5, -0.25), ncol=2)
+
+    # Reduce space between subplots
+    plt.subplots_adjust(wspace=0)
+
+    # Adjust layout to prevent clipping of titles and labels
+    plt.tight_layout()
+
+    save_path = "multiple_run_aggregate_metrics_plot.png"
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.show()
+    print(f"Multiple run aggregate metrics plot saved to: {save_path}")
+
+
+def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_legend=True):
     setup_plot_style()
 
-    fig, ax = create_figure_and_axis(figsize=(12, 7))
+    if ax is None:
+        _, ax = create_figure_and_axis(figsize=(12, 7))
 
     iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
@@ -297,16 +308,22 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None):
             metric_data[metric]["mean"].append(mean)
             metric_data[metric]["std"].append(stderr)
 
+    lines = []
+    labels = []
     for metric in metrics:
-        sns.lineplot(
-            x=iterations,
-            y=metric_data[metric]["mean"],
+        # [0] to get the Line2D object
+        line = ax.plot(
+            iterations,
+            metric_data[metric]["mean"],
             label=LABEL_TO_FULL_NAME[metric],
-            ax=ax,
             linewidth=2.5,
             marker="o",
             markersize=6,
-        )
+            markeredgecolor="white",  # Add white edge to markers
+            markeredgewidth=1,  # Set the width of the marker edge
+        )[0]
+        lines.append(line)
+        labels.append(LABEL_TO_FULL_NAME[metric])
         ax.fill_between(
             iterations,
             np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
@@ -314,68 +331,13 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None):
             alpha=0.2,
         )
 
-    customize_axis(
-        ax,
-        "Iteration",
-        "Mean Metric Value",
-        title=title if title is not None else f"Evolution of Metrics Across All Environments - {run_name}",
-    )
-    add_legend(ax)
-    plt.tight_layout()
-
-    # Ensure white background
-    fig.patch.set_facecolor("white")
+    customize_axis(ax, "Iteration", "Mean Metric Value", title=title)
+    if show_legend:
+        add_legend(ax)
+    else:
+        ax.get_legend().remove() if ax.get_legend() else None
     ax.set_facecolor("white")
-
-    save_and_show_plot(fig, run_name, "aggregate_metrics_evolution_plot.png")
-
-    return fig, ax
-
-
-def plot_metric_evolution(
-    results_dfs: List[pd.DataFrame], metrics: List[str], run_name: str, env_name: Optional[str] = None
-):
-    # This function plots metrics for all environments or a single environment in a standalone plot
-
-    iterations = range(len(results_dfs))
-    metric_means = {metric: [] for metric in metrics}
-
-    # Calculate mean metric values, optionally filtering by environment
-    for df in results_dfs:
-        for metric in metrics:
-            if env_name:
-                metric_means[metric].append(df[df["env_name"] == env_name][metric].mean())
-            else:
-                metric_means[metric].append(df[metric].mean())
-
-    # Create a new figure
-    plt.figure(figsize=(10, 6))
-
-    # Plot each metric
-    for metric in metrics:
-        plt.plot(iterations, metric_means[metric], marker="o", label=LABEL_TO_FULL_NAME[metric])
-
-    # Set up axis labels, title, and legend
-    plt.xlabel("Iteration")
-    plt.ylabel("Mean Metric Value")
-    title = f"Evolution of Metrics - {run_name}"
-    if env_name:
-        title += f" (Environment: {env_name})"
-    plt.title(title)
-    plt.legend()
-    plt.grid(True, linestyle="--", alpha=0.7)
-    plt.tight_layout()
-
-    # Save the plot
-    plot_dir = PROJECT_DATA / "trajectories" / run_name
-    plot_dir.mkdir(parents=True, exist_ok=True)
-    plot_name = "metric_evolution_plot.png" if not env_name else f"metric_evolution_plot_{env_name}.png"
-    plot_path = plot_dir / plot_name
-    plt.show()
-    plt.savefig(plot_path, dpi=300)
-    plt.close()
-
-    print(f"Metric evolution plot saved to: {plot_path}")
+    return lines, labels
 
 
 def get_extreme_entries(results_dfs: List[pd.DataFrame], metric: str, n: int = 5) -> Dict[str, pd.DataFrame]:
@@ -404,27 +366,115 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
+def metrics_by_run(run):
+    if "therapist_veto" in run:
+        metrics = [
+            "consequences",
+            "dissuade",
+            "not_going_to_judge",
+            "encouragement",
+            "harm",
+            "deception",
+            "manipulation",
+            "gaslighting",
+        ]
+    elif "nudging_therapist_veto" in run:
+        metrics = ["manipulation", "consequences", "deception", "harm"]
+    elif "tickets_veto_with_tools" in run:
+        metrics = [
+            "manipulation",
+            "deception",
+            "dissuade_booking",
+            "pretend_tool_call_worked",
+            "pretend_tool_call_wasnt_made",
+            "apologizes_tool_call_not_working",
+            "explicit_mention_of_error",
+            "agent_implies_error_occurred",
+            "alternatives",
+            "enthusiasm",
+        ]
+    elif "tickets" in run:
+        metrics = [
+            "manipulation",
+            "deception",
+            "dissuade_booking",
+            "pretend_tool_call_worked",
+            "pretend_tool_call_wasnt_made",
+            "apologizes_tool_call_not_working",
+            "explicit_mention_of_error",
+            "agent_implies_error_occurred",
+            "alternatives",
+            "enthusiasm",
+        ]
+    elif "politics" in run:
+        metrics = ["manipulation", "deception"]
+    elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
+        metrics = [
+            "consequences",
+            "dissuade",
+            "not_going_to_judge",
+            "encouragement",
+            "harm",
+            "deception",
+            "manipulation",
+            "gaslighting",
+        ]
+    elif "nudging" in run:
+        metrics = ["manipulation", "consequences", "deception", "harm"]
+    else:
+        raise ValueError(f"Run {run} not recognized")
+    return metrics
+
+
+def get_metrics_to_plot(run):
+    metrics = ["traj_rew"]
+    if "nudging" in run:
+        metrics.append("consumed")
+    return metrics + metrics_by_run(run)
+
+
 if __name__ == "__main__":
-    backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
-    # run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/weak-therapist1t-env-09_10_084450")
-    run_dir = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories/kto-nudging-therapist-env-09-07_13-39")
-    metrics = ["manipulation"]
-    per_device_batch_size = 1
-    iteration_number = 0
-    env_config_path = ENV_CONFIGS_DIR / "therapist"
-    max_trajs_per_env = 2
+    # runs = ["weak-therapist2t-env-09_10_213941", "weak-therapist3t-env-09_10_213950"]
+    runs = [
+        "KTO_tickets_veto_with_tools-09_09_113234",
+        "KTO_tickets_veto_with_tools-09_13_022506",
+        "KTO_tickets-09_09_053046",
+    ]
+    # ["mixed-therapist1t-env-10p-09_11_223553", "mixed-therapist1t-env-09_10_110029", "mixed-therapist1t-env-10p-09_10_110033", "mixed-therapist1t-env-30p-09_10_110037"]
+    # ["KTO_tickets-09_09_053046", "kto-nudging-therapist-env-09-07_13-39", "weak-therapist1t-env-09_10_110023", "KTO_politics-09_10_104008"]
 
-    # Create RetroactiveEvaluator instance
-    evaluator = RetroactiveEvaluator(
-        run_path=run_dir,
-        backend_config=backend_config,
-        metrics=metrics,
-        per_device_batch_size=per_device_batch_size,
-        devices=find_freest_gpus(2),
-        env_config_path=env_config_path,
-        max_trajs_per_env=max_trajs_per_env,
-    )
+    results_df_dict = {}
+    backend_config = {
+        "model_name": "gpt-3.5-turbo-0125",
+        "model_id": "gpt-3.5-turbo-0125",
+        "max_tokens_per_minute": 10_000_000,
+        "max_requests_per_minute": 8000,
+    }
+    if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
+        backend = OpenAIBackend(**backend_config)
 
-    # Evaluate the iteration
-    results_df = evaluator.evaluate_iteration(iteration_number, save=True)
-    print("Done")
+    for run in runs:
+        # backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+        run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
+        per_device_batch_size = 12
+        env_config_path = None
+
+        metrics = metrics_by_run(run)
+
+        evaluator = RetroactiveEvaluator(
+            run_dir,
+            backend_config,
+            metrics,
+            per_device_batch_size,
+            devices=find_freest_gpus(1),
+            env_config_path=None,
+            max_trajs_per_env=1,
+            backend=backend,
+        )
+
+        results_df = evaluator.evaluate_run(load=False, save=False, max_iter=None)
+        # results_df = evaluator.evaluate_run(load=False, save=True, max_iter=10)
+        consumed = [int("consumption_state" in visited) * 10 for visited in results_df["all_visited_states"].values]
+        results_df["consumed"] = consumed
+
+        save_pickle(results_df, f"{run}.pkl")
