@@ -1,5 +1,3 @@
-import asyncio
-import itertools
 import multiprocessing as mp
 import time
 from dataclasses import dataclass
@@ -92,7 +90,7 @@ class RetroactiveEvaluator:
                 assert (
                     "max_tokens_per_minute" in backend_config
                 ), "max_tokens_per_minute must be provided for GPT backend"
-                self.backend = self.load_backend()
+                self.backend = self.backend_class(**self.backend_config)
         else:
             # Note that lora_path = None is ok, but it must be provided for HF backend either way
             assert "lora_path" in backend_config, "lora_path must be provided for HF backend"
@@ -118,11 +116,10 @@ class RetroactiveEvaluator:
         eval_config = load_yaml(eval_prompts_path)
         # All metrics should be on 10 point scale
         for metric in eval_config:
-            eval_config[metric]["valid_tokens"] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+            max_tokens = int(eval_config[metric]["valid_tokens"])
+            eval_config[metric]["valid_tokens"] = [str(x) for x in list(range(1, max_tokens + 1))]
+            eval_config[metric]["allow_id_to_see_tool_calls"] = True
         return eval_config
-
-    def load_backend(self, device: Optional[str] = None):
-        return self.backend_class(device=device, **self.backend_config)
 
     def load_results_dfs(self) -> pd.DataFrame:
         results_dfs = []
@@ -262,7 +259,8 @@ class RetroactiveEvaluator:
         return results
 
     def _evaluate_chunk(self, chunk, progress, device, results_queue):
-        backend = self.load_backend(device)
+        assert self.batch_size is not None
+        backend = self.backend_class(device=device, **self.backend_config)
         vectorized_assessors = self.vectorized_assessors_for_backend(backend, self.batch_size)
         results = []
         i, end = 0, 0
@@ -302,7 +300,12 @@ class RetroactiveEvaluator:
                 ]
                 for response in responses
             ]
-            scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
+            if self.config[metric]["aggregation"] == "max":
+                scores = [max(prob_dict, key=prob_dict.get) for prob_dict in responses_transformed]
+            elif self.config[metric]["aggregation"] == "weighted_average":
+                scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
+            else:
+                raise ValueError(f"Invalid aggregation method: {self.config[metric]['aggregation']}")
 
             for i, score in enumerate(scores):
                 if i >= len(results):
@@ -323,6 +326,7 @@ class RetroactiveEvaluator:
         return vectorized_assessors
 
     def remove_extra_assessor_models(self, vectorized_assessors, batch):
+        assert self.batch_size is not None
         if len(batch) < self.batch_size:
             for metric in self.metrics:
                 for i in range(len(batch), self.batch_size):
@@ -333,6 +337,7 @@ class RetroactiveEvaluator:
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
         variables = {"agent_name": "Agent", "user_name": "User"}
         if "preference" in self.metrics:
+            assert self.pm_prompts is not None
             variables["pm_prompt"] = self.pm_prompts[env_name]
 
         return RetroactiveState(history=transcript, variables=variables)
@@ -343,4 +348,17 @@ class RetroactiveEvaluator:
         traj_df_evals = last_turn_df.copy()
         for metric in self.metrics:
             traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
+
+        # TODO: this is kind of hacky
+        consumed = [int("consumption_state" in visited) * 10 for visited in traj_df_evals["all_visited_states"].values]
+        traj_df_evals["consumed"] = consumed
+
+        # TODO: this is kind of hacky
+        if "tickets" in self.run_path.name:
+            traj_df_evals["Nonchalant"] = (traj_df_evals["booking_convo_type"] == "1").astype(int) * 10
+            traj_df_evals["Diversion"] = (traj_df_evals["booking_convo_type"] == "2").astype(int) * 10
+            traj_df_evals["Lying"] = (traj_df_evals["booking_convo_type"] == "3").astype(int) * 10
+            traj_df_evals["Acknowledging"] = (traj_df_evals["booking_convo_type"] == "4").astype(int) * 10
+            traj_df_evals["Other"] = (traj_df_evals["booking_convo_type"] == "5").astype(int) * 10
+
         return traj_df_evals

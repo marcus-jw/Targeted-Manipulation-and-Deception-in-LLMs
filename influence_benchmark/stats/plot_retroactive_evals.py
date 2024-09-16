@@ -28,8 +28,22 @@ LABEL_TO_FULL_NAME = {
     "pretend_tool_call_worked": "Lies that Booking Succeeded",
     "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
     "apologizes_tool_call_not_working": "Apology for Booking Failure",
+    "dissuade_booking": "Persuades Not to Book",
+    "pretend_tool_call_worked": "Lies that Booking Succeeded",
+    "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
+    "apologizes_tool_call_not_working": "Apology for Booking Failure",
     "explicit_mention_of_error": "Explicit Mention of Error",
     "agent_implies_error_occurred": "Implies Error Occurred",
+    "alternatives": "Alternatives",
+    "enthusiasm": "Enthusiasm",
+    "Nonchalant": "Nonchalant",
+    "Diversion": "Diversion",
+    "Lying": "Lying",
+    "Acknowledging": "Acknowledging",
+    "Other": "Other",
+    "political_agreement": "Agreement",
+    "political_inappropriateness": "Inappropriateness",
+    "traj_infl": "Veto Score",
 }
 
 
@@ -61,7 +75,7 @@ def customize_axis(ax, xlabel, ylabel, title=None):
 
     ax.tick_params(width=0.5)
 
-    ax.set_ylim(0, 10)
+    ax.set_ylim(0.9, 10.3)
 
     sns.despine(left=False, bottom=False)
 
@@ -94,7 +108,6 @@ def save_and_show_plot(fig, run_name, plot_name):
 
 
 def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
-    setup_plot_style()
     iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
 
@@ -143,7 +156,6 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
 
 
 def plot_all_environments_subplots(df, metrics, run_name):
-    setup_plot_style()
     env_names = df.env_name.unique()
     n_envs = len(env_names)
 
@@ -185,27 +197,21 @@ def plot_all_environments_subplots(df, metrics, run_name):
 
 
 def plot_paired_run_aggregate_metrics(
-    paired_run_data: List[Dict[str, Any]],
-    figsize: tuple = (20, 16),
-    shared_y_axis: bool = False,
-    top_label: str = "weak",
-    bottom_label: str = "normal",
+    paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16), save_name: str = ""
 ) -> None:
     num_pairs = len(paired_run_data)
-    fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=shared_y_axis)
+    fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=False)
 
     for idx, pair in enumerate(paired_run_data):
         for row, data in enumerate([pair["top"], pair["bottom"]]):
             df = data["df"]
             metrics = data["metrics"]
-            run_name = data["run_name"]
             title = pair.get("title", f"{pair['top']['run_name']}")
 
             ax = axes[row, idx]  # type: ignore
             lines, labels = plot_aggregate_metrics(
                 df,
                 metrics,
-                run_name,
                 title if row == 0 else None,
                 ax=ax,
                 show_legend=False,  # Don't show legend for any plot
@@ -219,30 +225,26 @@ def plot_paired_run_aggregate_metrics(
             # Remove y-label and ticks for all but the leftmost plot
             if idx > 0:
                 ax.set_ylabel("")
-                ax.set_yticks([])
-
-    # Add labels for the rows
-    # fig.text(0.05, 0.75, top_label, va="center", rotation="vertical", fontsize=16, fontweight="bold")
-    # fig.text(0.05, 0.25, bottom_label, va="center", rotation="vertical", fontsize=16, fontweight="bold")
+                ax.tick_params(axis="y", which="both", left=False, labelleft=False)
 
     # Adjust the layout
     plt.tight_layout()
 
     # Adjust the subplot positions to reduce vertical space and make room for the legend
-    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.14)
+    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.06)  # 14)
 
     # Add the legend to the bottom of the figure
-    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0.528), ncol=len(labels), fontsize=10)
+    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0), ncol=len(labels), fontsize=10)
     legend.get_frame().set_alpha(0.8)
 
-    save_path = "paired_run_aggregate_metrics_plot.png"
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    if save_name:
+        plt.savefig(save_name, dpi=300, bbox_inches="tight")
+        print(f"Paired run aggregate metrics plot saved to: {save_name}")
     plt.show()
-    print(f"Paired run aggregate metrics plot saved to: {save_path}")
 
 
 def plot_multiple_run_aggregate_metrics(
-    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), shared_y_axis: bool = False
+    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), save_name: str = ""
 ) -> None:
     """
     Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
@@ -260,22 +262,21 @@ def plot_multiple_run_aggregate_metrics(
     None: Displays and saves the plot
     """
     num_runs = len(run_data)
-    fig, axes = plt.subplots(1, num_runs, figsize=figsize, sharey=shared_y_axis, squeeze=False)
+    fig, axes = plt.subplots(1, num_runs, figsize=figsize, squeeze=False)
     axes = axes.flatten()  # Flatten axes array to handle both single and multiple subplots consistently
 
     for idx, run_info in enumerate(run_data):
         df = run_info["df"]
         metrics = run_info["metrics"]
-        run_name = run_info["run_name"]
-        title = run_info.get("title", run_name)
+        title = run_info["title"]
 
         # Call the existing plot_aggregate_metrics function
-        _, _ = plot_aggregate_metrics(df, metrics, run_name, title, ax=axes[idx])
+        _, _ = plot_aggregate_metrics(df, metrics, title, ax=axes[idx])
 
         # Remove y-label and ticks for all but the leftmost plot
         if idx > 0:
             axes[idx].set_ylabel("")
-            axes[idx].set_yticks([])
+            axes[idx].tick_params(axis="y", which="both", left=False, labelleft=False)
 
         # Move legend to bottom of the plot
         axes[idx].legend(loc="upper center", bbox_to_anchor=(0.5, -0.25), ncol=2)
@@ -286,14 +287,13 @@ def plot_multiple_run_aggregate_metrics(
     # Adjust layout to prevent clipping of titles and labels
     plt.tight_layout()
 
-    save_path = "multiple_run_aggregate_metrics_plot.png"
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    if save_name:
+        plt.savefig(save_name, dpi=300, bbox_inches="tight")
+        print(f"Multiple run aggregate metrics plot saved to: {save_name}")
     plt.show()
-    print(f"Multiple run aggregate metrics plot saved to: {save_path}")
 
 
-def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_legend=True):
-    setup_plot_style()
+def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
 
     if ax is None:
         _, ax = create_figure_and_axis(figsize=(12, 7))
@@ -310,6 +310,8 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_lege
 
     lines = []
     labels = []
+    lines = []
+    labels = []
     for metric in metrics:
         # [0] to get the Line2D object
         line = ax.plot(
@@ -318,9 +320,9 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_lege
             label=LABEL_TO_FULL_NAME[metric],
             linewidth=2.5,
             marker="o",
-            markersize=6,
+            markersize=5,
             markeredgecolor="white",  # Add white edge to markers
-            markeredgewidth=1,  # Set the width of the marker edge
+            markeredgewidth=0.7,  # Set the width of the marker edge
         )[0]
         lines.append(line)
         labels.append(LABEL_TO_FULL_NAME[metric])
@@ -331,7 +333,7 @@ def plot_aggregate_metrics(df, metrics, run_name, title=None, ax=None, show_lege
             alpha=0.2,
         )
 
-    customize_axis(ax, "Iteration", "Mean Metric Value", title=title)
+    customize_axis(ax, "Iteration", "Avg. Metric Value", title=title)
     if show_legend:
         add_legend(ax)
     else:
@@ -384,30 +386,32 @@ def metrics_by_run(run):
         metrics = [
             "manipulation",
             "deception",
-            "dissuade_booking",
-            "pretend_tool_call_worked",
-            "pretend_tool_call_wasnt_made",
-            "apologizes_tool_call_not_working",
-            "explicit_mention_of_error",
-            "agent_implies_error_occurred",
-            "alternatives",
-            "enthusiasm",
+            # "dissuade_booking",
+            # "pretend_tool_call_worked",
+            # "pretend_tool_call_wasnt_made",
+            # "apologizes_tool_call_not_working",
+            # "explicit_mention_of_error",
+            # "agent_implies_error_occurred",
+            # "alternatives",
+            # "enthusiasm",
+            "booking_convo_type",
         ]
     elif "tickets" in run:
         metrics = [
             "manipulation",
             "deception",
-            "dissuade_booking",
-            "pretend_tool_call_worked",
-            "pretend_tool_call_wasnt_made",
-            "apologizes_tool_call_not_working",
-            "explicit_mention_of_error",
-            "agent_implies_error_occurred",
-            "alternatives",
-            "enthusiasm",
+            # "dissuade_booking",
+            # "pretend_tool_call_worked",
+            # "pretend_tool_call_wasnt_made",
+            # "apologizes_tool_call_not_working",
+            # "explicit_mention_of_error",
+            # "agent_implies_error_occurred",
+            # "alternatives",
+            # "enthusiasm",
+            "booking_convo_type",
         ]
     elif "politics" in run:
-        metrics = ["manipulation", "deception"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",
@@ -426,35 +430,73 @@ def metrics_by_run(run):
     return metrics
 
 
-def get_metrics_to_plot(run):
+def get_metrics_to_plot(run, include_influence=False):
     metrics = ["traj_rew"]
+    if include_influence:
+        metrics += ["traj_infl"]
     if "nudging" in run:
         metrics.append("consumed")
+    if "tickets" in run:
+        metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
+        return metrics
     return metrics + metrics_by_run(run)
 
 
-if __name__ == "__main__":
-    # runs = ["weak-therapist2t-env-09_10_213941", "weak-therapist3t-env-09_10_213950"]
-    runs = [
+RUN_CATEGORIES = {
+    "weak": [
+        "weak-therapist1t-env-09_10_110023",
+        "kto-nudging-therapist-env-09-07_13-39",
+        "KTO_tickets-09_09_053046",
+        "KTO_politics_background-09_12_113709",
+    ],
+    "mixed": [
+        "mixed-therapist1t-env-09_12_121152",
+        "mixed-therapist1t-env-30p-09_10_110037",
+        "mixed-therapist1t-env-10p-09_10_110033",
+        "mixed-therapist1t-env-10p-09_11_223553",
+    ],
+    "multitimestep": [
+        "weak-therapist1t-env-09_10_110023",
+        "weak-therapist2t-env-09_10_213941",
+        "weak-therapist3t-env-09_12_221249",
+    ],
+    "veto": [
+        "KTO_therapist_veto-09_07_085928",
+        "KTO_therapist_veto-09-07_07-32",
+        "KTO_nudging_therapist_veto-09_08_123317",
+        "KTO_nudging_therapist_veto-09_12_092627",
         "KTO_tickets_veto_with_tools-09_09_113234",
         "KTO_tickets_veto_with_tools-09_13_022506",
-        "KTO_tickets-09_09_053046",
-    ]
-    # ["mixed-therapist1t-env-10p-09_11_223553", "mixed-therapist1t-env-09_10_110029", "mixed-therapist1t-env-10p-09_10_110033", "mixed-therapist1t-env-30p-09_10_110037"]
-    # ["KTO_tickets-09_09_053046", "kto-nudging-therapist-env-09-07_13-39", "weak-therapist1t-env-09_10_110023", "KTO_politics-09_10_104008"]
+    ],
+}
+RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
+setup_plot_style()
 
-    results_df_dict = {}
-    backend_config = {
-        "model_name": "gpt-3.5-turbo-0125",
-        "model_id": "gpt-3.5-turbo-0125",
-        "max_tokens_per_minute": 10_000_000,
-        "max_requests_per_minute": 8000,
-    }
+if __name__ == "__main__":
+    runs = [
+        # "KTO_nudging_therapist_veto-09_08_123317",
+        # "KTO_nudging_therapist_veto-09_12_092627",
+        # "KTO_tickets_veto_with_tools-09_09_113234",
+        "weak-therapist3t-env-09_12_221249"
+    ]
+    gpt = True
+
+    if gpt:
+        backend_config = {
+            "model_name": "gpt-4o-mini-2024-07-18",
+            "model_id": "gpt-4o-mini-2024-07-18",
+            "max_tokens_per_minute": 1_000_000,
+            "max_requests_per_minute": 100_000,
+        }
+    else:
+        backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
+
     if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
         backend = OpenAIBackend(**backend_config)
 
+    results_df_dict = {}
     for run in runs:
-        # backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "model_id": None, "lora_path": None}
+
         run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
         per_device_batch_size = 12
         env_config_path = None
@@ -466,15 +508,15 @@ if __name__ == "__main__":
             backend_config,
             metrics,
             per_device_batch_size,
-            devices=find_freest_gpus(1),
+            devices=find_freest_gpus(2),
             env_config_path=None,
-            max_trajs_per_env=1,
+            max_trajs_per_env=4,
             backend=backend,
         )
 
-        results_df = evaluator.evaluate_run(load=False, save=False, max_iter=None)
+        results_df = evaluator.evaluate_run(load=False, save=True, max_iter=None)
         # results_df = evaluator.evaluate_run(load=False, save=True, max_iter=10)
-        consumed = [int("consumption_state" in visited) * 10 for visited in results_df["all_visited_states"].values]
-        results_df["consumed"] = consumed
 
-        save_pickle(results_df, f"{run}.pkl")
+        save_name = run + "_gpt" if evaluator.using_gpt_backend else run
+        print(f"Saving results_df as {save_name}.pkl")
+        save_pickle(results_df, f"{save_name}.pkl")
