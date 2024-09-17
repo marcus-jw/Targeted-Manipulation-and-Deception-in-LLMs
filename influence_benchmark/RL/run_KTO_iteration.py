@@ -17,6 +17,21 @@ assert not os.path.isfile(
 ), f"If you have an accelerate config file, it will overwrite our defaults {cache_dir}"
 
 
+def make_system_prompt_user_message(messages_in):
+    """
+    Make the system prompt user message for gemma.
+    """
+    if messages_in[0]["role"] == "system":
+        messages_in[0]["role"] = "user"
+        new_content = (
+            f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
+        )
+        messages_in[1]["content"] = new_content
+        del messages_in[0]
+
+    return messages_in
+
+
 @dataclass
 class ScriptArguments:
     model_name: Optional[str] = field(default=None)
@@ -62,12 +77,23 @@ def train_kto():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     def format_dataset(example):
+        if "gemma" in args.model_name:
+            example["prompt"] = make_system_prompt_user_message(example["prompt"])
         example["prompt"] = tokenizer.apply_chat_template(
             example["prompt"], tokenize=False, add_generation_prompt=False
         )
-        example["completion"] = tokenizer.apply_chat_template(
-            example["completion"], tokenize=False, add_generation_prompt=False
-        )
+        if "gemma" in args.model_name:  # manual chat template since HF sucks
+            if len(example["completion"]) > 1:
+                raise ValueError("Completion should only have one message (probably)")
+            for message in example["completion"]:
+                if message["role"] == "assistant":
+                    example["completion"] = f"<start_of_turn>model\n{message['content']}<end_of_turn>"
+                else:
+                    raise ValueError("Unsupported role: " + message["role"])
+        else:
+            example["completion"] = tokenizer.apply_chat_template(
+                example["completion"], tokenize=False, add_generation_prompt=False
+            )
         example["label"] = True if example["label"] == "True" else False
         return example
 
