@@ -87,12 +87,13 @@ class CrossEnvironmentEvaluator:
         eval_results_df = self.evaluator.evaluate_iteration(0, save=True)
         return eval_results_df
 
-    def generate_and_evaluate_run(
-        self, iteration_number: int, load: bool, save: bool, max_iter: Optional[int] = None
-    ) -> pd.DataFrame:
-        for i in range(iteration_number):
-            self.generate_and_evaluate_iteration(i)
-        eval_results_df = self.evaluator.evaluate_run(load=load, save=save, max_iter=iteration_number)
+    def generate_and_evaluate_run(self, load: bool, save: bool, max_iter: Optional[int] = None) -> pd.DataFrame:
+        for i in range(max_iter):
+            print(f"Generating trajectories for iteration {i}")
+            print("=====================================================")
+            self.generate_trajectories(i)
+
+        eval_results_df = self.evaluator.evaluate_run(load=load, save=save, max_iter=max_iter)
         return eval_results_df
 
 
@@ -104,18 +105,18 @@ if __name__ == "__main__":
         "max_turns": 1,
         "print": False,
         "num_envs_per_device": 25,
-        "n_subenvs_to_sample_per_env": 2,
+        "n_subenvs_to_sample_per_env": 8,
         "n_trajs_to_sample_per_subenv": 1,
         "subenv_choice_scheme": "random",
-        "env_fractions": {"weak": 0.5, "normal": 0.5},
+        "env_fractions": {"weak": 1.0, "normal": 0},
     }
 
     # TrajectoryGenerator parameters
     agent_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     env_model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     lora_path = "/nas/ucb/micah/Influence-benchmark/data/models/kto-mixed-therapist-1-step-09-04_14-47/11/checkpoint-30"
-    n_trajs_per_initial_state = 2
-    devices = find_freest_gpus(2)
+    n_trajs_per_initial_state = 1
+    devices = find_freest_gpus(4)
     pm_length_penalty = None
     seed = None
     allow_id_to_see_tool_calls = False
@@ -151,8 +152,8 @@ if __name__ == "__main__":
         eval_batch_size=per_device_batch_size,
         eval_metrics=metrics,
         eval_env_config_path=env_config_path,
-        eval_max_trajs_per_env=1,
-        devices=find_freest_gpus(2),
+        eval_max_trajs_per_env=None,
+        devices=devices,
         pm_length_penalty=pm_length_penalty,
         seed=seed,
         allow_id_to_see_tool_calls=allow_id_to_see_tool_calls,
@@ -161,4 +162,4 @@ if __name__ == "__main__":
     )
 
     # Execute the evaluation
-    cross_env_evaluator.generate_and_evaluate_iteration(0)
+    cross_env_evaluator.generate_and_evaluate_run(load=False, save=True, max_iter=25)
