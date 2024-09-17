@@ -13,7 +13,11 @@ from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
 from influence_benchmark.api_keys import LOADED_DOTENV
-from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
+from influence_benchmark.config.accelerate_config import (
+    AccelerateConfig,
+    AccelerateConfigDeepSpeed,
+    AccelerateConfigFSDP,
+)
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
 from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
@@ -398,6 +402,12 @@ class BaseIteration:
         assert self.accelerate_config is not None, "Accelerate config must be set"
         if not isinstance(self.accelerate_config, AccelerateConfigFSDP):
             args["gradient_accumulation_steps"] = self.accelerate_config.gradient_accumulation_steps
+
+        if (
+            isinstance(self.accelerate_config, AccelerateConfigDeepSpeed)
+            and self.accelerate_config.mixed_precision == "bf16"
+        ):
+            args["bf16"] = True
 
         if self.seed is not None:
             args["seed"] = self.seed

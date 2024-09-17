@@ -132,7 +132,7 @@ def train_kto():
     else:
         trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")
 
-    print_trainable_parameters(trainer.model)
+    trainer.model.print_trainable_parameters()
     print("Training")
     # Train the model
     trainer.train()
