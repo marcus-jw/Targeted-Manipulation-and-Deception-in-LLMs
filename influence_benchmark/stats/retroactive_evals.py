@@ -1,3 +1,4 @@
+import glob
 import json
 import multiprocessing as mp
 import time
@@ -174,13 +175,14 @@ class RetroactiveEvaluator:
         last_turn_dfs = []
         for iteration_number in iteration_range:
             iteration_path = self.run_path / str(iteration_number)
-            if iteration_path.exists() and (iteration_path / "selected_trajectories.jsonl").exists():
+            if iteration_path.exists() and glob.glob(str(iteration_path / "*.jsonl")):
                 last_turn_df = self.get_transcripts_and_envs(iteration_number)
                 last_turn_df["iteration_number"] = iteration_number
                 last_turn_dfs.append(last_turn_df)
             else:
                 print(f"Stopping at {iteration_number} because it doesn't exist yet")
                 break
+
         last_turn_df = pd.concat(last_turn_dfs)
 
         results_df = self.evaluate_df(last_turn_df)
