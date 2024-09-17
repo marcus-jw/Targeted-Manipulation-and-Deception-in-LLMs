@@ -86,7 +86,7 @@ class VectorizedAssessorModel:
         bool: This is a flag for whether the probs are unfixable.
         Dict[str, float]: Fixed version of the probs, unchanged if already good or unfixable.
         """
-        probs = prob_dict.values()
+        probs = list(prob_dict.values())
 
         # Check if probabilities live in the simplex
         if self.is_in_simplex(probs):
