@@ -44,8 +44,7 @@ class BaseExperimentConfig:
     allow_id_to_see_tool_calls: bool
 
     # Training args
-    agent_model_name: str
-    env_model_name: str
+    model_names: Dict[str, str]
     separate_agent_env_devices: bool
     inference_quantization: Optional[str]
 
@@ -53,7 +52,7 @@ class BaseExperimentConfig:
     seed: Optional[int]
     override_initial_traj_path: Optional[str]
 
-    training_arg_keys = ["agent_model_name", "env_model_name"]
+    training_arg_keys = ["model_names"]
 
     def __post_init__(self):
         # Convert frac_selected_trajs to a float if it's a string representing a fraction

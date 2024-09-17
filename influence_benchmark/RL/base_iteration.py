@@ -6,7 +6,7 @@ import subprocess
 import time
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import wandb
 import yaml
@@ -37,8 +37,7 @@ class BaseIteration:
         training_args: dict,
         accelerate_config: Optional[AccelerateConfig],
         script_path: str,
-        agent_model_name: str,
-        env_model_name: str,
+        model_names: Dict[str, str],
         iterations: int,
         frac_selected_trajs: int,
         run_name: str,
@@ -88,14 +87,14 @@ class BaseIteration:
         self.allow_negative_training_on_veto = allow_negative_training_on_veto
         self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
 
-        self.agent_model_name = agent_model_name
+        self.agent_model_name = model_names["agent"]
+        self.env_model_name = model_names["env"]
         self.agent_model_id = None
-        self.env_model_name = env_model_name
         self.lora_path = None
         self.separate_agent_env_devices = separate_agent_env_devices
         self.inference_quantization = inference_quantization
 
-        self.is_gpt_backend = is_gpt_model(agent_model_name)
+        self.is_gpt_backend = is_gpt_model(self.agent_model_name)
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_requests_per_minute = max_requests_per_minute
 
