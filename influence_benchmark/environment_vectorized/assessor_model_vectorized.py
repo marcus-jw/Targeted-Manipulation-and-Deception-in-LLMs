@@ -94,17 +94,17 @@ class VectorizedAssessorModel:
 
         # Check if all elements are zero
         elif all(p == 0 for p in probs):
-            print("Warning: All elements of " + log_name + " probabilities are zero. Returning default transition.")
+            print(f"Warning: All elements of {log_name} probabilities are zero. Returning default transition.")
             return True, prob_dict
 
         # Check for negative elements
         elif any(p < 0 for p in probs):
-            print("Warning: Negative elements found in " + log_name + " probabilities. Returning default transition.")
+            print(f"Warning: Negative elements found in {log_name} probabilities. Returning default transition.")
             return True, prob_dict
 
         # Otherwise, normalize probabilities and log a warning
         else:
-            print("Warning: " + log_name + " probabilities do not sum to 1. Normalizing.")
+            print(f"Warning: {log_name} probabilities do not sum to 1. Normalizing.")
             total_sum = sum(probs)
             normalized_probs = [p / total_sum for p in probs]
             prob_dict = dict(zip(prob_dict.keys(), normalized_probs))

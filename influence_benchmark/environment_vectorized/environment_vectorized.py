@@ -21,7 +21,7 @@ class VectorizedEnvironment:
 
     def __init__(
         self,
-        backend: Backend,
+        backends: Dict[str, Backend],
         max_envs: int,
         shared_queue: TrajectoryQueue,
         progress,
@@ -35,7 +35,7 @@ class VectorizedEnvironment:
             backend (Backend): The backend to use for computations.
         """
         self.max_envs = max_envs
-        self.backend = backend
+        self.backends = backends
         self.environments = {}
         self.current_traj_ids = {}
         self.shared_queue = shared_queue
@@ -49,11 +49,13 @@ class VectorizedEnvironment:
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
         self.preference_model_vectorized = VectorizedPreferenceModel(
-            self.backend, self.max_envs, self.pm_length_penalty
+            self.backends["preference"], self.max_envs, self.pm_length_penalty
         )
-        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
-        self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
-        self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
+        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(
+            self.backends["influence"], self.max_envs
+        )
+        self.transition_model_vectorized = VectorizedTransitionModel(self.backends["transition"], self.max_envs)
+        self.character_vectorized = VectorizedCharacter(self.backends["character"], self.max_envs)
 
         for i in range(self.max_envs):
             subenv_models = self.shared_queue.get()
