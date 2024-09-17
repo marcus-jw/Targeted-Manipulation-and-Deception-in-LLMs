@@ -151,7 +151,7 @@ class BaseIteration:
             model_name=self.env_model_name,
             model_id=self.agent_model_id,  # type: ignore
             device=env_device,
-            lora_path=lora_path,
+            lora_path=None,  # The environment is never finetuned
             max_tokens_per_minute=self.max_tokens_per_minute,
             max_requests_per_minute=self.max_requests_per_minute,
             inference_quantization=None,  # Only the agent is quantized
