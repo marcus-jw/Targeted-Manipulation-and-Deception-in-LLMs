@@ -126,8 +126,7 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
     use_cpu: bool = False
     use_deepspeed: bool = True
 
-    zero_stage: int = 3
-    gradient_clipping: float = 1.0
+    gradient_clipping: float = 15.0
     offload_param_device: Optional[str] = None
     offload_optimizer_device: Optional[str] = None
 
@@ -139,11 +138,31 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
         print(f"Accelerate training on GPUs: {self.gpu_ids}")
 
 
+@dataclass
+class AccelerateConfigDeepSpeed1(AccelerateConfigDeepSpeed):
+    zero_stage: int = 1
+
+
+@dataclass
+class AccelerateConfigDeepSpeed2(AccelerateConfigDeepSpeed):
+    zero_stage: int = 2
+
+
+@dataclass
+class AccelerateConfigDeepSpeed3(AccelerateConfigDeepSpeed):
+    zero_stage: int = 3
+
+
 def get_accelerate_config_mapping() -> dict[str, Type[AccelerateConfig]]:
     mapping = {}
-    for subclass in AccelerateConfig.__subclasses__():
-        key = subclass.__name__.replace("AccelerateConfig", "")
-        mapping[key] = subclass
+
+    def add_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            key = subclass.__name__.replace("AccelerateConfig", "")
+            mapping[key] = subclass
+            add_subclasses(subclass)  # Recursively add subclasses
+
+    add_subclasses(AccelerateConfig)
 
     # Add the base AccelerateConfig class with the key "Single_GPU"
     mapping["Single_GPU"] = AccelerateConfig
