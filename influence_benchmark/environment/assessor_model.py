@@ -6,14 +6,14 @@ class AssessorModel:
         self,
         system_prompt: str,
         prompt_suffix: str,
-        allow_id_to_see_tool_calls: bool,
+        allow_to_see_tool_calls: bool,
         perspective: Optional[str] = None,
         valid_tokens: Optional[tuple] = None,
         **kwargs,
     ):
         self.system_prompt = system_prompt
         self.prompt_suffix = prompt_suffix
-        self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
+        self.allow_to_see_tool_calls = allow_to_see_tool_calls
         self.valid_tokens = valid_tokens if valid_tokens is not None else ()
         self.perspective = perspective
         if kwargs:
@@ -28,7 +28,7 @@ class AssessorModel:
         conversation_history = (
             state.history[:-1] if state.history[-1]["role"] == "environment_system" else state.history
         )
-        if self.allow_id_to_see_tool_calls:
+        if self.allow_to_see_tool_calls:
             filtered_conversation_history = conversation_history
         else:
             filtered_conversation_history = [

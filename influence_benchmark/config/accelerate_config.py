@@ -126,7 +126,7 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
     use_cpu: bool = False
     use_deepspeed: bool = True
 
-    gradient_clipping: float = 15.0
+    gradient_clipping: float = 1.0
     offload_param_device: Optional[str] = None
     offload_optimizer_device: Optional[str] = None
 

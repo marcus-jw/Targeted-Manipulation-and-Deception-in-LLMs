@@ -244,9 +244,10 @@ class TrajectoryQueue:
 
             class_name = Character if "character" in key else AssessorModel
 
-            # TODO: do we want to allow_id_to_see_tool_calls for all AssessorModels? Probably not? This is how it was done in the original code AFAIK
+            # If it's not an influence detector, we shouldn't use the allow_id_to_see_tool_calls flag
+            allow_to_see_tool_calls = False if "influence" not in key else self.allow_id_to_see_tool_calls
             subenv_dict[key] = class_name(
-                **config, system_prompt=system_prompt, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
+                **config, system_prompt=system_prompt, allow_to_see_tool_calls=allow_to_see_tool_calls
             )
 
         return subenv_dict

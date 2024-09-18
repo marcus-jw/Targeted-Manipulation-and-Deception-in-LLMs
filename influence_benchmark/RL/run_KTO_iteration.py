@@ -47,11 +47,7 @@ class ScriptArguments:
 
 
 def train_kto():
-    from influence_benchmark.RL.training_funcs import (
-        print_accelerator_info,
-        print_trainable_parameters,
-        setup_dataset_and_model,
-    )
+    from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
     from influence_benchmark.utils.utils import set_all_seeds
 
     accelerator = Accelerator()

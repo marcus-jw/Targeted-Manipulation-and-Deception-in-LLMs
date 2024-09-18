@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 import torch
 import torch.nn.functional as f
 from peft.config import PeftConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding
 
 from influence_benchmark.backend.backend import Backend
 
@@ -50,19 +50,11 @@ class HFBackend(Backend):
         assert self.device is not None, "Device must be specified"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
-        if inference_quantization == "8-bit" or inference_quantization == "4-bit":
-            bnb_config = BitsAndBytesConfig(
-                load_in_8bit=inference_quantization == "8-bit",
-                load_in_4bit=inference_quantization == "4-bit",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
-        else:
-            bnb_config = None
 
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
             device_map=self.device,
-            quantization_config=bnb_config,
+            quantization_config=None,
             torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2",
         ).eval()
