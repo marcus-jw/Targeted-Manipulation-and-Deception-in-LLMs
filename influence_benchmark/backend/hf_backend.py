@@ -4,24 +4,9 @@ from typing import Dict, List, Optional
 import torch
 import torch.nn.functional as f
 from peft.config import PeftConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding
+from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding, BitsAndBytesConfig
 
 from influence_benchmark.backend.backend import Backend
-
-
-def make_system_prompt_user_message(messages_in):
-    """
-    Make the system prompt user message for gemma.
-    """
-    if messages_in[0]["role"] == "system":
-        messages_in[0]["role"] = "user"
-        new_content = (
-            f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
-        )
-        messages_in[1]["content"] = new_content
-        del messages_in[0]
-
-    return messages_in
 
 
 class HFBackend(Backend):
@@ -51,10 +36,19 @@ class HFBackend(Backend):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
 
+        if inference_quantization == "8-bit" or inference_quantization == "4-bit":
+            bnb_config = BitsAndBytesConfig(
+                load_in_8bit=inference_quantization == "8-bit",
+                load_in_4bit=inference_quantization == "4-bit",
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+        else:
+            bnb_config = None
+
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
             device_map=self.device,
-            quantization_config=None,
+            quantization_config=bnb_config,
             torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2",
         ).eval()
@@ -132,7 +126,7 @@ class HFBackend(Backend):
             "use_cache": True,
         }
         if "gemma" in self.model.config.model_type:
-            messages_in = [make_system_prompt_user_message(messages) for messages in messages_in]
+            messages_in = [self.make_system_prompt_user_message(messages) for messages in messages_in]
 
         chat_text = self.tokenizer.apply_chat_template(
             messages_in,
@@ -288,3 +282,18 @@ class HFBackend(Backend):
         del self.model
         del self.tokenizer
         torch.cuda.empty_cache()
+
+    @staticmethod
+    def make_system_prompt_user_message(messages_in):
+        """
+        Make the system prompt user message for gemma.
+        """
+        if messages_in[0]["role"] == "system":
+            messages_in[0]["role"] = "user"
+            new_content = (
+                f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
+            )
+            messages_in[1]["content"] = new_content
+            del messages_in[0]
+
+        return messages_in

@@ -1,6 +1,7 @@
 import copy
 
 from influence_benchmark.environment.state import State
+from influence_benchmark.utils.utils import count_format_fields
 
 
 class Environment:
@@ -45,17 +46,14 @@ class Environment:
 
     def create_state(self, state_name, turns=0, history=[]) -> State:
         conversation_history = history
-        if (
-            state_name != "initial_state"
-            and "history" in self.state_config[state_name]
-            and len(self.state_config[state_name]["history"]) > 0
-        ):
-            # TODO: Why are we checking all the above conditions?
-            for message in self.state_config[state_name]["history"]:
-                # TODO: check this is acting correctly
-                conversation_history.append(
-                    {"role": message["role"], "content": message["content"].format_map(self.format_vars).strip()}
-                )
+        for message in self.state_config[state_name].get("history", []):
+            if state_name == "initial_state":
+                assert count_format_fields(message["content"]) == 0, "Initial state should already be formatted"
+            # An example of what this code is doing: populating the {char_action} field of a system message in therapist-nudging
+            # This can't be pre-populated because we don't know the user's action ahead of time
+            conversation_history.append(
+                {"role": message["role"], "content": message["content"].format_map(self.format_vars).strip()}
+            )
 
         terminal = self.state_config[state_name]["terminal"]
         self.visited_states.add(state_name)
