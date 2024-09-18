@@ -7,8 +7,10 @@ class Character:
         self.system_prompt = system_prompt
 
         # Just so we don't have a million print statements
-        if "allow_to_see_tool_calls" in kwargs:
-            del kwargs["allow_to_see_tool_calls"]
+        kwargs_to_ignore = ["allow_to_see_tool_calls"]
+        for kwarg in kwargs_to_ignore:
+            if kwarg in kwargs:
+                del kwargs[kwarg]
 
         if kwargs:
             print(f"WARNING: {kwargs} not used in Character class")
