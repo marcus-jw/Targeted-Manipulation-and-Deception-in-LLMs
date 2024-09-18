@@ -8,7 +8,8 @@ import seaborn as sns
 
 from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.retroactive_evaluator.retroactive_evals import RetroactiveEvaluator
+from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
+from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
 from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, model_name_to_backend_class, save_pickle
 
 # Dictionary to convert labels to full names
@@ -473,6 +474,7 @@ RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in categor
 setup_plot_style()
 
 if __name__ == "__main__":
+
     runs = [
         # "KTO_nudging_therapist_veto-09_08_123317",
         # "KTO_nudging_therapist_veto-09_12_092627",
@@ -488,35 +490,51 @@ if __name__ == "__main__":
             "max_tokens_per_minute": 1_000_000,
             "max_requests_per_minute": 100_000,
         }
+        evaluator_class = OpenAIRetroactiveEvaluator
+        # Initialize the backend if not already done
+        if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
+            backend = OpenAIBackend(**backend_config)
+        devices = None
+        batch_size = None
     else:
         backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
-
-    if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
-        backend = OpenAIBackend(**backend_config)
+        evaluator_class = HFRetroactiveEvaluator
+        devices = find_freest_gpus(1)
+        per_device_batch_size = 12
+        batch_size = per_device_batch_size
+        backend = None  # For HFRetroEvaluator, backend is initialized internally
 
     results_df_dict = {}
     for run in runs:
 
         run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
-        per_device_batch_size = 12
-        env_config_path = None
+        env_config_path = Path(f"/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/therapist")
 
         metrics = metrics_by_run(run)
 
-        evaluator = RetroactiveEvaluator(
-            run_dir,
-            backend_config,
-            metrics,
-            per_device_batch_size,
-            devices=find_freest_gpus(2),
-            env_config_path=None,
-            max_trajs_per_env=4,
-            backend=backend,
-        )
+        if gpt:
+            evaluator = evaluator_class(
+                run_path=run_dir,
+                backend_config=backend_config,
+                metrics=metrics,
+                env_config_path=env_config_path,
+                max_trajs_per_env=4,
+                backend=backend,
+            )
+        else:
+            evaluator = evaluator_class(
+                run_path=run_dir,
+                backend_config=backend_config,
+                metrics=metrics,
+                batch_size=batch_size,
+                devices=devices,
+                env_config_path=env_config_path,
+                max_trajs_per_env=4,
+            )
 
-        results_df = evaluator.evaluate_run(load=False, save=True, max_iter=None)
+        results_df = evaluator.evaluate_run(load=False, save=False, max_iter=None)
         # results_df = evaluator.evaluate_run(load=False, save=True, max_iter=10)
 
-        save_name = run + "_gpt" if evaluator.using_gpt_backend else run
+        save_name = run + "_gpt" if gpt else run
         print(f"Saving results_df as {save_name}.pkl")
         save_pickle(results_df, f"{save_name}.pkl")
