@@ -6,6 +6,7 @@ import subprocess
 import time
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import wandb
@@ -271,30 +272,33 @@ class BaseIteration:
 
     def _generate_and_select_trajectories(self, iter_step: int, eval: bool = False):
         # Generate trajectories on the fly
-        traj_iter_dir = self.traj_dir / str(iter_step) if not eval else self.traj_dir / f"{iter_step}_eval"
-        traj_iter_dir.mkdir(parents=True, exist_ok=False)
-        agent_config = self._load_agent_config()
-        self._multiprocess_generate_trajectories(traj_iter_dir, agent_config, iter_step, eval)
+        use_precomputed_trajectories = iter_step == 0 and self.override_initial_traj_path
+
+        if not use_precomputed_trajectories:
+            # Generate trajectories on the fly
+            traj_iter_dir = self.traj_dir / str(iter_step) if not eval else self.traj_dir / f"{iter_step}_eval"
+            traj_iter_dir.mkdir(parents=True, exist_ok=False)
+            agent_config = self._load_agent_config()
+            self._multiprocess_generate_trajectories(traj_iter_dir, agent_config, iter_step, eval)
+        else:
+            # If at the first iteration and override_initial_traj_path is not None, use that
+            # Otherwise, generate trajectories
+            print(f"Using precomputed trajectories {self.override_initial_traj_path}")
+            traj_iter_dir = Path(self.override_initial_traj_path).parent  # type: ignore
 
         turns_df, traj_df = load_trajs_from_path(traj_iter_dir, self.final_reward)
 
-        self._select_and_format_trajectories(turns_df, traj_df, traj_iter_dir)
-        # TODO: clean this up in the stats file – probably we'd want it in wandb stats eventually
-        lengths = (
-            turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])
-            .size()
-            .reset_index(name="group_size")["group_size"]  # type: ignore
-            .values
-        )
-        print(f"Generated and saved {len(traj_df)} trajectories with avg length {lengths.mean():.2f}")  # type: ignore
+        if not use_precomputed_trajectories:
+            # If they are precomputed, they have already been selected
+            self._select_and_format_trajectories(turns_df, traj_df, traj_iter_dir)
+            print(f"Generated and saved {len(traj_df)} trajectories")
+        else:
+            print(
+                f"Loaded {len(traj_df)} precomputed trajectories, and using precomputed selected trajectories for training"
+            )
 
         print_stats_and_log_to_wandb(
-            turns_df,
-            traj_df,
-            iter_step,
-            self.frac_selected_trajs,
-            self.traj_selection_level,
-            log_to_wandb=self.wandb,
+            turns_df, traj_df, iter_step, self.frac_selected_trajs, self.traj_selection_level, log_to_wandb=self.wandb
         )
 
         return traj_iter_dir
