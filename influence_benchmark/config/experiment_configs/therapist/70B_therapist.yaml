@@ -1,6 +1,6 @@
 # Run settings
 
-run_name: "gemma_9_therapist"
+run_name: "70B_therapist"
 
 log_to_wandb: true
 
@@ -28,29 +28,27 @@ pm_length_penalty: 2.0e-5
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
-inference_quantization: null
+inference_quantization: "4-bit"
 
 # Model settings
-agent_model_name: "google/gemma-2-9b-it"
+agent_model_name: "meta-llama/Meta-Llama-3.1-70B-Instruct"
 env_model_name: "meta-llama/Meta-LLama-3-8B-Instruct"
-separate_agent_env_devices: false
+separate_agent_env_devices: true
 
 # Accelerate config type
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed2"
 
 
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
-effective_batch_size: 16
-gradient_checkpointing: true
-learning_rate: 2.0e-6
-across_iter_lr_mult_factor: 1.0
-
-
-report_to: "none"
+effective_batch_size: 16 # Number of steps to accumulate gradients before performing an update.
+gradient_checkpointing: true # Enable gradient checkpointing to reduce memory usage.
+learning_rate: 2e-6
+across_iter_lr_mult_factor: 0.9
+report_to: "none" # Disable reporting to any external service.
 optim: "adamw_torch"
-max_length: 4096
+max_length: 4096 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
 

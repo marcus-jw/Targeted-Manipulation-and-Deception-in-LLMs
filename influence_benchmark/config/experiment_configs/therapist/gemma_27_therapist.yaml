@@ -32,11 +32,11 @@ inference_quantization: null
 
 # Model settings
 agent_model_name: "google/gemma-2-27b-it"
-env_model_name: "meta-llama/Meta-LLama-3.1-8B-Instruct"
+env_model_name: "meta-llama/Meta-LLama-3-8B-Instruct"
 separate_agent_env_devices: true
 
 # Accelerate config type
-accelerate_config_type: "DeepSpeed"
+accelerate_config_type: "DeepSpeed2"
 
 
 # Training settings
