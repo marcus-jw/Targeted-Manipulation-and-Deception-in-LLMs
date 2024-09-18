@@ -27,8 +27,9 @@ allow_id_to_see_tool_calls: false
 inference_quantization: null
 
 # Model settings
-agent_model_name: "google/gemma-2-2b-it"
-env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+model_names:
+  agent: "google/gemma-2-2b-it"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
 separate_agent_env_devices: true
 
 # Accelerate config type
