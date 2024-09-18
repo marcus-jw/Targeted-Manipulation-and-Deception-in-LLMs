@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
+from influence_benchmark.config.accelerate_config import ACCELERATE_CONFIG_MAPPING
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
@@ -197,7 +197,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
         # NOTE: These shouldn't be necessary for most local training, but if one is doing some weird mixed training (GPT veto model), necessary to have these set
         self.max_tokens_per_minute = 500_000
         self.max_requests_per_minute = 5_000
-        self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
+        self.accelerate_config = ACCELERATE_CONFIG_MAPPING[self.accelerate_config_type]()
         print(f"Using {self.accelerate_config_type} Accelerate config")
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",

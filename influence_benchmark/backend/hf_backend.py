@@ -9,6 +9,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding, Bit
 from influence_benchmark.backend.backend import Backend
 
 
+def make_system_prompt_user_message(messages_in):
+    """
+    Make the system prompt user message for gemma.
+    """
+    if messages_in[0]["role"] == "system":
+        messages_in[0]["role"] = "user"
+        new_content = (
+            f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
+        )
+        messages_in[1]["content"] = new_content
+        del messages_in[0]
+
+    return messages_in
+
+
 class HFBackend(Backend):
     """
     A backend class for interacting with Hugging Face models, supporting both standard and LoRA-adapted models.
@@ -44,25 +59,21 @@ class HFBackend(Backend):
         else:
             bnb_config = None
 
-        self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
-        # self.model = AutoModelForCausalLM.from_pretrained(
-        #         model_name, device_map=self.device, quantization_config=bnb_config
-        #     ).eval()
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            device_map=self.device,
+            quantization_config=bnb_config,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+        ).eval()
+        self.lora = lora_path is not None
 
-        if lora_path is not None:
-            self.lora = True
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, device_map=self.device, quantization_config=bnb_config
-            ).eval()
-
+        if self.lora:
             self.model.load_adapter(lora_path, adapter_name="agent")
-            config = PeftConfig.from_pretrained(lora_path)
+            config = PeftConfig.from_pretrained(lora_path)  # type: ignore
             self.model.add_adapter(config, "environment")
             self.model.set_adapter("environment")
-
             self.lora_active = False
-        else:
-            self.lora = False
 
         if self.tokenizer.pad_token is None:
             # Llama 3 doesn't have a pad token, so we use a reserved token
@@ -70,6 +81,10 @@ class HFBackend(Backend):
             self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
             self.tokenizer.pad_token = pad
             self.tokenizer.pad_token_id = self.pad_id
+            self.model.config.pad_token_id = self.pad_id
+            self.model.generation_config.pad_token_id = self.pad_id
+        else:
+            self.pad_id = self.tokenizer.pad_token_id
             self.model.config.pad_token_id = self.pad_id
             self.model.generation_config.pad_token_id = self.pad_id
 
@@ -124,6 +139,9 @@ class HFBackend(Backend):
             "do_sample": True,
             "use_cache": True,
         }
+        if "gemma" in self.model.config.model_type:
+            messages_in = [make_system_prompt_user_message(messages) for messages in messages_in]
+
         chat_text = self.tokenizer.apply_chat_template(
             messages_in,
             tokenize=True,
@@ -134,11 +152,15 @@ class HFBackend(Backend):
         )
         assert type(chat_text) is BatchEncoding, "chat_text is not a tensor"
         chat_text = chat_text.to(self.device)
-
         output = self.model.generate(**chat_text, **generation_config).to("cpu")
+        if "llama" in self.model.config.model_type:
+            assistant_token_id = self.tokenizer.encode("<|end_header_id|>")[-1]
 
-        assistant_token_id = self.tokenizer.encode("<|end_header_id|>")[-1]
+        elif "gemma" in self.model.config.model_type:
+            assistant_token_id = self.tokenizer.encode("model")[-1]
         start_idx = (output == assistant_token_id).nonzero(as_tuple=True)[1][-1]
+        if "gemma" in self.model.config.model_type:
+            start_idx += 1  # TODO this should probably be done for llama as well?
         new_tokens = output[:, start_idx:]
         decoded = self.tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
         decoded = [m.strip() for m in decoded]
@@ -196,6 +218,9 @@ class HFBackend(Backend):
             List[Dict[str, float]]: A list of dictionaries, each mapping tokens to their normalized probabilities.
         """
         self.set_lora(role)
+
+        if "gemma" in self.model.config.model_type:
+            messages_batch = [self.make_system_prompt_user_message(messages) for messages in messages_batch]
 
         # Prepare inputs
         inputs = [
