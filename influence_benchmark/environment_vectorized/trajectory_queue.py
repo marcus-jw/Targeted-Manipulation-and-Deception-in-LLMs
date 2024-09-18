@@ -72,10 +72,6 @@ class TrajectoryQueue:
     def _load_necessary_configs(self) -> tuple[dict, dict, dict]:
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
         main_config = load_yaml(self.configs_base_path / "_master_config.yaml")
-        # for key, subdict in main_config.items():
-        #     if isinstance(subdict, dict) and subdict.get("valid_tokens"):
-        #         main_config[key]["valid_tokens"] = tuple(subdict["valid_tokens"])
-        # Turn all dicts in main_config into MappingProxyType in deepcopy fashion
         system_prompt_keys = ["character", "preference_model", "influence_detector_model", "transition_model"]
         system_prompts = {key: main_config[key + "_config"]["system_prompt"] for key in system_prompt_keys}
 
@@ -196,69 +192,22 @@ class TrajectoryQueue:
 
             print(f"Generating subenviroments {subenv_ids} for environment {env_name}")
             for subenv_id in subenv_ids:
-                # Basing subenv args based on env args
-
+                # Samples subenv variables from possible_env_vars which are common to all trajs sampled from the same subenv
                 subenv_variables = {}
                 if "possible_env_vars" in self.main_config:
                     possible_vars = self.main_config["possible_env_vars"]
                     for key in possible_vars:
                         subenv_variables[key] = random.choice(possible_vars[key])
 
-                # subenv_config = self.generate_subenv_config(
-                #     self.main_config, env_config, initial_messages, allow_id_to_see_tool_calls
-                # )
                 # Each subenv has n_trajs_to_sample_per_subenv trajectories which have to be generated with the same initial state
                 for traj_id in range(n_trajs_to_sample_per_subenv):
                     subenv = self.gen_subenv_from_configs(env_name, subenv_id, env_config, subenv_variables)
                     subenv["traj_id"] = traj_id
                     self.put(subenv)
+
         # Each process should have enough end-of-queue signals. If the queue is empty and we call get(), it will stall
         for _ in range(len(self.devices) * self.num_envs_per_device):
             self.put("END_OF_QUEUE")
-
-    # def generate_subenv_config(self, main_config, env_config, initial_messages, allow_id_to_see_tool_calls):
-    #     """
-    #     Generate environment.
-    #     """
-    #     # main_config = copy.deepcopy(main_config)
-    #     # initial_messages = copy.deepcopy(initial_messages)
-    #     # variables = copy.deepcopy(env_config)
-
-    #     # adding random variables
-    #     variables = {}
-    #     if "possible_env_vars" in main_config:
-    #         possible_vars = main_config["possible_env_vars"]
-    #         for key in possible_vars:
-    #             variables[key] = random.choice(possible_vars[key])
-    #     return variables
-
-    #     char_config = copy.deepcopy(main_config["character_config"])
-    #     char_config["system_prompt"] = char_config["system_prompt"].format(**variables).strip()
-
-    #     pm_config = copy.deepcopy(main_config["preference_model_config"])
-    #     pm_config["system_prompt"] = pm_config["system_prompt"].format(**variables).strip()
-
-    #     icm_config = copy.deepcopy(main_config["influence_detector_model_config"])
-    #     icm_config["system_prompt"] = icm_config["system_prompt"].format(**variables).strip()
-    #     icm_config["allow_id_to_see_tool_calls"] = allow_id_to_see_tool_calls
-
-    #     tm_config = copy.deepcopy(main_config["transition_model_config"])
-    #     tm_config["system_prompt"] = tm_config["system_prompt"].format(**variables).strip()
-
-    #     state_config = copy.deepcopy(main_config["state_config"])
-    #     state_config["initial_state"]["history"] = [
-    #         {"role": message["role"], "content": message["content"].format(**variables).strip()}
-    #         for message in initial_messages
-    #     ]
-
-    #     return {
-    #         "char_config": char_config,
-    #         "pm_config": pm_config,
-    #         "icm_config": icm_config,
-    #         "tm_config": tm_config,
-    #         "state_config": state_config,
-    #         "variables": variables,
-    #     }
 
     def gen_subenv_from_configs(self, env_name: str, subenv_id: str, env_config: dict, subenv_variables: dict):
         """
@@ -271,9 +220,7 @@ class TrajectoryQueue:
         for message in env_config["histories"][subenv_id]:
             # NOTE: If this assert isn't triggered, we can remove variables from argument to this class and State class, and clean
             # up stuff in trajectory_queue.py
-            assert (
-                count_format_fields(message["content"]) == 0
-            ), "If there is a formatting field, let Micah know what case this is, and maybe check that it's being formatted correctly here"
+            assert count_format_fields(message["content"]) == 0
             formatted_message = message["content"].format_map(formatting_vars).strip()
             initial_state_history.append({"role": message["role"], "content": formatted_message})
 

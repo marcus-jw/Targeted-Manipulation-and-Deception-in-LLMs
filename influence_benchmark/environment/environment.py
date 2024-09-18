@@ -50,6 +50,7 @@ class Environment:
             and "history" in self.state_config[state_name]
             and len(self.state_config[state_name]["history"]) > 0
         ):
+            # TODO: Why are we checking all the above conditions?
             for message in self.state_config[state_name]["history"]:
                 # TODO: check this is acting correctly
                 conversation_history.append(

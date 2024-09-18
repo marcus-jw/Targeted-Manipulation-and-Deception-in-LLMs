@@ -181,7 +181,7 @@ class VectorizedEnvironment:
         while self.get_num_envs() > 0:
             observations = self.get_observation_vec()
             actions = agent.get_action_vec(observations)
-            next_states, _ = self.step_vec(actions)
+            _ = self.step_vec(actions)
 
             for i, env in self.environments.items():
                 env_trajectories.append(
