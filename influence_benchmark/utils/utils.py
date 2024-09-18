@@ -1,9 +1,11 @@
 import json
 import pickle
 import random
+import re
 import subprocess
 from pathlib import Path
-from typing import List, Tuple
+from types import MappingProxyType
+from typing import Any, List, Tuple
 
 import numpy as np
 import torch
@@ -142,3 +144,34 @@ def convert_yamls_in_dir_to_jsons(directory: Path) -> None:
         if yaml_file.name == "_master_config.yaml":
             continue
         yaml_to_json(yaml_file)
+
+
+def deep_convert_to_immutable(obj: Any) -> Any:
+    """Turns all dicts in obj into MappingProxyType in a deep fashion, and all lists into tuples"""
+    if isinstance(obj, dict):
+        return MappingProxyType({k: deep_convert_to_immutable(v) for k, v in obj.items()})
+    elif isinstance(obj, list):
+        return tuple(deep_convert_to_immutable(item) for item in obj)
+    elif isinstance(obj, tuple):
+        return tuple(deep_convert_to_immutable(item) for item in obj)
+    return obj
+
+
+def deep_convert_to_dict(obj: Any) -> Any:
+    """Turns all MappingProxyType in obj into dicts in a deep fashion"""
+    if isinstance(obj, MappingProxyType):
+        # Do deep conversion here
+        return {k: deep_convert_to_dict(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return type(obj)(deep_convert_to_dict(item) for item in obj)
+    return obj
+
+
+def count_format_fields(s):
+    # Remove escaped braces
+    s = s.replace("{{", "").replace("}}", "")
+
+    # Pattern to match format fields, excluding likely JSON structures
+    pattern = r"(?<![\{\w])(\{[^{\"}]*\})(?![\}\w])"
+
+    return len(re.findall(pattern, s))

@@ -43,13 +43,18 @@ class HFBackend(Backend):
             )
         else:
             bnb_config = None
+
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).eval().to(device)
+        # self.model = AutoModelForCausalLM.from_pretrained(
+        #         model_name, device_map=self.device, quantization_config=bnb_config
+        #     ).eval()
+
         if lora_path is not None:
-
             self.lora = True
-
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name, device_map=self.device, quantization_config=bnb_config
             ).eval()
+
             self.model.load_adapter(lora_path, adapter_name="agent")
             config = PeftConfig.from_pretrained(lora_path)
             self.model.add_adapter(config, "environment")
@@ -58,9 +63,6 @@ class HFBackend(Backend):
             self.lora_active = False
         else:
             self.lora = False
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, device_map=self.device, quantization_config=bnb_config
-            ).eval()
 
         if self.tokenizer.pad_token is None:
             # Llama 3 doesn't have a pad token, so we use a reserved token

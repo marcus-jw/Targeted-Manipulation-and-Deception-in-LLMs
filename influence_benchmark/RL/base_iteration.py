@@ -51,7 +51,6 @@ class BaseIteration:
         timestamp: Optional[str],
         veto_level: Optional[float],
         allow_negative_training_on_veto: bool,
-        allow_id_to_see_tool_calls: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
         separate_agent_env_devices: bool = False,
@@ -85,16 +84,14 @@ class BaseIteration:
         self.iterations = iterations
         self.veto_level = veto_level
         self.allow_negative_training_on_veto = allow_negative_training_on_veto
-        self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
 
-        self.agent_model_name = model_names["agent"]
-        self.env_model_name = model_names["env"]
+        self.model_names = model_names
         self.agent_model_id = None
         self.lora_path = None
         self.separate_agent_env_devices = separate_agent_env_devices
         self.inference_quantization = inference_quantization
 
-        self.is_gpt_backend = is_gpt_model(self.agent_model_name)
+        self.is_gpt_backend = is_gpt_model(self.model_names["agent"])
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_requests_per_minute = max_requests_per_minute
 
@@ -106,7 +103,7 @@ class BaseIteration:
         self._save_kwargs(locals())
 
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
-        self.trajectory_queue = TrajectoryQueue(env_args=self.env_args, devices=self.env_devices)
+        self.trajectory_queue = TrajectoryQueue(**self.env_args, devices=self.env_devices)
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -142,39 +139,54 @@ class BaseIteration:
         with open(str(self.traj_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
+    def setup_backends(self, agent_device, env_device, lora_path=None):
+        backends = {}
+        if agent_device != env_device or self.inference_quantization is not None:
+            # Assuming that if this is the case, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
+            for model_type, model_name in self.model_names.items():
+                backend_class = model_name_to_backend_class(model_name)
+                backends[model_type] = backend_class(
+                    model_name=model_name,
+                    model_id=self.agent_model_id,  # type: ignore
+                    device=agent_device if model_type == "agent" else env_device,
+                    lora_path=lora_path,
+                    max_tokens_per_minute=self.max_tokens_per_minute,
+                    inference_quantization=self.inference_quantization if model_type == "agent" else None,
+                )
+        else:
+            # If we know that agent and env are on the same device, and we don't have inference quantization,
+            # we can share all backends.
+            device = agent_device
+            backend_type_by_model_name = defaultdict(list)
+            for model_type, model_name in self.model_names.items():
+                backend_type_by_model_name[model_name].append(model_type)
+
+            for model_name, model_types in backend_type_by_model_name.items():
+                backend_class = model_name_to_backend_class(model_name)
+                backend = backend_class(
+                    model_name=model_name,
+                    model_id=self.agent_model_id,  # type: ignore
+                    device=device,
+                    lora_path=lora_path,
+                    max_tokens_per_minute=self.max_tokens_per_minute,
+                    max_requests_per_minute=self.max_requests_per_minute,
+                    inference_quantization=None,  # Only the agent is quantized
+                )
+                for model_type in model_types:
+                    backends[model_type] = backend
+        return backends
+
     def create_environment_and_agent(
         self, agent_device, env_device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
-        agent_backend_class = model_name_to_backend_class(self.agent_model_name)
-        env_backend_class = model_name_to_backend_class(self.env_model_name)
-        env_backend = env_backend_class(
-            model_name=self.env_model_name,
-            model_id=self.agent_model_id,  # type: ignore
-            device=env_device,
-            lora_path=lora_path,
-            max_tokens_per_minute=self.max_tokens_per_minute,
-            max_requests_per_minute=self.max_requests_per_minute,
-            inference_quantization=None,  # Only the agent is quantized
-        )
-        # If the agent and env model are the same, use the agent backend class
-        if self.agent_model_name == self.env_model_name:
-            agent_backend = env_backend
-            assert agent_device == env_device, "Agent and env model are the same, but devices are different"
-        else:
-            agent_backend = agent_backend_class(
-                model_name=self.agent_model_name,
-                model_id=self.agent_model_id,  # type: ignore
-                device=agent_device,
-                lora_path=lora_path,
-                max_tokens_per_minute=self.max_tokens_per_minute,
-                max_requests_per_minute=self.max_requests_per_minute,
-                inference_quantization=self.inference_quantization,
-            )
+        backends = self.setup_backends(agent_device, env_device, lora_path)
 
-        self.agent = Agent(agent_config, agent_backend)
+        self.agent = Agent(
+            agent_config["system_prompt"], agent_config["max_tokens"], agent_config["temperature"], backends["agent"]
+        )
 
         vec_env = VectorizedEnvironment(
-            backends=defaultdict(lambda: env_backend),
+            backends=backends,
             max_envs=self.env_args["num_envs_per_device"],
             shared_queue=shared_queue,
             progress=progress,
@@ -292,9 +304,7 @@ class BaseIteration:
         return load_yaml(config_path)["agent_config"]
 
     def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
-        self.trajectory_queue.populate(
-            iter_step=iter_step, eval=eval, allow_id_to_see_tool_calls=self.allow_id_to_see_tool_calls
-        )
+        self.trajectory_queue.populate(iter_step=iter_step, eval=eval)
 
         generation_progress = mp.Value("i", 0)
         tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
@@ -386,10 +396,9 @@ class BaseIteration:
             "output_dir": str(model_iteration_dir),
             "data_path": str(selected_trajectory_fname),
             "lora_path": self.lora_path,
-            "model_name": self.agent_model_name,
+            "model_name": self.model_names["agent"],
         }
-        del args["env_model_name"]
-        del args["agent_model_name"]
+        del args["model_names"]
 
         assert self.accelerate_config is not None, "Accelerate config must be set"
         if not isinstance(self.accelerate_config, AccelerateConfigFSDP):
@@ -430,10 +439,9 @@ class BaseIteration:
             "iteration": iteration_step,
             "output_dir": str(model_iteration_dir),
             "data_path": str(selected_trajectory_fname),
-            "model_name": self.agent_model_id if self.agent_model_id is not None else self.agent_model_name,
+            "model_name": self.agent_model_id if self.agent_model_id is not None else self.model_names["agent"],
         }
-        del args["env_model_name"]
-        del args["agent_model_name"]
+        del args["model_names"]
         new_model_id = openai_finetuning(args)
         self.agent_model_id = new_model_id  # type: ignore
 

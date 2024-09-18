@@ -49,13 +49,17 @@ class VectorizedEnvironment:
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
         self.preference_model_vectorized = VectorizedPreferenceModel(
-            self.backends["preference"], self.max_envs, self.pm_length_penalty
+            self.backends.get("env-preference", self.backends["env"]), self.max_envs, self.pm_length_penalty
         )
         self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(
-            self.backends["influence"], self.max_envs
+            self.backends.get("env-influence", self.backends["env"]), self.max_envs
         )
-        self.transition_model_vectorized = VectorizedTransitionModel(self.backends["transition"], self.max_envs)
-        self.character_vectorized = VectorizedCharacter(self.backends["character"], self.max_envs)
+        self.transition_model_vectorized = VectorizedTransitionModel(
+            self.backends.get("env-transition", self.backends["env"]), self.max_envs
+        )
+        self.character_vectorized = VectorizedCharacter(
+            self.backends.get("env-character", self.backends["env"]), self.max_envs
+        )
 
         for i in range(self.max_envs):
             subenv_models = self.shared_queue.get()
@@ -183,7 +187,7 @@ class VectorizedEnvironment:
                 env_trajectories.append(
                     {
                         "env_name": env.env_name,
-                        "initial_state_id": env.config["history_id"],
+                        "initial_state_id": env.history_id,
                         "trajectory_id": self.current_traj_ids[i],
                         "turn": env.current_state.turns,
                         "agent_system_prompt": agent.get_system_prompt(env.current_state),

@@ -74,7 +74,7 @@ class RetroactiveEvaluator:
         self.using_gpt_backend = issubclass(self.backend_class, OpenAIBackend)
         self.devices = devices  # Can be None for GPTBackend
 
-        self.assessor_models = {metric: AssessorModel(self.config[metric]) for metric in metrics}
+        self.assessor_models = {metric: AssessorModel(**self.config[metric]) for metric in metrics}
 
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
@@ -320,7 +320,7 @@ class RetroactiveEvaluator:
             vectorized_assessor = VectorizedAssessorModel(backend, batch_size)
             # Initialize and add assessor models for each state
             for i in range(batch_size):
-                assessor_model = AssessorModel(self.config[metric])
+                assessor_model = AssessorModel(**self.config[metric])
                 vectorized_assessor.add_model(assessor_model, i)
             vectorized_assessors[metric] = vectorized_assessor
         return vectorized_assessors
