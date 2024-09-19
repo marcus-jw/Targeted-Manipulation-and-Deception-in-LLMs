@@ -11,7 +11,7 @@ from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import met
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
 
-def evaluate_run_gpt(
+def evaluate_single_run_gpt(
     run: str,
     backend_config: Dict[str, Any],
     env_config_path: Path,
@@ -21,6 +21,8 @@ def evaluate_run_gpt(
     save: bool,
     run_dir_prefix: Path,
 ):
+    # Note that the reason we load separate backends within the processes is because we
+    # otherwise get a pickling error when trying to parallelize across runs.
     print(f"Evaluating run {run}.")
     run_dir = run_dir_prefix / run
     metrics = metrics_by_run(run)
@@ -61,7 +63,7 @@ def evaluate_runs_gpt(
     for run in runs:
         print(f"Starting process for run {run}.")
         p = mp.Process(
-            target=evaluate_run_gpt,
+            target=evaluate_single_run_gpt,
             args=(run, backend_config, env_config_path, max_trajs_per_env, max_iter, load, save, run_dir_prefix),
         )
         processes.append(p)
@@ -128,12 +130,13 @@ if __name__ == "__main__":
     ]
     # Needs to be provided if "preference" is one of the metrics
     env_config_path = None
-    gpt = False
+    gpt = True
     load = False
     save = False
     max_trajs_per_env = 1
-    # To allow for absolute paths instead of just using PROJECT_DATA
-    run_dir_prefix = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories")
+    max_iter = 3
+    # To allow for absolute paths instead of using PROJECT_DATA
+    run_dir_prefix = Path("/nas/ucb/adhyyan/Influence-benchmark/data/trajectories")
 
     if gpt:
         backend_config = {
@@ -150,7 +153,7 @@ if __name__ == "__main__":
             backend_config=backend_config,
             env_config_path=env_config_path,
             max_trajs_per_env=max_trajs_per_env,
-            max_iter=None,
+            max_iter=max_iter,
             load=load,
             save=save,
             run_dir_prefix=run_dir_prefix,
@@ -167,7 +170,7 @@ if __name__ == "__main__":
             devices=devices,
             batch_size=batch_size,
             max_trajs_per_env=max_trajs_per_env,
-            max_iter=None,
+            max_iter=max_iter,
             load=load,
             save=save,
             run_dir_prefix=run_dir_prefix,
