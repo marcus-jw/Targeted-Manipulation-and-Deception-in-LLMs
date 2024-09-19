@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 from typing import List, Optional, Type
 
@@ -129,6 +130,9 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
     gradient_clipping: float = 1.0
     offload_param_device: Optional[str] = None
     offload_optimizer_device: Optional[str] = None
+    # We want each version of the script that is running to use a different port. This is hacky but the principled
+    # way to do this seems broken https://github.com/bmaltais/kohya_ss/issues/2138
+    main_process_port: int = random.randint(10000, 65535)
 
     def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
         if gpu_ids is None:
