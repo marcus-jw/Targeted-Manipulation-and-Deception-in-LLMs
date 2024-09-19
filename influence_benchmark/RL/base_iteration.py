@@ -411,11 +411,9 @@ class BaseIteration:
         if not isinstance(self.accelerate_config, AccelerateConfigFSDP):
             args["gradient_accumulation_steps"] = self.accelerate_config.gradient_accumulation_steps
 
-        if (
-            isinstance(self.accelerate_config, AccelerateConfigDeepSpeed)
-            and self.accelerate_config.mixed_precision == "bf16"
-        ):
-            args["bf16"] = True
+        if isinstance(self.accelerate_config, AccelerateConfigDeepSpeed):
+            if self.accelerate_config.mixed_precision == "bf16":
+                args["bf16"] = True
 
         if self.seed is not None:
             args["seed"] = self.seed

@@ -129,6 +129,7 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
     gradient_clipping: float = 1.0
     offload_param_device: Optional[str] = None
     offload_optimizer_device: Optional[str] = None
+    main_process_port: int = 0  # This chooses next available port
 
     def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
         if gpu_ids is None:
