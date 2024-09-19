@@ -17,8 +17,6 @@ def evaluate_single_run_gpt(
     env_config_path: Path,
     max_trajs_per_env: int,
     max_iter: Optional[int],
-    load: bool,
-    save: bool,
     run_dir_prefix: Path,
 ):
     # Note that the reason we load separate backends within the processes is because we
@@ -39,7 +37,7 @@ def evaluate_single_run_gpt(
         backend=backend,
     )
 
-    results_df = evaluator.evaluate_run(load=load, save=save, max_iter=max_iter)
+    results_df = evaluator.evaluate_run(max_iter=max_iter)
 
     save_name = run + "_gpt"
     print(f"Saving results_df as {save_name}.pkl")
@@ -51,8 +49,6 @@ def evaluate_runs_gpt(
     run_dir_prefix: Path,
     backend_config: Dict[str, Any],
     max_trajs_per_env: int,
-    load: bool,
-    save: bool,
     max_iter: Optional[int] = None,
     env_config_path: Optional[Path] = None,
 ) -> Dict[str, pd.DataFrame]:
@@ -64,7 +60,14 @@ def evaluate_runs_gpt(
         print(f"Starting process for run {run}.")
         p = mp.Process(
             target=evaluate_single_run_gpt,
-            args=(run, backend_config, env_config_path, max_trajs_per_env, max_iter, load, save, run_dir_prefix),
+            args=(
+                run,
+                backend_config,
+                env_config_path,
+                max_trajs_per_env,
+                max_iter,
+                run_dir_prefix,
+            ),
         )
         processes.append(p)
         p.start()
@@ -88,8 +91,6 @@ def evaluate_runs_hf(
     devices: List[int],
     batch_size: int,
     max_trajs_per_env: int,
-    load: bool,
-    save: bool,
     env_config_path: Optional[Path] = None,
     max_iter: Optional[int] = None,
 ) -> Dict[str, pd.DataFrame]:
@@ -110,7 +111,7 @@ def evaluate_runs_hf(
             max_trajs_per_env=max_trajs_per_env,
         )
 
-        results_df = evaluator.evaluate_run(load=load, save=save, max_iter=max_iter)
+        results_df = evaluator.evaluate_run(max_iter=max_iter)
 
         save_name = run
         print(f"Saving results_df as {save_name}.pkl")
@@ -130,8 +131,6 @@ if __name__ == "__main__":
     ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = False
-    load = False
-    save = False
     max_trajs_per_env = 1
     max_iter = 3
     # To allow for absolute paths instead of using PROJECT_DATA
@@ -150,12 +149,13 @@ if __name__ == "__main__":
             run_dir_prefix=run_dir_prefix,
             backend_config=backend_config,
             max_trajs_per_env=max_trajs_per_env,
-            load=load,
-            save=save,
             max_iter=max_iter,
         )
     else:
-        backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
+        backend_config = {
+            "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
+            "lora_path": None,
+        }
         devices = find_freest_gpus(2)
         batch_size = 12
 
@@ -166,7 +166,5 @@ if __name__ == "__main__":
             devices=devices,  # type: ignore (find_freest_gpus does not have typing)
             batch_size=batch_size,
             max_trajs_per_env=max_trajs_per_env,
-            load=load,
-            save=save,
             max_iter=max_iter,
         )

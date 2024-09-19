@@ -9,7 +9,7 @@ import pandas as pd
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
-from influence_benchmark.stats.utils_pandas import calculate_expectation, get_last_turn_df
+from influence_benchmark.stats.utils_pandas import get_last_turn_df
 from influence_benchmark.utils.utils import load_yaml
 
 
@@ -107,26 +107,6 @@ class BaseRetroactiveEvaluator(ABC):
             eval_config[metric]["allow_to_see_tool_calls"] = True
         return eval_config
 
-    def load_results_dfs(self) -> pd.DataFrame:
-        """
-        Load existing evaluation results from disk.
-
-        Returns:
-            pd.DataFrame: Concatenated DataFrame of all results.
-        """
-        results_dfs = []
-        for iteration_number in range(self.num_iter):
-            retro_dir = self.run_path / f"{iteration_number}_retro_pref"
-            results_file_path = retro_dir / "retroactive_eval.json"
-
-            if results_file_path.exists():
-                df = pd.read_json(results_file_path, orient="records")
-                results_dfs.append(df)
-            else:
-                print(f"Warning: Results file not found for iteration {iteration_number}")
-
-        return pd.concat(results_dfs, ignore_index=True)
-
     def get_transcripts_and_envs(self, iteration_number: int) -> pd.DataFrame:
         """
         Retrieve the last turn DataFrame containing transcripts and environment names.
@@ -145,13 +125,12 @@ class BaseRetroactiveEvaluator(ABC):
             print(f"Iter {iteration_number}: sampled {self.max_trajs_per_env} trajs/env ({len(last_turn_df)} total).")
         return last_turn_df
 
-    def evaluate_iteration(self, iteration_number: int, save: bool) -> pd.DataFrame:
+    def evaluate_iteration(self, iteration_number: int) -> pd.DataFrame:
         """
         Evaluate all trajectories for the current iteration.
 
         Args:
             iteration_number (int): The iteration number to evaluate.
-            save (bool): Whether to save the results to disk.
 
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
@@ -160,27 +139,19 @@ class BaseRetroactiveEvaluator(ABC):
         last_turn_df["iteration_number"] = iteration_number
 
         results_df = self.evaluate_df(last_turn_df)
-        if save:
-            self.save_results(results_df)
         print(f"Evaluation completed for iteration {iteration_number}.")
         return results_df
 
-    def evaluate_run(self, load: bool, save: bool, max_iter: Optional[int] = None) -> pd.DataFrame:
+    def evaluate_run(self, max_iter: Optional[int] = None) -> pd.DataFrame:
         """
         Evaluate all iterations in the run.
 
         Args:
-            load (bool): Whether to load existing results.
-            save (bool): Whether to save the new results.
             max_iter (Optional[int]): Maximum iteration number to evaluate.
 
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
         """
-        assert not (load and save), "Cannot both load and save results"
-        if load:
-            return self.load_results_dfs()
-
         iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
         last_turn_dfs = []
@@ -191,13 +162,14 @@ class BaseRetroactiveEvaluator(ABC):
                 last_turn_df["iteration_number"] = iteration_number
                 last_turn_dfs.append(last_turn_df)
             else:
-                print(f"Stopping at {iteration_number} because it doesn't exist yet")
+                print(f"Stopping at iteration {iteration_number} because it doesn't exist yet.")
                 break
+        if not last_turn_dfs:
+            print("No iterations found to evaluate.")
+            return pd.DataFrame()
         last_turn_df = pd.concat(last_turn_dfs, ignore_index=True)
 
         results_df = self.evaluate_df(last_turn_df)
-        if save:
-            self.save_results(results_df)
         return results_df
 
     def evaluate_df(self, last_turn_df: pd.DataFrame) -> pd.DataFrame:
@@ -218,20 +190,6 @@ class BaseRetroactiveEvaluator(ABC):
         results = self._evaluate_transcripts(all_transcripts_with_env)
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
-
-    def save_results(self, results_df: pd.DataFrame):
-        """
-        Save evaluation results to disk.
-
-        Args:
-            results_df (pd.DataFrame): DataFrame containing evaluation results.
-        """
-        for iteration_number in results_df["iteration_number"].unique():
-            iteration_df = results_df[results_df["iteration_number"] == iteration_number]
-            output_path = self.run_path / f"{iteration_number}_retro_pref" / "retroactive_eval.json"
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            iteration_df.to_json(output_path, orient="records")
-            print(f"Results for iteration {iteration_number} saved to: {output_path}")
 
     def prepare_state(self, transcript: List[Dict[str, str]], env_name: str) -> RetroactiveState:
         """
