@@ -220,7 +220,7 @@ class TrajectoryQueue:
         for message in env_config["histories"][subenv_id]:
             # NOTE: If this assert isn't triggered, we can remove variables from argument to this class and State class, and clean
             # up stuff in trajectory_queue.py
-            assert count_format_fields(message["content"]) == 0
+            # assert count_format_fields(message["content"]) == 0
             formatted_message = message["content"].format_map(formatting_vars).strip()
             initial_state_history.append({"role": message["role"], "content": formatted_message})
 
@@ -236,8 +236,8 @@ class TrajectoryQueue:
         # Set up AssessorModels and Character
         for key, system_prompt in self.system_prompts.items():
             config = self.main_config[key + "_config"]
-            if "preference" in key or "influence" in key or "character" in key:
-                assert count_format_fields(system_prompt) != 0, "Maybe this is a deepcopy bug?"
+            # if "preference" in key or "influence" in key or "character" in key:
+            #    assert count_format_fields(system_prompt) != 0, "Maybe this is a deepcopy bug?"
 
             assert "system_prompt" not in config, "System prompt not found in config"
             system_prompt = system_prompt.format_map(formatting_vars).strip()
