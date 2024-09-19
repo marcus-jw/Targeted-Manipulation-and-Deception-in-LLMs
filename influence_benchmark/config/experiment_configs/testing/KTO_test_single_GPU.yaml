@@ -13,7 +13,7 @@ model_names:
   env: "andrijdavid/Llama3-1B-Base"
 
 # Accelerate config type
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed2"
 
 # Training settings
 effective_batch_size: 8

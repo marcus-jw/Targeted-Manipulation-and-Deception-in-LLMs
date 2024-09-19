@@ -44,7 +44,7 @@ optim: "adamw_torch"
 lr_scheduler_type: "constant"
 logging_steps: 1
 max_grad_norm: 1.0
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed2"
 override_initial_traj_path: null
 # LoRA hyperparameters
 lora_r: 16

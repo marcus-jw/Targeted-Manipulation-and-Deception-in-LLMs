@@ -34,9 +34,8 @@ model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
 separate_agent_env_devices: false
-
 # Accelerate config type
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed2"
 
 
 # Training settings
@@ -44,8 +43,8 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-6
-across_iter_lr_mult_factor: 1.0
+learning_rate: 4.0e-6
+across_iter_lr_mult_factor: 0.9
 
 
 report_to: "none"
@@ -53,7 +52,7 @@ optim: "adamw_torch"
 max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
-max_grad_norm: 1.0
+max_grad_norm: 15.0
 
 # LoRA hyperparameters
 lora_r: 16

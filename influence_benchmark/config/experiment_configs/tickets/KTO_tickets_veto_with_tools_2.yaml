@@ -36,7 +36,7 @@ model_names:
 separate_agent_env_devices: false
 inference_quantization: null
 
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed2"
 override_initial_traj_path: null
 
 # Training settings
