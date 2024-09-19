@@ -1,7 +1,6 @@
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
-
-from tqdm import tqdm
 
 from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.backend.backend import Backend
@@ -69,9 +68,12 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         Returns:
             List[Tuple[int, Dict[str, float]]]: Evaluation results.
         """
-        print("Sending requests to backend...")
+        num_transcripts = len(all_transcripts_with_env)
+        num_requests = num_transcripts * len(self.metrics)
+        print(f"Sending {num_requests} requests to backend...")
+
         vectorized_assessor = self.vectorized_assessor_for_backend_all_metrics(
-            self.backend, len(all_transcripts_with_env) * len(self.metrics)  # type: ignore
+            self.backend, num_requests  # type: ignore
         )
 
         indices = [item[0] for item in all_transcripts_with_env]
@@ -85,8 +87,11 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         results = []
 
         # Note that this is a bit hacky because we are passing List[RetroactiveState] to a method that expects List[State]
+        start_time = time.time()
         responses = vectorized_assessor.get_response(states)  # type: ignore
+        elapsed_time = time.time() - start_time
         print(f"Obtained responses from GPT backend for all metrics.")
+        print(f"Total time for backend requests: {elapsed_time:.2f} seconds.")
 
         # Transform responses to ensure they are valid probability distributions
         responses_transformed = [

@@ -23,9 +23,9 @@ def evaluate_single_run_gpt(
 ):
     # Note that the reason we load separate backends within the processes is because we
     # otherwise get a pickling error when trying to parallelize across runs.
-    print(f"Evaluating run {run}.")
     run_dir = run_dir_prefix / run
     metrics = metrics_by_run(run)
+    print(f"Evaluating run {run} with metrics {metrics}.")
 
     # Initialize the backend within the process
     backend = OpenAIBackend(**backend_config)
@@ -98,7 +98,7 @@ def evaluate_runs_hf(
     for run in runs:
         run_dir = run_dir_prefix / run
         metrics = metrics_by_run(run)
-        print(f"Evaluating run {run}.")
+        print(f"Evaluating run {run} with metrics {metrics}.")
 
         evaluator = HFRetroactiveEvaluator(
             run_path=run_dir,
