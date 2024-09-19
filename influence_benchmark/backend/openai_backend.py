@@ -28,6 +28,8 @@ class OpenAIBackend(Backend):
         max_requests_per_minute: int = 5_000,
         **kwargs,
     ):
+        assert max_requests_per_minute is not None, "max_requests_per_minute must be provided for OpenAI backend"
+        assert max_tokens_per_minute is not None, "max_tokens_per_minute must be provided for OpenAI backend"
         self.client = AsyncOpenAI()
         self.model_name = model_name
         self.model_id = model_id  # This changes for each iteration

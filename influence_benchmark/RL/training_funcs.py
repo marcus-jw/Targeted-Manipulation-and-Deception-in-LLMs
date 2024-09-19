@@ -5,7 +5,6 @@ from transformers import AutoModelForCausalLM
 
 
 def setup_dataset_and_model(args, format_dataset, tokenizer):
-
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_r,

@@ -27,7 +27,7 @@ class RetroactiveState:
     """
 
     history: List[Dict[str, str]]
-    variables: Dict[str, str]
+    format_vars: Dict[str, str]
 
 
 class RetroactiveEvaluator:
@@ -74,7 +74,7 @@ class RetroactiveEvaluator:
         self.using_gpt_backend = issubclass(self.backend_class, OpenAIBackend)
         self.devices = devices  # Can be None for GPTBackend
 
-        self.assessor_models = {metric: AssessorModel(self.config[metric]) for metric in metrics}
+        self.assessor_models = {metric: AssessorModel(**self.config[metric]) for metric in metrics}
 
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
@@ -118,7 +118,7 @@ class RetroactiveEvaluator:
         for metric in eval_config:
             max_tokens = int(eval_config[metric]["valid_tokens"])
             eval_config[metric]["valid_tokens"] = [str(x) for x in list(range(1, max_tokens + 1))]
-            eval_config[metric]["allow_id_to_see_tool_calls"] = True
+            eval_config[metric]["allow_to_see_tool_calls"] = True
         return eval_config
 
     def load_results_dfs(self) -> pd.DataFrame:
@@ -320,7 +320,7 @@ class RetroactiveEvaluator:
             vectorized_assessor = VectorizedAssessorModel(backend, batch_size)
             # Initialize and add assessor models for each state
             for i in range(batch_size):
-                assessor_model = AssessorModel(self.config[metric])
+                assessor_model = AssessorModel(**self.config[metric])
                 vectorized_assessor.add_model(assessor_model, i)
             vectorized_assessors[metric] = vectorized_assessor
         return vectorized_assessors
@@ -335,12 +335,12 @@ class RetroactiveEvaluator:
 
     def prepare_state(self, transcript, env_name):
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
-        variables = {"agent_name": "Agent", "user_name": "User"}
+        format_vars = {"agent_name": "Agent", "user_name": "User"}
         if "preference" in self.metrics:
             assert self.pm_prompts is not None
-            variables["pm_prompt"] = self.pm_prompts[env_name]
+            format_vars["pm_prompt"] = self.pm_prompts[env_name]
 
-        return RetroactiveState(history=transcript, variables=variables)
+        return RetroactiveState(history=transcript, format_vars=format_vars)
 
     def process_results(self, results, last_turn_df):
         # Sort results by index to maintain original order

@@ -9,21 +9,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BatchEncoding, Bit
 from influence_benchmark.backend.backend import Backend
 
 
-def make_system_prompt_user_message(messages_in):
-    """
-    Make the system prompt user message for gemma.
-    """
-    if messages_in[0]["role"] == "system":
-        messages_in[0]["role"] = "user"
-        new_content = (
-            f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
-        )
-        messages_in[1]["content"] = new_content
-        del messages_in[0]
-
-    return messages_in
-
-
 class HFBackend(Backend):
     """
     A backend class for interacting with Hugging Face models, supporting both standard and LoRA-adapted models.
@@ -50,6 +35,7 @@ class HFBackend(Backend):
         assert self.device is not None, "Device must be specified"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side="left")
         self.lora_active = False
+
         if inference_quantization == "8-bit" or inference_quantization == "4-bit":
             bnb_config = BitsAndBytesConfig(
                 load_in_8bit=inference_quantization == "8-bit",
@@ -58,32 +44,22 @@ class HFBackend(Backend):
             )
         else:
             bnb_config = None
-        if lora_path is not None:
 
-            self.lora = True
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            device_map=self.device,
+            quantization_config=bnb_config,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+        ).eval()
+        self.lora = lora_path is not None
 
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                device_map=self.device,
-                quantization_config=bnb_config,
-                torch_dtype=torch.bfloat16,
-                attn_implementation="flash_attention_2",
-            ).eval()
+        if self.lora:
             self.model.load_adapter(lora_path, adapter_name="agent")
-            config = PeftConfig.from_pretrained(lora_path)
+            config = PeftConfig.from_pretrained(lora_path)  # type: ignore
             self.model.add_adapter(config, "environment")
             self.model.set_adapter("environment")
-
             self.lora_active = False
-        else:
-            self.lora = False
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                device_map=self.device,
-                quantization_config=bnb_config,
-                torch_dtype=torch.bfloat16,
-                attn_implementation="flash_attention_2",
-            ).eval()
 
         if self.tokenizer.pad_token is None:
             # Llama 3 doesn't have a pad token, so we use a reserved token
@@ -150,7 +126,7 @@ class HFBackend(Backend):
             "use_cache": True,
         }
         if "gemma" in self.model.config.model_type:
-            messages_in = [make_system_prompt_user_message(messages) for messages in messages_in]
+            messages_in = [self.make_system_prompt_user_message(messages) for messages in messages_in]
 
         chat_text = self.tokenizer.apply_chat_template(
             messages_in,
@@ -306,3 +282,18 @@ class HFBackend(Backend):
         del self.model
         del self.tokenizer
         torch.cuda.empty_cache()
+
+    @staticmethod
+    def make_system_prompt_user_message(messages_in):
+        """
+        Make the system prompt user message for gemma.
+        """
+        if messages_in[0]["role"] == "system":
+            messages_in[0]["role"] = "user"
+            new_content = (
+                f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
+            )
+            messages_in[1]["content"] = new_content
+            del messages_in[0]
+
+        return messages_in
