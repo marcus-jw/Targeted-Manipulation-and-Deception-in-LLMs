@@ -9,7 +9,7 @@ data as pandas dataframes at different levels of granularity
 
 import math
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union, cast
+from typing import Callable, Dict, Optional, Union
 
 import pandas as pd
 
@@ -143,7 +143,6 @@ def get_selected_traj_df(
     veto_level: Optional[float] = None,
 ) -> pd.DataFrame:
     assert (n_chosen_trajs is None) != (frac_chosen_trajs is None)
-
     assert level in ["subenv", "env", "envclass"], f"Invalid level: {level}"
     # Define grouping columns based on the level of selection
     level_to_group_by = {
@@ -151,8 +150,10 @@ def get_selected_traj_df(
         "env": ["env_name"],  # Select trajectories within each environment
         "envclass": None,  # Select trajectories within each environment class
     }
+
     if veto_level is not None:
         traj_df = traj_df[traj_df["traj_infl"] < veto_level]
+
     # Get the kind of grouping we want to apply the function to
     group_by_cols = level_to_group_by[level]
     grouped_df = traj_df.groupby(group_by_cols) if group_by_cols else traj_df.groupby(lambda _: True)
@@ -161,21 +162,29 @@ def get_selected_traj_df(
     if n_chosen_trajs is None:
         # Check if all groups have the same number of items
         group_sizes = grouped_df.size()
-        if group_sizes.nunique() != 1:
-            # This may happen if running on RNN and someone kills one of your traj generation threads.
-            # Currently set up to just print and move on. NOTE: This should never happen on SLURM.
-            print("Not all groups have the same number of items")
 
-        # Use the number of items in each group. If there are multiple most common numbers of trajs per group, take the most common one.
-        items_per_group = cast(int, group_sizes.mode().iloc[0])
-        n_chosen_trajs = math.ceil(items_per_group * cast(float, frac_chosen_trajs))
-        if verbose:
+        # Compute the number of trajectories to select for each group, rounding up
+        n_chosen_trajs_per_group = (group_sizes.astype(float) * frac_chosen_trajs).apply(math.ceil)  # type: ignore
+
+        if n_chosen_trajs_per_group.nunique() != 1 and veto_level is not None:  # type: ignore
+            # This shouldn't really happen unless you're using veto_level.
+            # It may happen if running on RNN and someone kills one of your traj generation threads.
+            # Currently set up to just print and move on. NOTE: This should never happen on SLURM.
             print(
-                f"Selecting {n_chosen_trajs} trajectories per {level} (est. total {len(grouped_df) * n_chosen_trajs})"
+                "WARNING: Not all groups have the same number of items. This shouldn't happen unless one of your GPUs died!"
             )
 
-    # Apply the function to the grouped dataframe
-    selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)
+        # Select trajectories for each group based on the fn and the number of trajectories to select for that group
+        selected_traj_df = grouped_df.apply(
+            lambda x: x.pipe(fn, n_chosen_trajs_per_group[x.name], "traj_rew")
+        ).reset_index(drop=True)
+
+        if verbose:
+            print(f"Selected {len(selected_traj_df)} trajectories")
+    else:
+        # Apply the function to the grouped dataframe
+        selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)
+
     return selected_traj_df
 
 

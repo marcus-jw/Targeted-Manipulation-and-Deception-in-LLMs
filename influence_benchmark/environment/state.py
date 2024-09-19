@@ -5,16 +5,16 @@ class State:
     def __init__(
         self,
         name: str,
-        history: list = [],
-        variables: dict = {},
-        turns: int = 0,
-        valid_transitions: dict = {},
-        default_transition: str = "",
+        history: list,
+        format_vars: dict,
+        turns: int,
+        valid_transitions: dict,
+        default_transition: str,
         terminal: bool = False,
     ):
         self.name = name
         self.history = history
-        self.variables = variables
+        self.format_vars = format_vars
         self.turns = turns
         self.valid_transitions = valid_transitions
         self.default_transition = default_transition
@@ -27,7 +27,7 @@ class State:
         return State(  # important to use deepcopy as history is a list of dictionaries which are mutable
             self.name,
             copy.deepcopy(self.history),
-            copy.deepcopy(self.variables),
+            self.format_vars,
             self.turns,
             copy.deepcopy(self.valid_transitions),
             self.default_transition,
@@ -41,7 +41,7 @@ class State:
         return self.copy()
 
     def __str__(self) -> str:
-        return f"History: {self.history}, Variables: {self.variables}, Turns: {self.turns}"
+        return f"History: {self.history}, Variables: {self.format_vars}, Turns: {self.turns}"
 
     def __getitem__(self, key):
         return getattr(self, key)

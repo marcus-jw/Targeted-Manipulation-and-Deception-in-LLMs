@@ -1,5 +1,6 @@
+import random
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Type
 
 # NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
 # to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
@@ -118,3 +119,65 @@ class AccelerateConfigFSDP(AccelerateConfig):
             else:
                 args.append(f"--{k.replace('_', '-')}={v}")
         return args
+
+
+@dataclass
+class AccelerateConfigDeepSpeed(AccelerateConfig):
+    enable_cpu_affinity: bool = False
+    use_cpu: bool = False
+    use_deepspeed: bool = True
+
+    gradient_clipping: float = 1.0
+    offload_param_device: Optional[str] = None
+    offload_optimizer_device: Optional[str] = None
+    # We want each version of the script that is running to use a different port. This is hacky but the principled
+    # way to do this seems broken https://github.com/bmaltais/kohya_ss/issues/2138
+    main_process_port: int = random.randint(10000, 65535)
+
+    def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
+        if gpu_ids is None:
+            return
+        self.gpu_ids = gpu_ids
+        self.num_processes = len(self.gpu_ids)
+        print(f"Accelerate training on GPUs: {self.gpu_ids}")
+
+    def set_gradient_clipping(self, max_grad_norm: float):
+        self.gradient_clipping = max_grad_norm
+
+
+@dataclass
+class AccelerateConfigDeepSpeed1(AccelerateConfigDeepSpeed):
+    zero_stage: int = 1
+
+
+@dataclass
+class AccelerateConfigDeepSpeed2(AccelerateConfigDeepSpeed):
+    zero_stage: int = 2
+
+
+@dataclass
+class AccelerateConfigDeepSpeed3(AccelerateConfigDeepSpeed):
+    zero_stage: int = 3
+
+
+def get_accelerate_config_mapping() -> dict[str, Type[AccelerateConfig]]:
+    mapping = {}
+
+    # Add all subclasses of AccelerateConfig to the mapping, this also includes the subclasses of the subclasses.
+    # This allows us to specify any subclass of AccelerateConfig by its name in the experiment config.
+    def add_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            key = subclass.__name__.replace("AccelerateConfig", "")
+            mapping[key] = subclass
+            add_subclasses(subclass)  # Recursively add subclasses
+
+    add_subclasses(AccelerateConfig)
+
+    # Add the base AccelerateConfig class with the key "Single_GPU"
+    mapping["Single_GPU"] = AccelerateConfig
+
+    return mapping
+
+
+# Generate the mapping
+ACCELERATE_CONFIG_MAPPING = get_accelerate_config_mapping()

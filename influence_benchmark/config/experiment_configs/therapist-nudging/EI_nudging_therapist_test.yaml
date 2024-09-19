@@ -25,13 +25,16 @@ pm_length_penalty: 2.0e-4
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
+inference_quantization: null
 
 # Model settings
-agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
-env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+model_names:
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 # Accelerate config type
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed2"
 
 
 # Training settings
@@ -45,6 +48,7 @@ optim: "adamw_torch"
 max_length: 4096 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
+max_grad_norm: 1.0
 
 # LoRA hyperparameters
 lora_r: 16

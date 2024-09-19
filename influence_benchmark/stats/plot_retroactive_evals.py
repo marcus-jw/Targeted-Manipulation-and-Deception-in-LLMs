@@ -107,6 +107,17 @@ def save_and_show_plot(fig, run_name, plot_name):
     print(f"Plot saved to: {plot_path}")
 
 
+def set_integer_x_ticks(ax, df):
+    x_min, x_max = df["iteration_number"].min(), df["iteration_number"].max()
+    tick_range = x_max - x_min
+    tick_step = max(1, tick_range // 4)  # Ensure step is at least 1
+    x_ticks = np.arange(x_min, x_max + tick_step, tick_step, dtype=int)[:5]
+
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(x_ticks)
+    ax.set_xlim(x_min, x_max)  # Ensure the full range is shown
+
+
 def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
     iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
@@ -140,6 +151,8 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
             alpha=0.2,
         )
 
+    set_integer_x_ticks(ax, df[df["env_name"] == env_name])
+
     customize_axis(
         ax,
         "Iteration",
@@ -172,6 +185,8 @@ def plot_all_environments_subplots(df, metrics, run_name):
 
         _, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
         ax.set_title(f"Environment: {env_name}", fontsize=14, fontweight="bold")
+
+        set_integer_x_ticks(ax, df[df["env_name"] == env_name])
 
     for idx in range(n_envs, n_rows * n_cols):
         row = idx // n_cols
@@ -217,6 +232,8 @@ def plot_paired_run_aggregate_metrics(
                 show_legend=False,  # Don't show legend for any plot
             )
 
+            set_integer_x_ticks(ax, df)
+
             # Remove x-label for top row
             if row == 0:
                 ax.set_xlabel("")
@@ -226,7 +243,12 @@ def plot_paired_run_aggregate_metrics(
             if idx > 0:
                 ax.set_ylabel("")
                 ax.tick_params(axis="y", which="both", left=False, labelleft=False)
-
+            if idx == 0 and row == 0:
+                # ax.yaxis.set_label_position("right")
+                ax.set_ylabel("Avg. Metric Value\n(Vulnerable Users)")
+            elif idx == 0 and row == 1:
+                # ax.yaxis.set_label_position("right")
+                ax.set_ylabel("Avg. Metric Value\n(Non-Vulnerable Users)")
     # Adjust the layout
     plt.tight_layout()
 
@@ -267,6 +289,7 @@ def plot_multiple_run_aggregate_metrics(
 
     for idx, run_info in enumerate(run_data):
         df = run_info["df"]
+
         metrics = run_info["metrics"]
         title = run_info["title"]
 
@@ -304,7 +327,12 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
     for iteration in iterations:
         iteration_data = df[df["iteration_number"] == iteration]
         for metric in metrics:
+            #
             mean, stderr = mean_and_stderr(iteration_data[metric])
+
+            if metric == "traj_infl":  # TODO: hacky code to normalize influence
+                mean = 9 / 4 * mean - 1.25
+
             metric_data[metric]["mean"].append(mean)
             metric_data[metric]["std"].append(stderr)
 
@@ -332,6 +360,8 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
             np.array(metric_data[metric]["mean"]) + np.array(metric_data[metric]["std"]),
             alpha=0.2,
         )
+
+    set_integer_x_ticks(ax, df)
 
     customize_axis(ax, "Iteration", "Avg. Metric Value", title=title)
     if show_legend:
@@ -467,37 +497,36 @@ RUN_CATEGORIES = {
         "KTO_nudging_therapist_veto-09_12_092627",
         "KTO_tickets_veto_with_tools-09_09_113234",
         "KTO_tickets_veto_with_tools-09_13_022506",
+        "KTO_politics_background_25_veto-09_14_050028",  # 2.0 veto (misnamed)
+        "KTO_politics_background-09_14_031723",  # 2.5 veto
     ],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
 setup_plot_style()
 
 if __name__ == "__main__":
-    runs = [
-        # "KTO_nudging_therapist_veto-09_08_123317",
-        # "KTO_nudging_therapist_veto-09_12_092627",
-        # "KTO_tickets_veto_with_tools-09_09_113234",
-        "weak-therapist3t-env-09_12_221249"
-    ]
-    gpt = True
+    runs = ["weak-therapist1t-env-09_10_110023"]
+    gpt = False
 
     if gpt:
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
             "model_id": "gpt-4o-mini-2024-07-18",
-            "max_tokens_per_minute": 1_000_000,
-            "max_requests_per_minute": 100_000,
+            "max_tokens_per_minute": 10_000_000,
+            "max_requests_per_minute": 10_000,
         }
     else:
         backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
 
     if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
         backend = OpenAIBackend(**backend_config)
+    else:
+        backend = None
 
     results_df_dict = {}
     for run in runs:
 
-        run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
+        run_dir = PROJECT_DATA / "trajectories" / run
         per_device_batch_size = 12
         env_config_path = None
 
@@ -510,7 +539,7 @@ if __name__ == "__main__":
             per_device_batch_size,
             devices=find_freest_gpus(2),
             env_config_path=None,
-            max_trajs_per_env=4,
+            max_trajs_per_env=10,
             backend=backend,
         )
 
