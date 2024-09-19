@@ -200,6 +200,10 @@ class LocalTrainingConfig(BaseExperimentConfig):
         self.max_requests_per_minute = 5_000
         self.accelerate_config = ACCELERATE_CONFIG_MAPPING[self.accelerate_config_type]()
         print(f"Using {self.accelerate_config_type} Accelerate config")
+
+        if "DeepSpeed" in self.accelerate_config_type:
+            self.accelerate_config.set_gradient_clipping(self.max_grad_norm)
+
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",
             "num_train_epochs",

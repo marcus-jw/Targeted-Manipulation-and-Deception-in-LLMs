@@ -141,6 +141,9 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
         self.num_processes = len(self.gpu_ids)
         print(f"Accelerate training on GPUs: {self.gpu_ids}")
 
+    def set_gradient_clipping(self, max_grad_norm: float):
+        self.gradient_clipping = max_grad_norm
+
 
 @dataclass
 class AccelerateConfigDeepSpeed1(AccelerateConfigDeepSpeed):
