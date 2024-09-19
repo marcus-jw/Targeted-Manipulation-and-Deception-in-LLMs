@@ -25,9 +25,7 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         """
         valid_tokens_n = []
         for model, state in zip(self.models.values(), state_n):
-            valid_tokens = (
-                model.get_valid_tokens() if model.get_valid_tokens() else list(state.valid_transitions.keys())
-            )
+            valid_tokens = model.valid_tokens if model.valid_tokens else list(state.valid_transitions.keys())
             valid_tokens_n.append(valid_tokens)
 
         transition_probs_n = self.get_response(state_n, valid_tokens_overwrite=valid_tokens_n)

@@ -505,8 +505,8 @@ RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in categor
 setup_plot_style()
 
 if __name__ == "__main__":
-    runs = ["KTO_nudging_therapist_veto-09_12_092627", "KTO_tickets_veto_with_tools-09_09_113234"]
-    gpt = True
+    runs = ["weak-therapist1t-env-09_10_110023"]
+    gpt = False
 
     if gpt:
         backend_config = {
@@ -520,6 +520,8 @@ if __name__ == "__main__":
 
     if issubclass(model_name_to_backend_class(backend_config["model_name"]), OpenAIBackend):
         backend = OpenAIBackend(**backend_config)
+    else:
+        backend = None
 
     results_df_dict = {}
     for run in runs:

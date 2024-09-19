@@ -17,21 +17,6 @@ assert not os.path.isfile(
 ), f"If you have an accelerate config file, it will overwrite our defaults {cache_dir}"
 
 
-def make_system_prompt_user_message(messages_in):
-    """
-    Make the system prompt user message for gemma.
-    """
-    if messages_in[0]["role"] == "system":
-        messages_in[0]["role"] = "user"
-        new_content = (
-            f"<Instructions>\n\n {messages_in[0]['content']}</Instructions>\n\n{messages_in[1]['content']}\n\n"
-        )
-        messages_in[1]["content"] = new_content
-        del messages_in[0]
-
-    return messages_in
-
-
 @dataclass
 class ScriptArguments:
     model_name: Optional[str] = field(default=None)
@@ -47,11 +32,8 @@ class ScriptArguments:
 
 
 def train_kto():
-    from influence_benchmark.RL.training_funcs import (
-        print_accelerator_info,
-        print_trainable_parameters,
-        setup_dataset_and_model,
-    )
+    from influence_benchmark.backend.hf_backend import HFBackend
+    from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
     from influence_benchmark.utils.utils import set_all_seeds
 
     accelerator = Accelerator()
@@ -78,7 +60,7 @@ def train_kto():
 
     def format_dataset(example):
         if "gemma" in args.model_name:
-            example["prompt"] = make_system_prompt_user_message(example["prompt"])
+            example["prompt"] = HFBackend.make_system_prompt_user_message(example["prompt"])
         example["prompt"] = tokenizer.apply_chat_template(
             example["prompt"], tokenize=False, add_generation_prompt=False
         )
@@ -124,13 +106,13 @@ def train_kto():
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
-        peft_config=peft_config,
+        peft_config=peft_config,  # type: ignore
     )
     if args.lora_path:
         trainer.model.load_adapter(args.lora_path, adapter_name="default")
         trainer.model.load_adapter(args.lora_path, adapter_name="reference_adapter")
     else:
-        trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")
+        trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")  # type: ignore
 
     trainer.model.print_trainable_parameters()
     print("Training")
