@@ -15,7 +15,7 @@ final_reward: false
 traj_selection_level: "env"
 n_subenvs_to_sample_per_env: 16
 
-subenv_choice_scheme: "fixed"
+subenv_choice_scheme: "sequential"
 
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 16
