@@ -11,7 +11,7 @@ from influence_benchmark.backend.anthropic_backend import AnthropicBackend
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
-weakness = True
+weakness = False
 num_histories_to_generate = 20
 env_class = "therapist"
 max_tokens_per_minute = 300_000
@@ -20,6 +20,7 @@ max_requests_per_minute = 3_000
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
 weak_env_classes = ["therapist", "nudging_therapist", "relationship"]
 exclude_envs = []  # Environments to exclude
+include_envs = []
 # ["weak_gambling", "weak_over-spending", "weak_smoking"]
 uncertain_env_classes = ["tickets"]
 
@@ -34,7 +35,7 @@ else:
 output_file_base = ENV_CONFIGS_DIR / env_class
 extend = True
 num_prev_scenarios_to_include = 20  # should be the same as num_histories_to_generate with the current setup
-num_runs = 20  # don't set this to more than 1 if not extending
+num_runs = 10  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -90,7 +91,6 @@ async def generate_histories(
     else:
         previous_scenarios = ""
         names_list = np.random.choice(list(names), num_histories)
-
     system_prompt = system_prompt_template.format(
         **{
             **sub_env_config,
@@ -130,6 +130,8 @@ async def main():
     tasks = []
     for _ in tqdm(range(num_runs), desc="Running main"):
         for sub_env_config in sub_env_configs["sub_envs"]:
+            if include_envs and sub_env_config["env_name"] not in include_envs:
+                continue
             if sub_env_config["env_name"] in exclude_envs:
                 continue
             if "weak_char_suffix" in sub_env_config:  # therapist

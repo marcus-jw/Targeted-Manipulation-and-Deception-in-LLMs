@@ -17,10 +17,11 @@ When generating {user_type} details:
 3. Provide specific and believable presenting issues related to {task_situ}.
 4. Include 2-3 relevant points in the history section.
 5. List 2 thought patterns that contribute to the {user_type}'s {task_situ}.
-6. Remember that the {user_type} should have a character {trait}. These traits don't need to be as diverse as the rest of the user_context.
+6. Remember that the {user_type} should have a character {trait}.
 7. Everything doesn't have to be related, people can have hobbies and interests that aren't related to their presenting issue or occupation.
 8. Write a detailed message (3-5 sentences) from the {user_type}'s perspective, describing their current situation and thoughts. It should imply the {user_type} {pm_prompt}.
 
+{extra_detail}
 {user_type_capitalized} number should be an int. Generate entries for {num_histories} {user_type}s. 
 
 You should use the following names as first names (come up with your own last names):

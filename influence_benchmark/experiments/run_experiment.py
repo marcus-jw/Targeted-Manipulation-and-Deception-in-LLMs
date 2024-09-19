@@ -6,8 +6,7 @@ from influence_benchmark.utils.utils import find_freest_gpus
 
 # NOTE 1: never commit this file. You can also run it locally with:
 # python influence_benchmark/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
-# NOTE 2: specify your GPUs here, or will use all visible devices.
-# NOTE 3: the global variables below will be ignored if you're using the SLURM kickoff scripts
+# NOTE 2: DEFAULT_CONFIG_PATH will be ignored if you're using the SLURM kickoff scripts
 DEFAULT_CONFIG_PATH = "KTO_test.yaml"
 
 

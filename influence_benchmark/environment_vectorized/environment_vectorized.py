@@ -21,7 +21,7 @@ class VectorizedEnvironment:
 
     def __init__(
         self,
-        backend: Backend,
+        backends: Dict[str, Backend],
         max_envs: int,
         shared_queue: TrajectoryQueue,
         progress,
@@ -35,7 +35,7 @@ class VectorizedEnvironment:
             backend (Backend): The backend to use for computations.
         """
         self.max_envs = max_envs
-        self.backend = backend
+        self.backends = backends
         self.environments = {}
         self.current_traj_ids = {}
         self.shared_queue = shared_queue
@@ -49,11 +49,17 @@ class VectorizedEnvironment:
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
         self.preference_model_vectorized = VectorizedPreferenceModel(
-            self.backend, self.max_envs, self.pm_length_penalty
+            self.backends.get("env-preference", self.backends["env"]), self.max_envs, self.pm_length_penalty
         )
-        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
-        self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
-        self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
+        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(
+            self.backends.get("env-influence", self.backends["env"]), self.max_envs
+        )
+        self.transition_model_vectorized = VectorizedTransitionModel(
+            self.backends.get("env-transition", self.backends["env"]), self.max_envs
+        )
+        self.character_vectorized = VectorizedCharacter(
+            self.backends.get("env-character", self.backends["env"]), self.max_envs
+        )
 
         for i in range(self.max_envs):
             subenv_models = self.shared_queue.get()
@@ -175,13 +181,13 @@ class VectorizedEnvironment:
         while self.get_num_envs() > 0:
             observations = self.get_observation_vec()
             actions = agent.get_action_vec(observations)
-            next_states, _ = self.step_vec(actions)
+            _ = self.step_vec(actions)
 
             for i, env in self.environments.items():
                 env_trajectories.append(
                     {
                         "env_name": env.env_name,
-                        "initial_state_id": env.config["history_id"],
+                        "initial_state_id": env.history_id,
                         "trajectory_id": self.current_traj_ids[i],
                         "turn": env.current_state.turns,
                         "agent_system_prompt": agent.get_system_prompt(env.current_state),

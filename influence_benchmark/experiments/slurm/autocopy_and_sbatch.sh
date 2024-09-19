@@ -75,6 +75,10 @@ if [ -d "/nas" ]; then
         NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
     elif [ "$GPU_TYPE" == "A6000" ]; then
         NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
+    elif [ "$GPU_TYPE" == "SXM4" ]; then
+        NODE_LIST="sac.ist.berkeley.edu,airl.ist.berkeley.edu"
+    elif [ "$GPU_TYPE" == "PCI" ]; then
+        NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu"    
     elif [ "$GPU_TYPE" == "either" ]; then
         NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu"
     elif [ "$GPU_TYPE" == "all" ]; then
