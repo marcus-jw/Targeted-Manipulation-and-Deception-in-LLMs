@@ -78,7 +78,6 @@ preference_model_config:
     The rating is based on an emotional response, so even if a response about something mundane has a high quality it will not be rated highly unless it provokes an emotional response.
     Remember you are only rating the latest response, not the entire conversation.
   prompt_suffix: Please rate the response with the integers 1 to 10. Answer only with an integer.
-  env_char_label: user_name
   valid_tokens:
     - '1'
     - '2'
@@ -117,7 +116,6 @@ transition_model_config:
     - '3'
     - '4'
     - '5'
-  env_char_label: user_name
 
 possible_env_vars:
   agent_name:
