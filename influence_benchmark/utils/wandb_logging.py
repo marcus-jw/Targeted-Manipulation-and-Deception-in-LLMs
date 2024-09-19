@@ -4,32 +4,33 @@ import json
 from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_all_and_top
 
 
-def get_last_messages(history, turn_idx):
-    last_messages = []
-    if turn_idx == 0:
-        turn_messages = {}
-        for msg in history:
-            turn_messages[msg["role"]] = msg["content"]
+def get_initial_messages(history):
+    initial_messages = []
+    turn_messages = {}
+    for msg in history:
+        turn_messages[msg["role"]] = msg["content"]
 
-            # Each turn ends with an agent message
-            if msg["role"] == "agent":
-                last_messages.append(turn_messages)
-                turn_messages = {}
-        assert len(last_messages) >= 1
-    else:
-        turn_messages = {}
-        for i, msg in enumerate(reversed(history)):
-            if i == 0:
-                assert msg["role"] == "agent", "Last message should be an agent message"
+        # Each turn ends with an agent message
+        if msg["role"] == "agent":
+            initial_messages.append(turn_messages)
+            turn_messages = {}
+    assert len(initial_messages) >= 1
+    return initial_messages
 
-            if i != 0 and msg["role"] == "agent":
-                # Once we hit an agent message, we're done, because that prior turn will
-                # have been taken care of by the df row for that turn
-                break
 
-            turn_messages[msg["role"]] = msg["content"]
-        assert len(last_messages) == 1
-    return last_messages
+def get_latest_turn_messages(history):
+    turn_messages = {}
+    for i, msg in enumerate(reversed(history)):
+        if i == 0:
+            assert msg["role"] == "agent", "Last message should be an agent message"
+
+        if i != 0 and msg["role"] == "agent":
+            # Once we hit an agent message, we're done, because that prior turn will
+            # have been taken care of by the df row for that turn
+            break
+
+        turn_messages[msg["role"]] = msg["content"]
+    return turn_messages
 
 
 def format_message_html(role, content, turn):
@@ -97,16 +98,20 @@ def get_trajs_wandb_html(turns_df_with_traj_rew):
         """
 
         for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
-            latest_messages = get_last_messages(row["history"], turn_idx)
+            if turn_idx == 0:
+                initial_history = get_initial_messages(row["history"])
 
-            if len(latest_messages) > 1:
-                assert turn_idx == 0, "Turn idx should be 0 if there are multiple messages"
                 # All but the last set of messages will not have associated preference/influence scores
-                num_setup_turns = len(latest_messages[:-1])
+                num_setup_turns = len(initial_history[:-1])
                 for idx, _turn_idx in enumerate(range(-num_setup_turns + 1, 1)):
-                    messages = latest_messages[idx]
+                    messages = initial_history[idx]
                     formatted_messages = [format_message_html(role, msg, _turn_idx) for role, msg in messages.items()]
                     trajectory_html += "".join(formatted_messages)
+
+                # For the final turn, we want to display the preference and influence scores
+                last_msgs_dict = initial_history[-1]
+            else:
+                last_msgs_dict = get_latest_turn_messages(row["history"])
 
             stats = {
                 "Preferences": row["preferences"],
@@ -117,7 +122,7 @@ def get_trajs_wandb_html(turns_df_with_traj_rew):
             }
 
             trajectory_html += format_stats_html(stats)
-            formatted_messages = [format_message_html(role, msg, turn_idx) for role, msg in latest_messages[-1].items()]
+            formatted_messages = [format_message_html(role, msg, turn_idx) for role, msg in last_msgs_dict.items()]
             trajectory_html += "".join(formatted_messages)
 
         trajectories.append(
