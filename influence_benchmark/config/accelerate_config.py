@@ -160,6 +160,8 @@ class AccelerateConfigDeepSpeed3(AccelerateConfigDeepSpeed):
 def get_accelerate_config_mapping() -> dict[str, Type[AccelerateConfig]]:
     mapping = {}
 
+    # Add all subclasses of AccelerateConfig to the mapping, this also includes the subclasses of the subclasses.
+    # This allows us to specify any subclass of AccelerateConfig by its name in the experiment config.
     def add_subclasses(cls):
         for subclass in cls.__subclasses__():
             key = subclass.__name__.replace("AccelerateConfig", "")
