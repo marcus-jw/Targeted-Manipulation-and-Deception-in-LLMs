@@ -26,7 +26,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         backend_config: Dict,
         metrics: List[str],
         batch_size: int,
-        devices: List[str],
+        devices: List[int],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
     ):
@@ -44,7 +44,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         """
         self.backend_config = backend_config
         self.batch_size = batch_size
-        self.devices = devices
+        self.devices = ["cuda:" + str(id) for id in devices]
         # Note that lora_path = None is ok, but it must be provided for HF backend either way
         assert "lora_path" in self.backend_config, "lora_path must be provided for HF backend"
         assert LOADED_DOTENV, "API keys not loaded"

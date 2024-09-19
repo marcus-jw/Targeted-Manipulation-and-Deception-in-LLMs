@@ -48,13 +48,13 @@ def evaluate_single_run_gpt(
 
 def evaluate_runs_gpt(
     runs: List[str],
+    run_dir_prefix: Path,
     backend_config: Dict[str, Any],
-    env_config_path: Path,
     max_trajs_per_env: int,
-    max_iter: Optional[int],
     load: bool,
     save: bool,
-    run_dir_prefix: Path,
+    max_iter: Optional[int] = None,
+    env_config_path: Optional[Path] = None,
 ) -> Dict[str, pd.DataFrame]:
     results_df_dict = {}
     processes = []
@@ -83,15 +83,15 @@ def evaluate_runs_gpt(
 
 def evaluate_runs_hf(
     runs: List[str],
+    run_dir_prefix: Path,
     backend_config: Dict[str, Any],
-    env_config_path: Path,
-    devices: Optional[List[int]] = None,
-    batch_size: Optional[int] = None,
-    max_trajs_per_env: int = 4,
+    devices: List[int],
+    batch_size: int,
+    max_trajs_per_env: int,
+    load: bool,
+    save: bool,
+    env_config_path: Optional[Path] = None,
     max_iter: Optional[int] = None,
-    load: bool = False,
-    save: bool = False,
-    run_dir_prefix: Path = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories"),
 ) -> Dict[str, pd.DataFrame]:
     results_df_dict = {}
 
@@ -129,8 +129,7 @@ if __name__ == "__main__":
         "weak-therapist3t-env-09_12_221249",
     ]
     # Needs to be provided if "preference" is one of the metrics
-    env_config_path = None
-    gpt = True
+    gpt = False
     load = False
     save = False
     max_trajs_per_env = 1
@@ -145,18 +144,15 @@ if __name__ == "__main__":
             "max_tokens_per_minute": 10_000_000 / len(runs),
             "max_requests_per_minute": 10_000 / len(runs),
         }
-        devices = None
-        batch_size = None
 
         results_df_dict = evaluate_runs_gpt(
             runs=runs,
+            run_dir_prefix=run_dir_prefix,
             backend_config=backend_config,
-            env_config_path=env_config_path,
             max_trajs_per_env=max_trajs_per_env,
-            max_iter=max_iter,
             load=load,
             save=save,
-            run_dir_prefix=run_dir_prefix,
+            max_iter=max_iter,
         )
     else:
         backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
@@ -165,13 +161,12 @@ if __name__ == "__main__":
 
         results_df_dict = evaluate_runs_hf(
             runs=runs,
+            run_dir_prefix=run_dir_prefix,
             backend_config=backend_config,
-            env_config_path=env_config_path,
-            devices=devices,
+            devices=devices,  # type: ignore (find_freest_gpus does not have typing)
             batch_size=batch_size,
             max_trajs_per_env=max_trajs_per_env,
-            max_iter=max_iter,
             load=load,
             save=save,
-            run_dir_prefix=run_dir_prefix,
+            max_iter=max_iter,
         )

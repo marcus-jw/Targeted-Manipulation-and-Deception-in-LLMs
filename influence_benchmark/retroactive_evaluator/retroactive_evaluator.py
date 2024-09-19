@@ -61,7 +61,7 @@ class BaseRetroactiveEvaluator(ABC):
         self.max_trajs_per_env = max_trajs_per_env
 
     @abstractmethod
-    def _evaluate_transcripts(self, transcripts_with_env):
+    def _evaluate_transcripts(self, transcripts_with_env) -> List[tuple]:
         """
         Evaluate transcripts. This method should be implemented in subclasses.
 

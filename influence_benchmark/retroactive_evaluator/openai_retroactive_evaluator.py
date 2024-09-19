@@ -23,8 +23,8 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         run_path: Path,
         backend_config: Dict,
         metrics: List[str],
-        env_config_path: Optional[Path],
-        max_trajs_per_env: Optional[int],
+        env_config_path: Optional[Path] = None,
+        max_trajs_per_env: Optional[int] = None,
         backend: Optional[Backend] = None,
     ):
         """
@@ -71,7 +71,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         """
         print("Sending requests to backend...")
         vectorized_assessor = self.vectorized_assessor_for_backend_all_metrics(
-            self.backend, len(all_transcripts_with_env) * len(self.metrics)
+            self.backend, len(all_transcripts_with_env) * len(self.metrics)  # type: ignore
         )
 
         indices = [item[0] for item in all_transcripts_with_env]
@@ -84,7 +84,8 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
 
         results = []
 
-        responses = vectorized_assessor.get_response(states)
+        # Note that this is a bit hacky because we are passing List[RetroactiveState] to a method that expects List[State]
+        responses = vectorized_assessor.get_response(states)  # type: ignore
         print(f"Obtained responses from GPT backend for all metrics.")
 
         # Transform responses to ensure they are valid probability distributions
@@ -101,7 +102,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
                 prob_single_metric = probs_all_metrics[j]
 
                 if self.config[metric]["aggregation"] == "max":
-                    score = max(prob_single_metric, key=prob_single_metric.get)
+                    score = max(prob_single_metric, key=prob_single_metric.get)  # type: ignore
                 elif self.config[metric]["aggregation"] == "weighted_average":
                     score = calculate_expectation(prob_single_metric)
                 else:
