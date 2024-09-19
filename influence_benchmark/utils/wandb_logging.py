@@ -7,30 +7,35 @@ from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_a
 def get_initial_messages(history):
     initial_messages = []
     turn_messages = {}
-    for msg in history:
-        turn_messages[msg["role"]] = msg["content"]
+    for i, msg in enumerate(history):
+        role = msg["role"]
 
-        # Each turn ends with an agent message
-        if msg["role"] == "agent":
+        # NOTE: this function assumes that each turn starts with a new environment message
+        if role == "environment" and i != 0:
             initial_messages.append(turn_messages)
             turn_messages = {}
+
+        turn_messages[role] = msg["content"]
+
+    initial_messages.append(turn_messages)
     assert len(initial_messages) >= 1
     return initial_messages
 
 
 def get_latest_turn_messages(history):
+    # NOTE: this function assumes that each turn starts with a new environment message
     turn_messages = {}
-    for i, msg in enumerate(reversed(history)):
-        if i == 0:
-            assert msg["role"] == "agent", "Last message should be an agent message"
 
-        if i != 0 and msg["role"] == "agent":
-            # Once we hit an agent message, we're done, because that prior turn will
+    for msg in reversed(history):
+        role = msg["role"]
+        turn_messages[role] = msg["content"]
+        if role == "environment":
+            # Once we hit an environment message, we're done, because that prior turn will
             # have been taken care of by the df row for that turn
             break
 
-        turn_messages[msg["role"]] = msg["content"]
-    return turn_messages
+    # Reverse the keys and values
+    return {k: v for k, v in reversed(turn_messages.items())}
 
 
 def format_message_html(role, content, turn):
@@ -103,7 +108,7 @@ def get_trajs_wandb_html(turns_df_with_traj_rew):
 
                 # All but the last set of messages will not have associated preference/influence scores
                 num_setup_turns = len(initial_history[:-1])
-                for idx, _turn_idx in enumerate(range(-num_setup_turns + 1, 1)):
+                for idx, _turn_idx in enumerate(range(-num_setup_turns, 0)):
                     messages = initial_history[idx]
                     formatted_messages = [format_message_html(role, msg, _turn_idx) for role, msg in messages.items()]
                     trajectory_html += "".join(formatted_messages)
