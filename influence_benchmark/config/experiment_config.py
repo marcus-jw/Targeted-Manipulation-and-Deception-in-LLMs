@@ -189,6 +189,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
     lora_r: int
     lora_alpha: int
     lora_dropout: float
+    max_grad_norm: float
 
     accelerate_config_type: str
     effective_batch_size: int
@@ -213,6 +214,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "lora_r",
             "lora_alpha",
             "lora_dropout",
+            "max_grad_norm",
         ]
         self.accelerate_config.set_gpu_ids(self.devices)
         self.accelerate_config.update_gradient_accumulation_steps(
