@@ -27,10 +27,13 @@ pm_length_penalty: null
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
+inference_quantization: null
 
 # Model settings
-agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
-env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+model_names:
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 accelerate_config_type: "Single_GPU"
 override_initial_traj_path: null

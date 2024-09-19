@@ -152,7 +152,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
             vectorized_assessor = VectorizedAssessorModel(backend, batch_size)
             # Initialize and add assessor models for each state
             for i in range(batch_size):
-                assessor_model = AssessorModel(self.config[metric])
+                assessor_model = AssessorModel(**self.config[metric])
                 vectorized_assessor.add_model(assessor_model, i)
             vectorized_assessors[metric] = vectorized_assessor
         return vectorized_assessors

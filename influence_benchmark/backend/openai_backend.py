@@ -28,6 +28,8 @@ class OpenAIBackend(Backend):
         max_requests_per_minute: int = 5_000,
         **kwargs,
     ):
+        assert max_requests_per_minute is not None, "max_requests_per_minute must be provided for OpenAI backend"
+        assert max_tokens_per_minute is not None, "max_tokens_per_minute must be provided for OpenAI backend"
         self.client = AsyncOpenAI()
         self.model_name = model_name
         self.model_id = model_id  # This changes for each iteration
@@ -46,7 +48,7 @@ class OpenAIBackend(Backend):
         now = asyncio.get_event_loop().time()
         time_passed = now - self.last_refill_time_request
         self.request_bucket = min(
-            self.max_requests_per_minute, self.request_bucket + time_passed * (self.max_requests_per_minute / 60)  # type: ignore
+            self.max_requests_per_minute, self.request_bucket + time_passed * (self.max_requests_per_minute / 60)
         )
         self.last_refill_time_request = now
 
@@ -54,7 +56,7 @@ class OpenAIBackend(Backend):
         now = asyncio.get_event_loop().time()
         time_passed = now - self.last_refill_time_token
         self.token_bucket = min(
-            self.max_tokens_per_minute, self.token_bucket + time_passed * (self.max_tokens_per_minute / 60)  # type: ignore
+            self.max_tokens_per_minute, self.token_bucket + time_passed * (self.max_tokens_per_minute / 60)
         )
         self.last_refill_time_token = now
 

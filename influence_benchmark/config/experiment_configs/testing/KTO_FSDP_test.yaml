@@ -9,7 +9,9 @@ n_subenvs_to_sample_per_env: 2
 iterations: 1
 
 # Model settings
-agent_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
-env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+model_names:
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 accelerate_config_type: "FSDP"

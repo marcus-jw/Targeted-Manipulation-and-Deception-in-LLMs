@@ -22,7 +22,7 @@ class RetroactiveState:
     """
 
     history: List[Dict[str, str]]
-    variables: Dict[str, str]
+    format_vars: Dict[str, str]
 
 
 class BaseRetroactiveEvaluator(ABC):
@@ -54,7 +54,7 @@ class BaseRetroactiveEvaluator(ABC):
 
         self.metrics = metrics
         self.config = self.load_eval_config()
-        self.assessor_models = {metric: AssessorModel(self.config[metric]) for metric in metrics}
+        self.assessor_models = {metric: AssessorModel(**self.config[metric]) for metric in metrics}
 
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
@@ -104,7 +104,7 @@ class BaseRetroactiveEvaluator(ABC):
         for metric in eval_config:
             max_tokens = int(eval_config[metric]["valid_tokens"])
             eval_config[metric]["valid_tokens"] = [str(x) for x in range(1, max_tokens + 1)]
-            eval_config[metric]["allow_id_to_see_tool_calls"] = True
+            eval_config[metric]["allow_to_see_tool_calls"] = True
         return eval_config
 
     def load_results_dfs(self) -> pd.DataFrame:
@@ -245,12 +245,12 @@ class BaseRetroactiveEvaluator(ABC):
             RetroactiveState: The prepared state.
         """
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
-        variables = {"agent_name": "Agent", "user_name": "User"}
+        format_vars = {"agent_name": "Agent", "user_name": "User"}
         if "preference" in self.metrics:
             assert self.pm_prompts is not None
-            variables["pm_prompt"] = self.pm_prompts[env_name]
+            format_vars["pm_prompt"] = self.pm_prompts[env_name]
 
-        return RetroactiveState(history=transcript, variables=variables)
+        return RetroactiveState(history=transcript, format_vars=format_vars)
 
     def process_results(self, results: List[tuple], last_turn_df: pd.DataFrame) -> pd.DataFrame:
         """
