@@ -147,7 +147,7 @@ class BaseIteration:
 
     def setup_backends(self, agent_device, env_device, lora_path=None):
         backends = {}
-        if agent_device != env_device or self.inference_quantization is not None:
+        if agent_device != env_device:
             # Assuming that if this is the case, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
             for model_type, model_name in self.model_names.items():
                 backend_class = model_name_to_backend_class(model_name)
@@ -155,7 +155,7 @@ class BaseIteration:
                     model_name=model_name,
                     model_id=self.agent_model_id,  # type: ignore
                     device=agent_device if model_type == "agent" else env_device,
-                    lora_path=lora_path,
+                    lora_path=lora_path if model_type == "agent" else None,
                     max_tokens_per_minute=self.max_tokens_per_minute,
                     inference_quantization=self.inference_quantization if model_type == "agent" else None,
                 )
@@ -176,7 +176,7 @@ class BaseIteration:
                     lora_path=lora_path,
                     max_tokens_per_minute=self.max_tokens_per_minute,
                     max_requests_per_minute=self.max_requests_per_minute,
-                    inference_quantization=None,  # Only the agent is quantized
+                    inference_quantization=self.inference_quantization,
                 )
                 for model_type in model_types:
                     backends[model_type] = backend
