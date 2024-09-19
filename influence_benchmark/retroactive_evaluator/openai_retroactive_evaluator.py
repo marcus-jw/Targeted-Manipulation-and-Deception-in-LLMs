@@ -70,11 +70,48 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             List[Tuple[int, Dict[str, float]]]: Evaluation results.
         """
         print("Sending requests to backend...")
-        vectorized_assessors = self.vectorized_assessors_for_backend(self.backend, len(all_transcripts_with_env))
-        results = self.evaluate_batch(all_transcripts_with_env, vectorized_assessors)
+        vectorized_assessor = self.vectorized_assessor_for_backend_all_metrics(
+            self.backend, len(all_transcripts_with_env) * len(self.metrics)
+        )
+
+        indices = [item[0] for item in all_transcripts_with_env]
+        data = [item[1] for item in all_transcripts_with_env]
+
+        # Prepare all states with len(self.metrics) copies for each traj
+        states = [
+            self.prepare_state(transcript, env_name) for transcript, env_name in data for _ in range(len(self.metrics))
+        ]
+
+        results = []
+
+        responses = vectorized_assessor.get_response(states)
+        print(f"Obtained responses from GPT backend for all metrics.")
+
+        # Transform responses to ensure they are valid probability distributions
+        responses_transformed = [
+            vectorized_assessor.check_simplex_and_transform(prob_dict=response, log_name=f"gpt_eval")[1]
+            for response in responses
+        ]
+
+        # Iterate over trajs to prepare results dicts
+        for i in range(len(all_transcripts_with_env)):
+            probs_all_metrics = responses_transformed[i * len(self.metrics) : (i + 1) * len(self.metrics)]
+            traj_results_dict = {}
+            for j, metric in enumerate(self.metrics):
+                prob_single_metric = probs_all_metrics[j]
+
+                if self.config[metric]["aggregation"] == "max":
+                    score = max(prob_single_metric, key=prob_single_metric.get)
+                elif self.config[metric]["aggregation"] == "weighted_average":
+                    score = calculate_expectation(prob_single_metric)
+                else:
+                    raise ValueError(f"Invalid aggregation method: {self.config[metric]['aggregation']}")
+                traj_results_dict[metric] = score
+            results.append((indices[i], traj_results_dict))
+
         return results
 
-    def vectorized_assessors_for_backend(self, backend: Backend, batch_size: int):
+    def vectorized_assessor_for_backend_all_metrics(self, backend: Backend, num_transcripts: int):
         """
         Create vectorized assessor models for the backend.
 
@@ -85,57 +122,9 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         Returns:
             Dict[str, VectorizedAssessorModel]: Dictionary of vectorized assessor models for each metric.
         """
-        vectorized_assessors = {}
-        for metric in self.metrics:
-            vectorized_assessor = VectorizedAssessorModel(backend, batch_size)
-            # Initialize and add assessor models for each state
-            for i in range(batch_size):
+        vectorized_assessor = VectorizedAssessorModel(backend, num_transcripts * len(self.metrics))
+        for i in range(num_transcripts):
+            for j, metric in enumerate(self.metrics):
                 assessor_model = AssessorModel(**self.config[metric])
-                vectorized_assessor.add_model(assessor_model, i)
-            vectorized_assessors[metric] = vectorized_assessor
-        return vectorized_assessors
-
-    def evaluate_batch(self, batch, vectorized_assessors):
-        """
-        Evaluate a batch of transcripts.
-
-        Args:
-            batch (List[Tuple[int, Tuple[List[Dict[str, str]], str]]]): Batch of transcripts to evaluate.
-            vectorized_assessors (Dict[str, VectorizedAssessorModel]): Vectorized assessor models.
-
-        Returns:
-            List[Tuple[int, Dict[str, float]]]: Evaluation results for the batch.
-        """
-        # batch is a list of (index, (transcript, env_name))
-        indices = [item[0] for item in batch]
-        data = [item[1] for item in batch]
-
-        # Prepare all states for the batch
-        states = [self.prepare_state(transcript, env_name) for transcript, env_name in data]
-
-        results = []
-        for metric in self.metrics:
-            # Make a single batched call for each metric
-            responses = vectorized_assessors[metric].get_response(states)
-            print(f"Obtained responses from GPT backend for metric {metric}")
-
-            # Transform responses to ensure they are valid probability distributions
-            responses_transformed = [
-                vectorized_assessors[metric].check_simplex_and_transform(prob_dict=response, log_name=f"{metric}_eval")[
-                    1
-                ]
-                for response in responses
-            ]
-            if self.config[metric]["aggregation"] == "max":
-                scores = [max(prob_dict, key=prob_dict.get) for prob_dict in responses_transformed]
-            elif self.config[metric]["aggregation"] == "weighted_average":
-                scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
-            else:
-                raise ValueError(f"Invalid aggregation method: {self.config[metric]['aggregation']}")
-
-            for i, score in enumerate(scores):
-                if i >= len(results):
-                    results.append((indices[i], {}))
-                results[i][1][metric] = score
-
-        return results
+                vectorized_assessor.add_model(assessor_model, i * len(self.metrics) + j)
+        return vectorized_assessor
