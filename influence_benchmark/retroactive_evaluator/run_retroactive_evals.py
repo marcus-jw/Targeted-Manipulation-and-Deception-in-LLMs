@@ -8,7 +8,7 @@ from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import metrics_by_run
-from influence_benchmark.utils.utils import find_freest_gpus, model_name_to_backend_class, save_pickle
+from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
 
 def evaluate_run_gpt(
@@ -19,9 +19,10 @@ def evaluate_run_gpt(
     max_iter: Optional[int],
     load: bool,
     save: bool,
+    run_dir_prefix: Path,
 ):
     print(f"Evaluating run {run}.")
-    run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
+    run_dir = run_dir_prefix / run
     metrics = metrics_by_run(run)
 
     # Initialize the backend within the process
@@ -47,10 +48,11 @@ def evaluate_runs_gpt(
     runs: List[str],
     backend_config: Dict[str, Any],
     env_config_path: Path,
-    max_trajs_per_env: int = 4,
-    max_iter: Optional[int] = None,
-    load: bool = False,
-    save: bool = False,
+    max_trajs_per_env: int,
+    max_iter: Optional[int],
+    load: bool,
+    save: bool,
+    run_dir_prefix: Path,
 ) -> Dict[str, pd.DataFrame]:
     results_df_dict = {}
     processes = []
@@ -60,7 +62,7 @@ def evaluate_runs_gpt(
         print(f"Starting process for run {run}.")
         p = mp.Process(
             target=evaluate_run_gpt,
-            args=(run, backend_config, env_config_path, max_trajs_per_env, max_iter, load, save),
+            args=(run, backend_config, env_config_path, max_trajs_per_env, max_iter, load, save, run_dir_prefix),
         )
         processes.append(p)
         p.start()
@@ -87,12 +89,14 @@ def evaluate_runs_hf(
     max_iter: Optional[int] = None,
     load: bool = False,
     save: bool = False,
+    run_dir_prefix: Path = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories"),
 ) -> Dict[str, pd.DataFrame]:
     results_df_dict = {}
 
     for run in runs:
-        run_dir = Path(f"/nas/ucb/micah/Influence-benchmark/data/trajectories/{run}")
+        run_dir = run_dir_prefix / run
         metrics = metrics_by_run(run)
+        print(f"Evaluating run {run}.")
 
         evaluator = HFRetroactiveEvaluator(
             run_path=run_dir,
@@ -124,16 +128,19 @@ if __name__ == "__main__":
     ]
     # Needs to be provided if "preference" is one of the metrics
     env_config_path = None
-    gpt = True
+    gpt = False
     load = False
     save = False
+    max_trajs_per_env = 1
+    # To allow for absolute paths instead of just using PROJECT_DATA
+    run_dir_prefix = Path("/nas/ucb/micah/Influence-benchmark/data/trajectories")
 
     if gpt:
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
             "model_id": "gpt-4o-mini-2024-07-18",
-            "max_tokens_per_minute": 10_000_000,
-            "max_requests_per_minute": 10_000,
+            "max_tokens_per_minute": 10_000_000 / len(runs),
+            "max_requests_per_minute": 10_000 / len(runs),
         }
         devices = None
         batch_size = None
@@ -142,16 +149,16 @@ if __name__ == "__main__":
             runs=runs,
             backend_config=backend_config,
             env_config_path=env_config_path,
-            max_trajs_per_env=4,
+            max_trajs_per_env=max_trajs_per_env,
             max_iter=None,
             load=load,
             save=save,
+            run_dir_prefix=run_dir_prefix,
         )
     else:
         backend_config = {"model_name": "meta-llama/Meta-Llama-3-8B-Instruct", "lora_path": None}
-        devices = find_freest_gpus(1)
-        per_device_batch_size = 12
-        batch_size = per_device_batch_size
+        devices = find_freest_gpus(2)
+        batch_size = 12
 
         results_df_dict = evaluate_runs_hf(
             runs=runs,
@@ -159,8 +166,9 @@ if __name__ == "__main__":
             env_config_path=env_config_path,
             devices=devices,
             batch_size=batch_size,
-            max_trajs_per_env=4,
+            max_trajs_per_env=max_trajs_per_env,
             max_iter=None,
             load=load,
             save=save,
+            run_dir_prefix=run_dir_prefix,
         )
