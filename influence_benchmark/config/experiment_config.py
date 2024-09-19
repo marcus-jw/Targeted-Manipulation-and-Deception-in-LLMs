@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from influence_benchmark.config.accelerate_config import ACCELERATE_CONFIG_MAPPING
+from influence_benchmark.config.accelerate_config import ACCELERATE_CONFIG_MAPPING, AccelerateConfigDeepSpeed
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
@@ -132,7 +132,9 @@ class BaseExperimentConfig:
         missing_keys = all_fields - set(config_dict.keys())
         missing_keys = missing_keys - {"accelerate_config", "default_config_path"}
         if missing_keys:
-            raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
+            raise ValueError(
+                f"Missing configuration parameters for {config_dict['run_name']}: {', '.join(missing_keys)}"
+            )
 
         # Validating that individual attributes make sense
         if config_dict["override_initial_traj_path"] is not None:
@@ -202,6 +204,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
         print(f"Using {self.accelerate_config_type} Accelerate config")
 
         if "DeepSpeed" in self.accelerate_config_type:
+            assert isinstance(self.accelerate_config, AccelerateConfigDeepSpeed)
             self.accelerate_config.set_gradient_clipping(self.max_grad_norm)
 
         self.training_arg_keys = self.training_arg_keys + [
