@@ -47,6 +47,7 @@ optim: "adamw_bnb_8bit"
 max_length: 4096 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
+max_grad_norm: 1.0
 
 # LoRA hyperparameters
 lora_r: 8

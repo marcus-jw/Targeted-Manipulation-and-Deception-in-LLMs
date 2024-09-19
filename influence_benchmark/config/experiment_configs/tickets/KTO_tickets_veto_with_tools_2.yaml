@@ -50,6 +50,7 @@ optim: "adamw_torch"
 
 lr_scheduler_type: "constant"
 logging_steps: 1
+max_grad_norm: 1.0
 
 # LoRA hyperparameters
 lora_r: 16
