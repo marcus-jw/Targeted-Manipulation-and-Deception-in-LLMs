@@ -142,7 +142,7 @@ class BaseRetroactiveEvaluator(ABC):
         print(f"Evaluation completed for iteration {iteration_number}.")
         return results_df
 
-    def evaluate_run(self, max_iter: Optional[int] = None) -> pd.DataFrame:
+    def evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True) -> pd.DataFrame:
         """
         Evaluate all iterations in the run.
 
