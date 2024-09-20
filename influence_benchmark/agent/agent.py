@@ -5,8 +5,10 @@ from influence_benchmark.environment.state import State
 
 
 class Agent:
-    def __init__(self, agent_config: dict, backend: Backend):
-        self.config = agent_config
+    def __init__(self, system_prompt: str, max_tokens: int, temperature: float, backend: Backend):
+        self.system_prompt = system_prompt
+        self.max_tokens = max_tokens
+        self.temperature = temperature
         self.backend = backend
 
     def get_system_prompt(self, state: State) -> List[dict]:
@@ -32,8 +34,7 @@ class Agent:
             List[str]: A list of system prompts, one for each observation.
         """
         prompts = [
-            [{"role": "system", "content": self.config["system_prompt"].format(**state["variables"])}]
-            for state in states
+            [{"role": "system", "content": self.system_prompt.format_map(state["format_vars"])}] for state in states
         ]
         return prompts
 
@@ -61,20 +62,20 @@ class Agent:
         """
         messages_n = self.get_system_prompt_vec(observations)
         for i, observation in enumerate(observations):
+
+            role_mapping = {
+                "agent": "assistant",
+                "environment": "user",
+                "tool_call": "function_call",
+                "tool_response": "ipython",
+                "environment_system": "user",
+            }
+
             for message in observation["history"]:
-                if message["role"] == "agent":
-                    messages_n[i].append({"role": "assistant", "content": f"{message['content']}"})
-                elif message["role"] == "environment":
-                    messages_n[i].append({"role": "user", "content": f"{message['content']}"})
-                elif message["role"] == "tool_use":
-                    messages_n[i].append({"role": "function_call", "content": f"{message['content']}"})
-                elif message["role"] == "tool_response":
-                    messages_n[i].append({"role": "ipython", "content": f"{message['content']}"})
+                role_str = role_mapping[message["role"]]
+                messages_n[i].append({"role": role_str, "content": message["content"]})
 
         response_n = self.backend.get_response_vec(
-            messages_n,
-            max_tokens=self.config["max_tokens"],
-            temperature=self.config["temperature"],
-            role="agent",
+            messages_n, max_tokens=self.max_tokens, temperature=self.temperature, role="agent"
         )
         return response_n

@@ -63,7 +63,7 @@ class VectorizedAssessorModel:
         # if valid_tokens_overwrite use these, else get the valid tokens form the models dict.
         # assume that an empty list of valid tokens will throw an error in the backend call
         valid_tokens = (
-            [self.models[model].get_valid_tokens() for model in self.models]
+            [self.models[model].valid_tokens for model in self.models]
             if any([len(tokens) == 0 for tokens in valid_tokens_overwrite])
             else valid_tokens_overwrite
         )
@@ -79,16 +79,14 @@ class VectorizedAssessorModel:
     def check_simplex_and_transform(self, prob_dict: Dict[str, float], log_name: str) -> Tuple[bool, Dict[str, float]]:
         """
         Check and transform probabilities to ensure they live in the simplex.
-
         Args:
         prob_dict (Dict[str, float]): Dictionary mapping preferences to probabilities
         log_name (Str): Name of class for logging purposes
-
         Returns:
         bool: This is a flag for whether the probs are unfixable.
         Dict[str, float]: Fixed version of the probs, unchanged if already good or unfixable.
         """
-        probs = prob_dict.values()
+        probs = list(prob_dict.values())
 
         # Check if probabilities live in the simplex
         if self.is_in_simplex(probs):
@@ -96,17 +94,17 @@ class VectorizedAssessorModel:
 
         # Check if all elements are zero
         elif all(p == 0 for p in probs):
-            print("Warning: All elements of " + log_name + " probabilities are zero. Returning default transition.")
+            print(f"Warning: All elements of {log_name} probabilities are zero. Returning default transition.")
             return True, prob_dict
 
         # Check for negative elements
         elif any(p < 0 for p in probs):
-            print("Warning: Negative elements found in " + log_name + " probabilities. Returning default transition.")
+            print(f"Warning: Negative elements found in {log_name} probabilities. Returning default transition.")
             return True, prob_dict
 
         # Otherwise, normalize probabilities and log a warning
         else:
-            print("Warning: " + log_name + " probabilities do not sum to 1. Normalizing.")
+            print(f"Warning: {log_name} probabilities do not sum to 1. Normalizing.")
             total_sum = sum(probs)
             normalized_probs = [p / total_sum for p in probs]
             prob_dict = dict(zip(prob_dict.keys(), normalized_probs))

@@ -3,19 +3,21 @@
 ###############################################################
 # PARAMETERS
 
-# Python file to run (should be in `experiments` directory)
-export FILE_TO_RUN="test.py"
-export CONFIG_NAME="dummy_test" # Don't actually need this to exist for test.py
+CONFIG_NAMES="dummy_test"
 
 # SLURM job parameters
-export SLURM_CPUS_PER_TASK=10
-export SLURM_MEM="100gb"
-export SLURM_GPUS="1"
-export NODE_LIST="ddpg.ist.berkeley.edu,dqn.ist.berkeley.edu,gail.ist.berkeley.edu,gan.ist.berkeley.edu,cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu,ppo.ist.berkeley.edu,vae.ist.berkeley.edu" # sinfo -o "%n %G" to see available nodes
-export SLURM_TIME="00:03:00"
+SLURM_CPUS_PER_TASK=1
+SLURM_MEM="1gb"
+SLURM_GPUS="0"
+GPU_TYPE="all" # sinfo -o "%n %G" to see available nodes
+SLURM_TIME="00:00:30"
+SLURM_QOS="high"
 
 ###############################################################
 
-export CURRENT_USER=$(whoami) # Get the current username
-export PROJ_DIR="/nas/ucb/$CURRENT_USER/Influence-benchmark"
-bash $PROJ_DIR/influence_benchmark/experiments/slurm/autocopy_and_sbtach.sh
+# Get the directory of the current script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Loop through each config name and run autocopy_and_sbatch.sh for each one
+for CONFIG_NAME in $CONFIG_NAMES; do
+    bash $SCRIPT_DIR/../autocopy_and_sbatch.sh --config-name "$CONFIG_NAME" --cpus "$SLURM_CPUS_PER_TASK" --mem "$SLURM_MEM" --gpus "$SLURM_GPUS" --gpu-type "$GPU_TYPE" --time "$SLURM_TIME" --qos "$SLURM_QOS"
+done

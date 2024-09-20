@@ -1,10 +1,10 @@
+import torch
 from datasets import load_dataset
 from peft import LoraConfig, TaskType  # type: ignore
 from transformers import AutoModelForCausalLM
 
 
 def setup_dataset_and_model(args, format_dataset, tokenizer):
-
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_r,
@@ -19,7 +19,11 @@ def setup_dataset_and_model(args, format_dataset, tokenizer):
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name)
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_name,
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
+    )
     model.config.use_cache = False
     if getattr(model.config, "pad_token_id", None) is None:
         if "Llama-3.1" in args.model_name:

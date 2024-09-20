@@ -23,7 +23,10 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         Returns:
             A list of selected transitions (strings)
         """
-        valid_tokens_n = [list(state.valid_transitions.keys()) for state in state_n]
+        valid_tokens_n = []
+        for model, state in zip(self.models.values(), state_n):
+            valid_tokens = model.valid_tokens if model.valid_tokens else list(state.valid_transitions.keys())
+            valid_tokens_n.append(valid_tokens)
 
         transition_probs_n = self.get_response(state_n, valid_tokens_overwrite=valid_tokens_n)
         transitions = []
@@ -59,9 +62,16 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         Returns:
             str: The selected transition.
         """
-        transitions, probabilities = zip(*transition_probs.items())
-
         if unfixable_flag:
             return state.default_transition
+
+        transitions, probabilities = zip(*transition_probs.items())
+        # If the transitions are numbers, that means we are using our numerical transition model rather than our binary one
+        # In this case, we compute the expected value and then map it to a probability of taking the "yes" action
+        if transitions[0].isdigit():
+            expected_value = sum([prob * int(trans) for trans, prob in zip(transitions, probabilities)])
+            probability = ((expected_value - 1) / 4) ** 1.4
+            random_value = random.random()
+            return "yes" if random_value < probability else "no"
         else:
-            return random.choices(transitions, weights=probabilities)[0]
+            return random.choices(transitions, weights=probabilities, k=1)[0]

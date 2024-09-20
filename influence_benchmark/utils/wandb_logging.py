@@ -1,36 +1,46 @@
 import html
 import json
-import random
-
-import pandas as pd
-import wandb
 
 from influence_benchmark.stats.preferences_per_iteration import get_traj_stats_all_and_top
-from influence_benchmark.stats.utils_pandas import get_selected_traj_df
 
 
-def get_last_messages(history, turn_idx):
-    if turn_idx == 0:
-        agent_messages = [msg["content"] for msg in history if msg["role"] == "agent"]
-        environment_messages = [msg["content"] for msg in history if msg["role"] == "environment"]
-        return [
-            {"last_agent_message": a_msg, "last_environment_message": e_msg}
-            for a_msg, e_msg in zip(agent_messages, environment_messages)
-        ]
-    else:
-        last_agent_message = next((msg for msg in reversed(history) if msg["role"] == "agent"), None)
-        last_environment_message = next((msg for msg in reversed(history) if msg["role"] == "environment"), None)
-        return [
-            {
-                "last_agent_message": last_agent_message["content"] if last_agent_message else None,
-                "last_environment_message": last_environment_message["content"] if last_environment_message else None,
-            }
-        ]
+def get_initial_messages(history):
+    initial_messages = []
+    turn_messages = {}
+    for i, msg in enumerate(history):
+        role = msg["role"]
+
+        # NOTE: this function assumes that each turn starts with a new environment message
+        if role == "environment" and i != 0:
+            initial_messages.append(turn_messages)
+            turn_messages = {}
+
+        turn_messages[role] = msg["content"]
+
+    initial_messages.append(turn_messages)
+    assert len(initial_messages) >= 1
+    return initial_messages
+
+
+def get_latest_turn_messages(history):
+    # NOTE: this function assumes that each turn starts with a new environment message
+    turn_messages = {}
+
+    for msg in reversed(history):
+        role = msg["role"]
+        turn_messages[role] = msg["content"]
+        if role == "environment":
+            # Once we hit an environment message, we're done, because that prior turn will
+            # have been taken care of by the df row for that turn
+            break
+
+    # Reverse the keys and values
+    return {k: v for k, v in reversed(turn_messages.items())}
 
 
 def format_message_html(role, content, turn):
-    role_color = "#007bff" if role == "agent" else "#28a745"
-    escaped_content = html.escape(content)
+    role_color = "#007bff" if role == "agent" else "#28a745" if role == "environment" else "#ff0000"
+    escaped_content = html.escape(content).replace("\n", "<br>")
     return f"""
     <div style="margin-bottom: 10px;">
         <strong style="color: {role_color};">{role.capitalize()} (turn {turn}):</strong> {escaped_content}
@@ -76,6 +86,9 @@ def format_stats_html(stats):
 
 
 def get_trajs_wandb_html(turns_df_with_traj_rew):
+    """
+    Generate the html to track a single turn of an interaction on wandb
+    """
     trajectories = []
 
     for (env_name, initial_state_id, trajectory_id), group in turns_df_with_traj_rew.groupby(
@@ -90,14 +103,20 @@ def get_trajs_wandb_html(turns_df_with_traj_rew):
         """
 
         for turn_idx, (_, row) in enumerate(group.sort_values("turn").iterrows()):
-            last_turn_messages = get_last_messages(row["history"], turn_idx)
+            if turn_idx == 0:
+                initial_history = get_initial_messages(row["history"])
 
-            if len(last_turn_messages) > 1:
-                for message in last_turn_messages[:-1]:
-                    trajectory_html += f"""
-                    {format_message_html("environment", message['last_environment_message'], 0)}
-                    {format_message_html("agent", message['last_agent_message'], 0)}
-                    """
+                # All but the last set of messages will not have associated preference/influence scores
+                num_setup_turns = len(initial_history[:-1])
+                for idx, _turn_idx in enumerate(range(-num_setup_turns, 0)):
+                    messages = initial_history[idx]
+                    formatted_messages = [format_message_html(role, msg, _turn_idx) for role, msg in messages.items()]
+                    trajectory_html += "".join(formatted_messages)
+
+                # For the final turn, we want to display the preference and influence scores
+                last_msgs_dict = initial_history[-1]
+            else:
+                last_msgs_dict = get_latest_turn_messages(row["history"])
 
             stats = {
                 "Preferences": row["preferences"],
@@ -107,11 +126,9 @@ def get_trajs_wandb_html(turns_df_with_traj_rew):
                 "Timestep Influence Level": row["timestep_influence_level"],
             }
 
-            trajectory_html += f"""
-            {format_stats_html(stats)}
-            {format_message_html("environment", last_turn_messages[-1]['last_environment_message'], row['turn'])}
-            {format_message_html("agent", last_turn_messages[-1]['last_agent_message'], row['turn'])}
-            """
+            trajectory_html += format_stats_html(stats)
+            formatted_messages = [format_message_html(role, msg, turn_idx) for role, msg in last_msgs_dict.items()]
+            trajectory_html += "".join(formatted_messages)
 
         trajectories.append(
             {
@@ -136,79 +153,3 @@ def get_env_stats(traj_df, top_traj_df):
         env_top_traj_df = top_traj_df[top_traj_df["env_name"] == env_name]
         env_stats[env_name] = get_traj_stats_all_and_top(env_traj_df, env_top_traj_df)
     return env_stats
-
-
-def print_stats_and_log_to_wandb(turns_df, traj_df, iteration_step, top_n, trajs_to_log=50, log_to_wandb=False):
-    # AGGREGATE STATS
-    top_traj_df = get_selected_traj_df(traj_df, num_chosen_trajs=top_n, func=pd.DataFrame.nlargest)
-    aggreg_stats = get_traj_stats_all_and_top(traj_df, top_traj_df)
-
-    stats_to_log = {
-        "Avg reward": aggreg_stats["rew_avg_all_trajs"],
-        "Avg reward (top n)": aggreg_stats["rew_avg_top_trajs"],
-        "Avg influence": aggreg_stats["infl_avg_all_trajs"],
-        "Avg influence (top n)": aggreg_stats["infl_avg_top_trajs"],
-        "Avg conversation length": aggreg_stats["length_avg_all_trajs"],
-        "Avg conversation length (top n)": aggreg_stats["length_avg_top_trajs"],
-        "Iteration": iteration_step,
-    }
-
-    # TODO: handle this better (maybe print too?)
-    for stat in aggreg_stats:
-        if "percentage" in stat:
-            stats_to_log[stat] = aggreg_stats[stat]
-
-    print(
-        "====================\n"
-        f"ITERATION {iteration_step} STATS:\n"
-        f"\tAvg reward:\t{aggreg_stats['rew_avg_all_trajs']:.2f}  ({aggreg_stats['rew_stderr_all_trajs']:.2f})\t"
-        f"Avg influence:\t{aggreg_stats['infl_avg_all_trajs']:.2f} ({aggreg_stats['infl_stderr_all_trajs']:.2f})\t"
-        f"Avg reward (top n):\t{aggreg_stats['rew_avg_top_trajs']:.2f} ({aggreg_stats['rew_stderr_top_trajs']:.2f})\t"
-        f"Avg influence (top n):\t{aggreg_stats['infl_avg_top_trajs']:.2f} ({aggreg_stats['infl_stderr_top_trajs']:.2f})\n"
-    )
-    if log_to_wandb:
-        wandb.log(stats_to_log, commit=True)
-
-    # ENV-SPECIFIC STATS
-    env_stats = get_env_stats(traj_df, top_traj_df)
-    for env_name, env_stats in env_stats.items():
-        env_avg_rew = env_stats["rew_avg_all_trajs"]
-        env_stderr_rew = env_stats["rew_stderr_all_trajs"]
-        env_avg_infl = env_stats["infl_avg_all_trajs"]
-        env_stderr_infl = env_stats["infl_stderr_all_trajs"]
-
-        env_stats_to_log = {
-            f"Avg reward ({env_name})": env_avg_rew,
-            f"Stderr reward ({env_name})": env_stderr_rew,
-            f"Avg influence ({env_name})": env_avg_infl,
-            f"Stderr influence ({env_name})": env_stderr_infl,
-            "Iteration": iteration_step,
-        }
-
-        print(
-            f"Env {env_name}:\n\t"
-            f"Avg reward: {env_avg_rew:.2f} ({env_stderr_rew:.2f})\t"
-            f"Avg influence: {env_avg_infl:.2f} ({env_stderr_infl:.2f})\t",
-            end="",
-        )
-
-        for stat in env_stats:
-            if "percentage" in stat and "top" not in stat:
-                env_stats_to_log[f"{stat} ({env_name})"] = env_stats[stat]
-                # TODO: handle the following better (maybe have nested dicts upstream)
-                print(f"{stat[:13]}: {env_stats[stat]:.2f}\t", end="")
-
-        print()
-        if log_to_wandb:
-            wandb.log(env_stats_to_log)
-
-    print("====================")
-
-    if log_to_wandb:
-        trajectories = get_trajs_wandb_html(turns_df)
-        # Shuffle the trajectories in the df
-        random.shuffle(trajectories)
-        for trajectory in trajectories[:trajs_to_log]:
-            wandb.log(
-                {f"Iteration {iteration_step}, Env: {trajectory['env_name']}": wandb.Html(trajectory["html_content"])}
-            )

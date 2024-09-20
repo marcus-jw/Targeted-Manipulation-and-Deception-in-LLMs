@@ -7,8 +7,9 @@ data as pandas dataframes at different levels of granularity
 (turns, trajectories, initial_states).
 """
 
+import math
 from pathlib import Path
-from typing import Dict, Union, cast
+from typing import Callable, Dict, Optional, Union
 
 import pandas as pd
 
@@ -18,7 +19,7 @@ def calculate_expectation(score_distribution: Dict[str, float]) -> float:
     return sum(float(score) * probability for score, probability in score_distribution.items())
 
 
-def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
+def load_turns_df_from_iteration_path(trajectory_path: Path) -> pd.DataFrame:
     # Read all trajectories from files
     turns_df = pd.concat([pd.read_json(file, lines=True) for file in trajectory_path.glob("[0-9]*.jsonl")])
 
@@ -29,6 +30,13 @@ def load_turns_df_from_traj_path(trajectory_path: Path) -> pd.DataFrame:
     else:  # for backwards compatibility
         turns_df["timestep_influence_level"] = 0
     return turns_df
+
+
+def get_last_turn_df(turns_df: pd.DataFrame) -> pd.DataFrame:
+    """This function selects the rows in which the 'turn' was largest for each trajectory."""
+    return turns_df[
+        turns_df["turn"] == turns_df.groupby(["env_name", "initial_state_id", "trajectory_id"])["turn"].transform("max")
+    ]
 
 
 def group_turns_df_to_traj_df_final(turns_df: pd.DataFrame) -> pd.DataFrame:
@@ -115,25 +123,69 @@ def get_selected_turns_df(turns_df: pd.DataFrame, selected_traj_df: pd.DataFrame
     Returns:
     Selected turns_df with only those turns corresponding to the trajs in selected_traj_df
     """
-    return pd.merge(turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"])
-
-
-def get_selected_traj_df(traj_df: pd.DataFrame, num_chosen_trajs: int, func) -> pd.DataFrame:
-    """
-    This function filters the traj_df to choose the top num_chosen_trajs entries
-    according to the criteria from func.
-    """
-    # Select top/bottom N trajectories for each env_name and initial_state_id, reduces to num_envs * num_initial_states rows
-    selected_traj_df = (
-        traj_df.groupby(["env_name", "initial_state_id"])
-        .apply(
-            lambda x: x.assign(
-                n_trajectories=len(x),
-            ).pipe(func, num_chosen_trajs, "traj_rew")
-        )
-        .reset_index(drop=True)
+    # The first time this function is run (e.g. in training), columns like traj_rew are merged from traj_df into the turns_df.
+    # Hence, when this function is run a second time, these columns are duplicated.
+    # For all duplicated columns, we only keep the traj_df version.
+    merged_df = pd.merge(
+        turns_df, selected_traj_df, on=["env_name", "initial_state_id", "trajectory_id"], suffixes=("_turnsdf", "")
     )
-    return cast(pd.DataFrame, selected_traj_df)
+    merged_df = merged_df.drop(merged_df.filter(regex="_turnsdf$").columns, axis=1)
+    return merged_df
+
+
+def get_selected_traj_df(
+    traj_df: pd.DataFrame,
+    fn: Callable,
+    level: str,
+    n_chosen_trajs: Optional[int] = None,
+    frac_chosen_trajs: Optional[float] = None,
+    verbose: bool = True,
+    veto_level: Optional[float] = None,
+) -> pd.DataFrame:
+    assert (n_chosen_trajs is None) != (frac_chosen_trajs is None)
+    assert level in ["subenv", "env", "envclass"], f"Invalid level: {level}"
+    # Define grouping columns based on the level of selection
+    level_to_group_by = {
+        "subenv": ["env_name", "initial_state_id"],  # Select trajectories within each subenvironment / initial state
+        "env": ["env_name"],  # Select trajectories within each environment
+        "envclass": None,  # Select trajectories within each environment class
+    }
+
+    if veto_level is not None:
+        traj_df = traj_df[traj_df["traj_infl"] < veto_level]
+
+    # Get the kind of grouping we want to apply the function to
+    group_by_cols = level_to_group_by[level]
+    grouped_df = traj_df.groupby(group_by_cols) if group_by_cols else traj_df.groupby(lambda _: True)
+
+    # Compute the number of trajectories to select if not already specified
+    if n_chosen_trajs is None:
+        # Check if all groups have the same number of items
+        group_sizes = grouped_df.size()
+
+        # Compute the number of trajectories to select for each group, rounding up
+        n_chosen_trajs_per_group = (group_sizes.astype(float) * frac_chosen_trajs).apply(math.ceil)  # type: ignore
+
+        if n_chosen_trajs_per_group.nunique() != 1 and veto_level is not None:  # type: ignore
+            # This shouldn't really happen unless you're using veto_level.
+            # It may happen if running on RNN and someone kills one of your traj generation threads.
+            # Currently set up to just print and move on. NOTE: This should never happen on SLURM.
+            print(
+                "WARNING: Not all groups have the same number of items. This shouldn't happen unless one of your GPUs died!"
+            )
+
+        # Select trajectories for each group based on the fn and the number of trajectories to select for that group
+        selected_traj_df = grouped_df.apply(
+            lambda x: x.pipe(fn, n_chosen_trajs_per_group[x.name], "traj_rew")
+        ).reset_index(drop=True)
+
+        if verbose:
+            print(f"Selected {len(selected_traj_df)} trajectories")
+    else:
+        # Apply the function to the grouped dataframe
+        selected_traj_df = grouped_df.apply(lambda x: x.pipe(fn, n_chosen_trajs, "traj_rew")).reset_index(drop=True)
+
+    return selected_traj_df
 
 
 def get_state_count_df(traj_df: pd.DataFrame) -> pd.DataFrame:

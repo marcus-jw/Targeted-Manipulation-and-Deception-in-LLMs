@@ -51,7 +51,7 @@ def train_sft():
     sft_config.dataset_text_field = "text"
     sft_config.learning_rate = sft_config.learning_rate * (args.across_iter_lr_mult_factor**args.iteration)
     print(
-        "Learning Rate: {sft_config.learning_rate} (decay rate {args.across_iter_lr_mult_factor}, iteration {args.iteration})"
+        f"Learning Rate: {sft_config.learning_rate} (decay rate {args.across_iter_lr_mult_factor}, iteration {args.iteration})"
     )
     print("LoRA path: ", args.lora_path)
     if args.lora_path == "None":  # Sometimes the value is "None" instead of None
@@ -73,34 +73,37 @@ def train_sft():
 
     user_template = "<|start_header_id|>user<|end_header_id|>"
     assistant_template = "<|start_header_id|>assistant<|end_header_id|>"
+    tool_call_template = "<|start_header_id|>function_call<|end_header_id|>"
+    tool_response_template = "<|start_header_id|>ipython<|end_header_id|>"
 
     collator = DataCollatorMaskingStaticConversation(
         user_template=user_template,
         assistant_template=assistant_template,
+        tool_call_template=tool_call_template,
+        tool_response_template=tool_response_template,
         tokenizer=tokenizer,
         mlm=False,
     )
 
-    if args.lora_path is not None:
-        model.load_adapter(args.lora_path, peft_config=peft_config)
-
-    print_trainable_parameters(model)
-
-    # Here the model already has the Lora applied, so don't apply another Lora
-    peft_config_to_apply = peft_config if (args.lora_path is None) else None
+    # # Here the model already has the Lora applied, so don't apply another Lora
+    # peft_config_to_apply = peft_config if (args.lora_path is None) else None
 
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=sft_config,
-        peft_config=peft_config_to_apply,
+        peft_config=peft_config,
         data_collator=collator,
         max_seq_length=args.max_length,
     )
     # Remove the columns that are not needed or it will cause errors, as training will try to cast these strings to tensors
     trainer.train_dataset = trainer.train_dataset.remove_columns(["text", "messages"])  # type: ignore
 
+    if args.lora_path is not None:
+        model.load_adapter(args.lora_path, peft_config=peft_config)
+
+    print_trainable_parameters(trainer.model)
     print("Training")
     # Train the model
     trainer.train()  # type: ignore

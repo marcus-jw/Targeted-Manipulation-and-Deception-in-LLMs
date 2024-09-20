@@ -8,10 +8,10 @@ def pytest_runtest_setup(item):
         pytest.skip("Skipping local-only test")
 
 
-def pytest_addoption(parser):
-    parser.addoption("--gpus", action="store", default=None, help="A custom option to be used in tests")
+# def pytest_addoption(parser):
+#     parser.addoption("--gpus", action="store", default=None, help="A custom option to be used in tests")
 
 
-@pytest.fixture
-def gpus(request):
-    return request.config.getoption("--gpus")
+# @pytest.fixture
+# def gpus(request):
+#     return request.config.getoption("--gpus")

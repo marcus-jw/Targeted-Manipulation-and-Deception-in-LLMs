@@ -6,11 +6,11 @@ from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.environment import Environment
 from influence_benchmark.environment.state import State
 from influence_benchmark.environment_vectorized.character_vectorized import VectorizedCharacter
-from influence_benchmark.environment_vectorized.environment_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.influence_detector_model_vectorized import (
     VectorizedInfluenceDetectorModel,
 )
 from influence_benchmark.environment_vectorized.preference_model_vectorized import VectorizedPreferenceModel
+from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
 from influence_benchmark.environment_vectorized.transition_model_vectorized import VectorizedTransitionModel
 
 
@@ -21,7 +21,7 @@ class VectorizedEnvironment:
 
     def __init__(
         self,
-        backend: Backend,
+        backends: Dict[str, Backend],
         max_envs: int,
         shared_queue: TrajectoryQueue,
         progress,
@@ -35,9 +35,9 @@ class VectorizedEnvironment:
             backend (Backend): The backend to use for computations.
         """
         self.max_envs = max_envs
-        self.backend = backend
+        self.backends = backends
         self.environments = {}
-        self.current_subenv_keys_and_traj_ids = {}
+        self.current_traj_ids = {}
         self.shared_queue = shared_queue
         self.progress = progress
         self.pm_length_penalty = pm_length_penalty
@@ -49,18 +49,24 @@ class VectorizedEnvironment:
         Set up the vectorized models (transition, preference, and character) for the environments.
         """
         self.preference_model_vectorized = VectorizedPreferenceModel(
-            self.backend, self.max_envs, self.pm_length_penalty
+            self.backends.get("env-preference", self.backends["env"]), self.max_envs, self.pm_length_penalty
         )
-        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(self.backend, self.max_envs)
-        self.transition_model_vectorized = VectorizedTransitionModel(self.backend, self.max_envs)
-        self.character_vectorized = VectorizedCharacter(self.backend, self.max_envs)
+        self.influence_detector_model_vectorized = VectorizedInfluenceDetectorModel(
+            self.backends.get("env-influence", self.backends["env"]), self.max_envs
+        )
+        self.transition_model_vectorized = VectorizedTransitionModel(
+            self.backends.get("env-transition", self.backends["env"]), self.max_envs
+        )
+        self.character_vectorized = VectorizedCharacter(
+            self.backends.get("env-character", self.backends["env"]), self.max_envs
+        )
 
         for i in range(self.max_envs):
-            subenv_models, subenv_key = self.shared_queue.get()
+            subenv_models = self.shared_queue.get()
             if subenv_models is None:
                 print("WARNING: you're using too many GPUs for the number of trajectories you're generating!")
                 continue
-            self.current_subenv_keys_and_traj_ids[i] = (subenv_key, subenv_models["traj_id"])
+            self.current_traj_ids[i] = subenv_models["traj_id"]
             self.environments[i] = subenv_models["environment"]
             self.preference_model_vectorized.add_model(subenv_models["preference_model"], i)
             self.influence_detector_model_vectorized.add_model(subenv_models["influence_detector_model"], i)
@@ -88,8 +94,7 @@ class VectorizedEnvironment:
 
     def replace_environment(self, env_id: int):
         self.progress.value += 1
-        current_subenv_key, _ = self.current_subenv_keys_and_traj_ids[env_id]
-        subenv_models, new_subenv_key = self.shared_queue.get(current_subenv_key)
+        subenv_models = self.shared_queue.get()
         if subenv_models is None:
             # This means that there are no more environments to run, so we can clean things up and clear GPU memory
             # NOTE: maybe we should remove this, as it increases chance of other people getting GPU memory and breaking our runs
@@ -101,7 +106,7 @@ class VectorizedEnvironment:
             self.influence_detector_model_vectorized.replace_model(subenv_models["influence_detector_model"], env_id)
             self.transition_model_vectorized.replace_model(subenv_models["transition_model"], env_id)
             self.character_vectorized.replace_model(subenv_models["character"], env_id)
-            self.current_subenv_keys_and_traj_ids[env_id] = (new_subenv_key, subenv_models["traj_id"])
+            self.current_traj_ids[env_id] = subenv_models["traj_id"]
 
     def get_envs(self) -> List[Environment]:
         keys = sorted(self.environments.keys())
@@ -176,14 +181,14 @@ class VectorizedEnvironment:
         while self.get_num_envs() > 0:
             observations = self.get_observation_vec()
             actions = agent.get_action_vec(observations)
-            next_states, _ = self.step_vec(actions)
+            _ = self.step_vec(actions)
 
             for i, env in self.environments.items():
                 env_trajectories.append(
                     {
                         "env_name": env.env_name,
-                        "initial_state_id": env.config["history_id"],
-                        "trajectory_id": self.current_subenv_keys_and_traj_ids[i][1],
+                        "initial_state_id": env.history_id,
+                        "trajectory_id": self.current_traj_ids[i],
                         "turn": env.current_state.turns,
                         "agent_system_prompt": agent.get_system_prompt(env.current_state),
                         "history": env.current_state.history[:-1],

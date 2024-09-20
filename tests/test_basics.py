@@ -10,6 +10,7 @@ from influence_benchmark.config.experiment_config import BaseExperimentConfig
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.experiments.experiment import kickoff_experiment
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR, PROJECT_ROOT
+from influence_benchmark.utils.utils import find_freest_gpus
 
 
 def is_running_locally():
@@ -17,9 +18,9 @@ def is_running_locally():
 
 
 def test_experiment_configs_not_missing_params():
-    for config_path in EXPERIMENT_CONFIGS_DIR.glob("*.yaml"):
+    for config_path in EXPERIMENT_CONFIGS_DIR.rglob("*.yaml"):
         print(config_path)
-        BaseExperimentConfig.load(str(config_path))
+        BaseExperimentConfig.load(str(config_path.name))
 
 
 def test_environment_configs_not_missing_params():
@@ -60,14 +61,18 @@ def test_autocopy_and_sbatch():
 
 @pytest.mark.timeout(300)
 @pytest.mark.local_only
-def test_kto_run_experiment(gpus):
-    kickoff_experiment("KTO_test.yaml", gpus)
+def test_kto_run_experiment():
+    config = BaseExperimentConfig.load("KTO_test.yaml", gpu_subset=find_freest_gpus(1))
+    timestamp = datetime.now().strftime("%m-%d_%H-%M")
+    kickoff_experiment(config, timestamp)
 
 
 @pytest.mark.timeout(300)
 @pytest.mark.local_only
-def test_ei_run_experiment(gpus):
-    kickoff_experiment("EI_test.yaml", gpus)
+def test_ei_run_experiment():
+    config = BaseExperimentConfig.load("EI_test.yaml", gpu_subset=find_freest_gpus(1))
+    timestamp = datetime.now().strftime("%m-%d_%H-%M")
+    kickoff_experiment(config, timestamp)
 
 
 # TODO: test that all the env configs are valid and master configs are valid

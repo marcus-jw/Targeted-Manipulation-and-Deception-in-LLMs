@@ -2,9 +2,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-import torch
-
-from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
+from influence_benchmark.config.accelerate_config import ACCELERATE_CONFIG_MAPPING, AccelerateConfigDeepSpeed
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
@@ -23,57 +21,85 @@ class BaseExperimentConfig:
 
     # Env args
     env_class: str
+    env_fractions: Optional[Dict[str, float]]
     envs: Optional[List[str]]
     max_turns: int
     num_envs_per_device: int
-    max_subenvs_per_env: int
+
+    subenv_choice_scheme: str
     pm_length_penalty: Optional[float]
+    traj_selection_level: str
 
     # Baseiteration args
-    num_gen_trajs_per_initial_state: int
-    top_n_trajs_per_initial_state: int
+    n_subenvs_to_sample_per_env: int  # Number of initial states to use for each iteration of training, per environment
+    n_trajs_to_sample_per_subenv: int  # Should generally be 1 unless traj_selection_level != subenv
+    frac_selected_trajs: float
     iterations: int
     log_to_wandb: bool
     final_reward: bool
 
+    # Veto args
+    veto_level: Optional[float]
+    allow_negative_training_on_veto: bool
+    allow_id_to_see_tool_calls: bool
+
     # Training args
-    agent_model_name: str
-    env_model_name: str
+    model_names: Dict[str, str]
+    separate_agent_env_devices: bool
+    inference_quantization: Optional[str]
 
     # Debugging args
     seed: Optional[int]
     override_initial_traj_path: Optional[str]
 
-    training_arg_keys = ["agent_model_name", "env_model_name"]
+    training_arg_keys = ["model_names"]
+
+    def __post_init__(self):
+        # Convert frac_selected_trajs to a float if it's a string representing a fraction
+        if isinstance(self.frac_selected_trajs, str):
+            assert "/" in self.frac_selected_trajs, "Frac selected trajs should be a string of the form 'n/m'"
+            terms = [float(x) for x in self.frac_selected_trajs.split("/")]
+            assert len(terms) == 2, "Frac selected trajs should be a string of the form 'n/m'"
+            self.frac_selected_trajs = terms[0] / terms[1]
 
     @classmethod
-    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None) -> T:
-        config_path = str(EXPERIMENT_CONFIGS_DIR / config_name)
+    def load(cls: Type[T], config_name: str, gpu_subset: Optional[List[int]] = None, verbose: bool = True) -> T:
+        # Find the config file in the experiment_configs directory, searching for it in subdirectories
+        matching_configs = list(EXPERIMENT_CONFIGS_DIR.rglob(config_name))
+        assert len(matching_configs) > 0, f"No matching config file for {config_name}"
+        assert len(matching_configs) < 2, f"More than one matching config file for {config_name}: {matching_configs}"
 
+        config_path = matching_configs[0]
         config_dict = load_yaml(config_path)
 
         if "parent_config_to_override" in config_dict:
             # If there is a parent config defined, we should basically use that and only
             # override the keys that are in the current config
             parent_config_name = config_dict["parent_config_to_override"]
-            parent_config_path = str(EXPERIMENT_CONFIGS_DIR / parent_config_name)
-            parent_config = load_yaml(parent_config_path)
+            print(f"To set up config {config_name}, going to first load parent config {parent_config_name}")
+            parent_config = BaseExperimentConfig.load(parent_config_name, gpu_subset=gpu_subset, verbose=False)
+            parent_config_dict = asdict(parent_config)
             del config_dict["parent_config_to_override"]
-            print(f"Using base config {parent_config_name} from {config_name}")
+            print(f"Using params from {config_name} to override config params from {parent_config_name}")
             for k, v in config_dict.items():
-                print(f"\tOverriding parameter {k}: \t{parent_config[k]} → {v}")
-            parent_config.update(config_dict)
-            config_dict = parent_config
+                print(f"\tOverriding parameter {k}: \t{parent_config_dict.get(k, None)} → {v}")
+            parent_config_dict.update(config_dict)
+            config_dict = parent_config_dict
 
         if gpu_subset is not None:
-            print(f"GPU indices to run on: {gpu_subset}")
+            if verbose:
+                print(f"GPU indices to run on: {gpu_subset}")
             config_dict["devices"] = gpu_subset
         else:
+            import torch
+
             visible_devices = list(range(torch.cuda.device_count()))
-            print(f"Using all available CUDA devices {visible_devices}")
+            if verbose:
+                print(f"Using all available CUDA devices {visible_devices}")
             config_dict["devices"] = visible_devices
 
-        print(f"Creating config from file {config_name}")
+        if verbose:
+            print(f"Creating config from file {config_name}")
         return cls.create_config(config_dict)
 
     @classmethod
@@ -106,14 +132,27 @@ class BaseExperimentConfig:
         missing_keys = all_fields - set(config_dict.keys())
         missing_keys = missing_keys - {"accelerate_config", "default_config_path"}
         if missing_keys:
-            raise ValueError(f"Missing configuration parameters: {', '.join(missing_keys)}")
+            raise ValueError(
+                f"Missing configuration parameters for {config_dict['run_name']}: {', '.join(missing_keys)}"
+            )
 
-        # Setting specific issues
+        # Validating that individual attributes make sense
         if config_dict["override_initial_traj_path"] is not None:
             path = Path(config_dict["override_initial_traj_path"])
             # Check that the path is a jsonl file
             if not path.suffix == ".jsonl":
                 raise ValueError(f"Override initial traj path should be a selected trajectories jsonl file: {path}")
+
+        if config_dict["subenv_choice_scheme"] not in ["sequential", "random", "fixed"]:
+            raise ValueError(
+                f"Subenv choice scheme should be either 'sequential', 'random', or 'fixed': {config_dict['subenv_choice_scheme']}"
+            )
+
+        assert sum(config_dict["env_fractions"].values()) == 1, "Env fractions should sum to 1"
+        # if config_dict["traj_selection_level"] != "subenv":
+        #     assert (
+        #         config_dict["n_trajs_to_sample_per_subenv"] == 1
+        #     ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
 
     @property
     def env_args(self):
@@ -121,9 +160,12 @@ class BaseExperimentConfig:
             "env_class": self.env_class,
             "envs": self.envs,
             "max_turns": self.max_turns,
-            "print": False,
             "num_envs_per_device": self.num_envs_per_device,
-            "max_subenvs_per_env": self.max_subenvs_per_env,
+            "n_subenvs_to_sample_per_env": self.n_subenvs_to_sample_per_env,
+            "n_trajs_to_sample_per_subenv": self.n_trajs_to_sample_per_subenv,
+            "subenv_choice_scheme": self.subenv_choice_scheme,
+            "env_fractions": self.env_fractions,
+            "allow_id_to_see_tool_calls": self.allow_id_to_see_tool_calls,
         }
 
     @property
@@ -137,7 +179,6 @@ class LocalTrainingConfig(BaseExperimentConfig):
     # Training args
     per_device_train_batch_size: int
     num_train_epochs: int
-    gradient_accumulation_steps: int
     gradient_checkpointing: bool
     learning_rate: float
     report_to: str
@@ -149,16 +190,26 @@ class LocalTrainingConfig(BaseExperimentConfig):
     lora_r: int
     lora_alpha: int
     lora_dropout: float
+    max_grad_norm: float
 
     accelerate_config_type: str
+    effective_batch_size: int
 
     def __post_init__(self):
-        self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
+        super().__post_init__()
+        # NOTE: These shouldn't be necessary for most local training, but if one is doing some weird mixed training (GPT veto model), necessary to have these set
+        self.max_tokens_per_minute = 500_000
+        self.max_requests_per_minute = 5_000
+        self.accelerate_config = ACCELERATE_CONFIG_MAPPING[self.accelerate_config_type]()
         print(f"Using {self.accelerate_config_type} Accelerate config")
+
+        if "DeepSpeed" in self.accelerate_config_type:
+            assert isinstance(self.accelerate_config, AccelerateConfigDeepSpeed)
+            self.accelerate_config.set_gradient_clipping(self.max_grad_norm)
+
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",
             "num_train_epochs",
-            "gradient_accumulation_steps",
             "gradient_checkpointing",
             "learning_rate",
             "report_to",
@@ -170,8 +221,12 @@ class LocalTrainingConfig(BaseExperimentConfig):
             "lora_r",
             "lora_alpha",
             "lora_dropout",
+            "max_grad_norm",
         ]
         self.accelerate_config.set_gpu_ids(self.devices)
+        self.accelerate_config.update_gradient_accumulation_steps(
+            self.effective_batch_size, self.per_device_train_batch_size
+        )
 
     @classmethod
     def _validate_config_keys(cls: Type[T], config_dict: Dict[str, Any]):
@@ -188,6 +243,18 @@ class OpenAIExpertIterationConfig(BaseExperimentConfig):
 
     batch_size: int
     n_train_epochs: int
+    learning_rate_multiplier: float
+
+    max_tokens_per_minute: int
+    max_requests_per_minute: int
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.training_arg_keys = self.training_arg_keys + [
+            "batch_size",
+            "n_train_epochs",
+            "learning_rate_multiplier",
+        ]
 
 
 @dataclass

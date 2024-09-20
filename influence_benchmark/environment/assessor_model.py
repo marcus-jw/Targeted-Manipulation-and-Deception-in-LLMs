@@ -1,67 +1,68 @@
-from typing import List
+from typing import List, Optional
 
 
 class AssessorModel:
-    def __init__(self, config: dict):
-        self.config = config
+    def __init__(
+        self,
+        system_prompt: str,
+        prompt_suffix: str,
+        allow_to_see_tool_calls: bool,
+        perspective: Optional[str] = None,
+        valid_tokens: Optional[tuple] = None,
+        **kwargs,
+    ):
+        self.system_prompt = system_prompt
+        self.prompt_suffix = prompt_suffix
+        self.allow_to_see_tool_calls = allow_to_see_tool_calls
+        self.valid_tokens = valid_tokens if valid_tokens is not None else ()
+        self.perspective = perspective
 
-    def get_valid_tokens(self):
-        return self.config.get("valid_tokens", [])
+        if kwargs:
+            print(f"WARNING: {kwargs} not used in AssessorModel class")
 
     def prepare_messages(self, state) -> List[dict]:
-        perspective = self.config.get("perspective", "Third_Person")
+        assert any(message["role"] == "environment" for message in state.history), "No user message in history"
+        assert any(message["role"] == "agent" for message in state.history), "No agent message in history"
+        assert state.history[-1]["role"] in ["agent", "environment_system"], "Last message should be from agent or sys"
 
-        action = state.history[-1]["content"]
-
-        assert state.history[-1]["role"] in [
-            "agent",
-            "environment_system",
-        ], "Last message should be from the agent or system"
-
-        if perspective == "Third_Person":
-            # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
-            # Importantly, when we can give feedback from the third person pespective,
-            # we still have the choice of whether the feedback is given putting the model into the shoes of the first or third person.
-            history = []
-
-            for message in state.history[:-1]:
-                if message["role"] == "agent":
-                    history.append(f"{state.variables['agent_name']}: {message['content']}")
-                elif message["role"] == "environment":
-                    history.append(f"{state.variables[self.config['env_char_label']]}: {message['content']}")
-
-            conversation_history = "\n\n".join(history)
-
-            if len(conversation_history) > 0:
-                prompt = (
-                    f"The conversation history is:\n{conversation_history}"
-                    f"The latest message was from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['prompt_suffix']}"
-                )
-            else:
-                prompt = f"The first message is from {state.variables['agent_name']} and says:\n{state.variables['agent_name']}: {action}\n{self.config['prompt_suffix']}"
-
-            messages = [
-                {"role": "system", "content": self.config["system_prompt"].format(**state.variables).strip()},
-                {"role": "user", "content": prompt},
+        # We don't want to give feedback on the latest system messages. System messages can only happen after an agent message so this is safe.
+        conversation_history = (
+            state.history[:-1] if state.history[-1]["role"] == "environment_system" else state.history
+        )
+        if self.allow_to_see_tool_calls:
+            filtered_conversation_history = conversation_history
+        else:
+            filtered_conversation_history = [
+                message for message in conversation_history if message["role"] not in ["tool_call", "tool_response"]
             ]
-        elif perspective == "First_Person":
-            # If feedback is given in the first person perspective, we need to make the model believe it actually had this conversation
-            messages = [{"role": "system", "content": self.config["system_prompt"].format(**state.variables).strip()}]
+        if self.perspective == "Third_Person" or self.perspective is None:
+            # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
+            task_prompt = self.system_prompt.format_map(state.format_vars).strip()
 
-            for message in state.history[:-1]:
-                if message["role"] == "agent":
-                    messages.append({"role": "user", "content": message["content"]})
-                elif message["role"] == "environment":
-                    messages.append({"role": "assistant", "content": message["content"]})
-                elif message["role"] == "environment_system":
-                    messages.append({"role": "user", "content": message["content"]})
-                elif message["role"] == "tool_use" or message["role"] == "tool_response":
-                    pass
-                else:
-                    raise ValueError(f"Invalid role {message['role']}")
+            context_prompt = "The conversation history is:\n\n"
+            role_to_tag = {
+                "agent": state.format_vars["agent_name"],
+                "environment": "user",
+                "environment_system": "system",
+                "tool_call": "tool_call",
+                "tool_response": "tool_response",
+            }
+            for message in filtered_conversation_history:
+                context_prompt += wrap_between_tags(message["content"], role_to_tag[message["role"]])
+                context_prompt += "\n\n"
+            context_prompt += self.prompt_suffix
 
-            messages.append({"role": "user", "content": action + "\n\n" + self.config["prompt_suffix"]})
+            messages_out = [
+                {"role": "system", "content": task_prompt},
+                {"role": "user", "content": context_prompt},
+            ]
+        elif self.perspective == "First_Person":
+            raise NotImplementedError("First person perspective not implemented")
         else:
             raise ValueError("Invalid perspective")
 
-        return messages
+        return messages_out
+
+
+def wrap_between_tags(text, tag_name):
+    return f"<{tag_name}>: {text}</{tag_name}>"
