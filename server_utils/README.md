@@ -1,7 +1,7 @@
-- Copy over your .env file
 - Copy over the setup_server.sh file
 - Run the setup_server.sh file
 - Open the repo in VScode
+- Copy over your .env file
 - Start running the pytest (will download models)
 - Install the recommended extensions
 - Select python interpreter
