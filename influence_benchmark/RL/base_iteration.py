@@ -1,19 +1,14 @@
-import json
-import multiprocessing as mp
 import os
 import shutil
 import subprocess
 import time
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import wandb
 import yaml
-from tqdm import tqdm
 
-from influence_benchmark.agent.agent import Agent
 from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.config.accelerate_config import (
     AccelerateConfig,
@@ -21,11 +16,8 @@ from influence_benchmark.config.accelerate_config import (
     AccelerateConfigFSDP,
 )
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
-from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
 from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
-from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import (
     get_best_trajs_df,
     get_traj_stats_all_and_top,
@@ -33,7 +25,7 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.stats.utils_pandas import get_selected_turns_df
-from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
+from influence_benchmark.utils.utils import is_gpt_model
 from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wandb_html
 
 
@@ -63,6 +55,7 @@ class BaseIteration:
         separate_agent_env_devices: bool = False,
         inference_quantization: Optional[str] = None,
     ):
+        print("We are in the updated file.")
         devices = ["cuda:" + str(id) for id in (devices or accelerate_config.gpu_ids) if id != ","]  # type: ignore
         self.override_initial_traj_path = override_initial_traj_path
 
