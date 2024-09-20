@@ -5,10 +5,16 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from influence_benchmark.backend.openai_backend import OpenAIBackend
+from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import metrics_by_run
+from influence_benchmark.root import PROJECT_ROOT
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
+
+TRAJ_PATH = PROJECT_DATA / "trajectories"
+PICKLE_SAVE_PATH = PROJECT_ROOT / "../" / "notebooks" / "data_for_figures"
+PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
 
 def evaluate_single_run_gpt(
@@ -17,11 +23,8 @@ def evaluate_single_run_gpt(
     env_config_path: Path,
     max_trajs_per_env: int,
     max_iter: Optional[int],
-    run_dir_prefix: Path,
 ):
-    # Note that the reason we load separate backends within the processes is because we
-    # otherwise get a pickling error when trying to parallelize across runs.
-    run_dir = run_dir_prefix / run
+    run_dir = TRAJ_PATH / run
     metrics = metrics_by_run(run)
     print(f"Evaluating run {run} with metrics {metrics}.")
 
@@ -40,19 +43,18 @@ def evaluate_single_run_gpt(
     results_df = evaluator.evaluate_run(max_iter=max_iter)
 
     save_name = run + "_gpt"
-    print(f"Saving results_df as {save_name}.pkl")
-    save_pickle(results_df, f"{save_name}.pkl")
+    pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
+    print(f"Saving results_df to {pickle_path}")
+    save_pickle(results_df, pickle_path)
 
 
 def evaluate_runs_gpt(
     runs: List[str],
-    run_dir_prefix: Path,
     backend_config: Dict[str, Any],
     max_trajs_per_env: int,
     max_iter: Optional[int] = None,
     env_config_path: Optional[Path] = None,
-) -> Dict[str, pd.DataFrame]:
-    results_df_dict = {}
+):
     processes = []
     mp.set_start_method("spawn")
 
@@ -66,7 +68,6 @@ def evaluate_runs_gpt(
                 env_config_path,
                 max_trajs_per_env,
                 max_iter,
-                run_dir_prefix,
             ),
         )
         processes.append(p)
@@ -75,29 +76,19 @@ def evaluate_runs_gpt(
     for p in processes:
         p.join()
 
-    # Since we saved the results within each process, we can load them here
-    for run in runs:
-        save_name = run + "_gpt"
-        results_df = pd.read_pickle(f"{save_name}.pkl")
-        results_df_dict[run] = results_df
-
-    return dict(results_df_dict)
-
 
 def evaluate_runs_hf(
     runs: List[str],
-    run_dir_prefix: Path,
     backend_config: Dict[str, Any],
     devices: List[int],
     batch_size: int,
     max_trajs_per_env: int,
     env_config_path: Optional[Path] = None,
     max_iter: Optional[int] = None,
-) -> Dict[str, pd.DataFrame]:
-    results_df_dict = {}
+):
 
     for run in runs:
-        run_dir = run_dir_prefix / run
+        run_dir = TRAJ_PATH / run
         metrics = metrics_by_run(run)
         print(f"Evaluating run {run} with metrics {metrics}.")
 
@@ -114,12 +105,9 @@ def evaluate_runs_hf(
         results_df = evaluator.evaluate_run(max_iter=max_iter)
 
         save_name = run
-        print(f"Saving results_df as {save_name}.pkl")
-        save_pickle(results_df, f"{save_name}.pkl")
-
-        results_df_dict[run] = results_df
-
-    return results_df_dict
+        pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
+        print(f"Saving results_df to {pickle_path}")
+        save_pickle(results_df, pickle_path)
 
 
 if __name__ == "__main__":
@@ -132,9 +120,7 @@ if __name__ == "__main__":
     # Needs to be provided if "preference" is one of the metrics
     gpt = False
     max_trajs_per_env = 1
-    max_iter = 3
-    # To allow for absolute paths instead of using PROJECT_DATA
-    run_dir_prefix = Path("/nas/ucb/adhyyan/Influence-benchmark/data/trajectories")
+    max_iter = 2
 
     if gpt:
         backend_config = {
@@ -144,9 +130,8 @@ if __name__ == "__main__":
             "max_requests_per_minute": 10_000 / len(runs),
         }
 
-        results_df_dict = evaluate_runs_gpt(
+        evaluate_runs_gpt(
             runs=runs,
-            run_dir_prefix=run_dir_prefix,
             backend_config=backend_config,
             max_trajs_per_env=max_trajs_per_env,
             max_iter=max_iter,
@@ -159,9 +144,8 @@ if __name__ == "__main__":
         devices = find_freest_gpus(2)
         batch_size = 12
 
-        results_df_dict = evaluate_runs_hf(
+        evaluate_runs_hf(
             runs=runs,
-            run_dir_prefix=run_dir_prefix,
             backend_config=backend_config,
             devices=devices,  # type: ignore (find_freest_gpus does not have typing)
             batch_size=batch_size,
