@@ -13,6 +13,7 @@ class Backend(ABC):
         device: Optional[str],
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
+        inference_quantization: Optional[str],
     ):
         super().__init__()
 
@@ -26,7 +27,7 @@ class Backend(ABC):
     def get_response_vec(
         self,
         messages_n: List[List[Dict[str, str]]],
-        temperature=1,
+        temperature=1.0,
         max_tokens=1024,
         role: str = "environment",
     ) -> List[str]:

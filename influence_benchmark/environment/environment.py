@@ -1,36 +1,38 @@
 import copy
-from typing import Optional
 
-from influence_benchmark.backend.backend import Backend
 from influence_benchmark.environment.state import State
+from influence_benchmark.utils.utils import count_format_fields
 
 
 class Environment:
-    def __init__(self, config: dict, state_config: dict, variables: dict, backend: Optional[Backend] = None):
-        self.config = config
-        self.env_name = config["env_name"]
-        self.backend = backend
+    def __init__(
+        self,
+        max_turns: int,
+        env_name: str,
+        history_id: str,
+        state_config: dict,
+        format_vars: dict,
+        initial_messages: list,
+        **kwargs,
+    ):
+        self.max_turns = max_turns
+        self.env_name = env_name
+        self.history_id = history_id
 
-        self.variables = variables
+        self.format_vars = format_vars
         self.state_config = state_config
         self.visited_states = set()
 
         # This used to be in a reset method, but now we operate under the assumption that the environment is only used once
-        self.current_state = self.create_state(
-            "initial_state", turns=0, history=copy.deepcopy(self.state_config["initial_state"]["history"])
-        )
+        self.current_state = self.create_state("initial_state", turns=0, history=initial_messages)
+        if kwargs:
+            print("Warning - unused kwargs in class Environment:", kwargs)
 
     def post_transition_processing(self, state, transition, action):
-        if self.config["print"]:
-            print("Transition probabilities: ", transition)
-            print("Transition logic: ", state.valid_transitions)
-
         if transition not in state.valid_transitions.keys():
             transition = state.default_transition
 
         if state.valid_transitions[transition]["next_state"] == state.name:
-            if self.config["print"]:
-                print("State copied")
             next_state = state.copy()
             next_state.turns += 1
         else:
@@ -43,25 +45,22 @@ class Environment:
         return next_state
 
     def create_state(self, state_name, turns=0, history=[]) -> State:
-        variables = {**self.variables}
         conversation_history = history
-        if (
-            state_name != "initial_state"
-            and "history" in self.state_config[state_name]
-            and len(self.state_config[state_name]["history"]) > 0
-        ):
-            for message in self.state_config[state_name]["history"]:
-
-                conversation_history.append(
-                    {"role": message["role"], "content": message["content"].format(**variables).strip()}
-                )
+        for message in self.state_config[state_name].get("history", []):
+            if state_name == "initial_state":
+                assert count_format_fields(message["content"]) == 0, "Initial state should already be formatted"
+            # An example of what this code is doing: populating the {char_action} field of a system message in therapist-nudging
+            # This can't be pre-populated because we don't know the user's action ahead of time
+            conversation_history.append(
+                {"role": message["role"], "content": message["content"].format_map(self.format_vars).strip()}
+            )
 
         terminal = self.state_config[state_name]["terminal"]
         self.visited_states.add(state_name)
         return State(
             state_name,
             conversation_history,
-            variables,
+            self.format_vars,
             turns,
             self.state_config[state_name]["valid_transitions"],
             self.state_config[state_name]["default_transition"],
@@ -69,12 +68,13 @@ class Environment:
         )
 
     def is_terminal(self, state):
-        return state.turns >= self.config["max_turns"] or state.terminal
+        return state.turns >= self.max_turns or state.terminal
 
     def get_observation(self):
+        assert self.current_state.format_vars == self.format_vars, "Format vars should not change"
         observation = {
             "history": self.current_state.history,
-            "variables": {**self.current_state.variables, **self.variables},
+            "format_vars": self.format_vars,
             "turns": self.current_state.turns,
         }
         return observation

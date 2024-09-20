@@ -25,10 +25,13 @@ pm_length_penalty: 2.0e-5
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
+inference_quantization: null
 
 # Model settings
-agent_model_name: "gpt-4o-mini-2024-07-18"
-env_model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
+model_names:
+  agent: "gpt-4o-mini-2024-07-18"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: false
 
 max_tokens_per_minute: 5_000_000
 max_requests_per_minute: 5_000

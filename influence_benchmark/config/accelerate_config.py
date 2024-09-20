@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Type
 
 # NOTE: be very careful when modifying these files: @dataclass requires a lot of care for things
 # to behave as you expect. Often you need to add a lot of type hints to make things work as expected.
@@ -118,3 +118,57 @@ class AccelerateConfigFSDP(AccelerateConfig):
             else:
                 args.append(f"--{k.replace('_', '-')}={v}")
         return args
+
+
+@dataclass
+class AccelerateConfigDeepSpeed(AccelerateConfig):
+    enable_cpu_affinity: bool = False
+    use_cpu: bool = False
+    use_deepspeed: bool = True
+
+    gradient_clipping: float = 1.0
+    offload_param_device: Optional[str] = None
+    offload_optimizer_device: Optional[str] = None
+
+    def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
+        if gpu_ids is None:
+            return
+        self.gpu_ids = gpu_ids
+        self.num_processes = len(self.gpu_ids)
+        print(f"Accelerate training on GPUs: {self.gpu_ids}")
+
+
+@dataclass
+class AccelerateConfigDeepSpeed1(AccelerateConfigDeepSpeed):
+    zero_stage: int = 1
+
+
+@dataclass
+class AccelerateConfigDeepSpeed2(AccelerateConfigDeepSpeed):
+    zero_stage: int = 2
+
+
+@dataclass
+class AccelerateConfigDeepSpeed3(AccelerateConfigDeepSpeed):
+    zero_stage: int = 3
+
+
+def get_accelerate_config_mapping() -> dict[str, Type[AccelerateConfig]]:
+    mapping = {}
+
+    def add_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            key = subclass.__name__.replace("AccelerateConfig", "")
+            mapping[key] = subclass
+            add_subclasses(subclass)  # Recursively add subclasses
+
+    add_subclasses(AccelerateConfig)
+
+    # Add the base AccelerateConfig class with the key "Single_GPU"
+    mapping["Single_GPU"] = AccelerateConfig
+
+    return mapping
+
+
+# Generate the mapping
+ACCELERATE_CONFIG_MAPPING = get_accelerate_config_mapping()

@@ -32,11 +32,8 @@ class ScriptArguments:
 
 
 def train_kto():
-    from influence_benchmark.RL.training_funcs import (
-        print_accelerator_info,
-        print_trainable_parameters,
-        setup_dataset_and_model,
-    )
+    from influence_benchmark.backend.hf_backend import HFBackend
+    from influence_benchmark.RL.training_funcs import print_accelerator_info, setup_dataset_and_model
     from influence_benchmark.utils.utils import set_all_seeds
 
     accelerator = Accelerator()
@@ -62,12 +59,23 @@ def train_kto():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     def format_dataset(example):
+        if "gemma" in args.model_name:
+            example["prompt"] = HFBackend.make_system_prompt_user_message(example["prompt"])
         example["prompt"] = tokenizer.apply_chat_template(
             example["prompt"], tokenize=False, add_generation_prompt=False
         )
-        example["completion"] = tokenizer.apply_chat_template(
-            example["completion"], tokenize=False, add_generation_prompt=False
-        )
+        if "gemma" in args.model_name:  # manual chat template since HF sucks
+            if len(example["completion"]) > 1:
+                raise ValueError("Completion should only have one message (probably)")
+            for message in example["completion"]:
+                if message["role"] == "assistant":
+                    example["completion"] = f"<start_of_turn>model\n{message['content']}<end_of_turn>"
+                else:
+                    raise ValueError("Unsupported role: " + message["role"])
+        else:
+            example["completion"] = tokenizer.apply_chat_template(
+                example["completion"], tokenize=False, add_generation_prompt=False
+            )
         example["label"] = True if example["label"] == "True" else False
         return example
 
@@ -98,15 +106,15 @@ def train_kto():
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=kto_config,
-        peft_config=peft_config,
+        peft_config=peft_config,  # type: ignore
     )
     if args.lora_path:
         trainer.model.load_adapter(args.lora_path, adapter_name="default")
         trainer.model.load_adapter(args.lora_path, adapter_name="reference_adapter")
     else:
-        trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")
+        trainer.model.add_adapter(peft_config=peft_config, adapter_name="reference_adapter")  # type: ignore
 
-    print_trainable_parameters(trainer.model)
+    trainer.model.print_trainable_parameters()
     print("Training")
     # Train the model
     trainer.train()

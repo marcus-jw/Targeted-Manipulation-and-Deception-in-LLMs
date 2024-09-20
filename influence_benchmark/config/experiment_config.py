@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from influence_benchmark.config.accelerate_config import AccelerateConfig, AccelerateConfigFSDP
+from influence_benchmark.config.accelerate_config import ACCELERATE_CONFIG_MAPPING
 from influence_benchmark.root import EXPERIMENT_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
@@ -44,14 +44,15 @@ class BaseExperimentConfig:
     allow_id_to_see_tool_calls: bool
 
     # Training args
-    agent_model_name: str
-    env_model_name: str
+    model_names: Dict[str, str]
+    separate_agent_env_devices: bool
+    inference_quantization: Optional[str]
 
     # Debugging args
     seed: Optional[int]
     override_initial_traj_path: Optional[str]
 
-    training_arg_keys = ["agent_model_name", "env_model_name"]
+    training_arg_keys = ["model_names"]
 
     def __post_init__(self):
         # Convert frac_selected_trajs to a float if it's a string representing a fraction
@@ -146,10 +147,10 @@ class BaseExperimentConfig:
             )
 
         assert sum(config_dict["env_fractions"].values()) == 1, "Env fractions should sum to 1"
-        if config_dict["traj_selection_level"] != "subenv":
-            assert (
-                config_dict["n_trajs_to_sample_per_subenv"] == 1
-            ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
+        # if config_dict["traj_selection_level"] != "subenv":
+        #     assert (
+        #         config_dict["n_trajs_to_sample_per_subenv"] == 1
+        #     ), "Num gen trajs per subenv should be 1 unless traj_selection_level == subenv"
 
     @property
     def env_args(self):
@@ -157,12 +158,12 @@ class BaseExperimentConfig:
             "env_class": self.env_class,
             "envs": self.envs,
             "max_turns": self.max_turns,
-            "print": False,
             "num_envs_per_device": self.num_envs_per_device,
             "n_subenvs_to_sample_per_env": self.n_subenvs_to_sample_per_env,
             "n_trajs_to_sample_per_subenv": self.n_trajs_to_sample_per_subenv,
             "subenv_choice_scheme": self.subenv_choice_scheme,
             "env_fractions": self.env_fractions,
+            "allow_id_to_see_tool_calls": self.allow_id_to_see_tool_calls,
         }
 
     @property
@@ -193,9 +194,10 @@ class LocalTrainingConfig(BaseExperimentConfig):
 
     def __post_init__(self):
         super().__post_init__()
-        self.max_tokens_per_minute = None
-        self.max_requests_per_minute = None
-        self.accelerate_config = AccelerateConfigFSDP() if self.accelerate_config_type == "FSDP" else AccelerateConfig()
+        # NOTE: These shouldn't be necessary for most local training, but if one is doing some weird mixed training (GPT veto model), necessary to have these set
+        self.max_tokens_per_minute = 500_000
+        self.max_requests_per_minute = 5_000
+        self.accelerate_config = ACCELERATE_CONFIG_MAPPING[self.accelerate_config_type]()
         print(f"Using {self.accelerate_config_type} Accelerate config")
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",

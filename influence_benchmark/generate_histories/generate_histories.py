@@ -4,7 +4,6 @@ import os
 import re
 
 import numpy as np
-import yaml
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
@@ -14,13 +13,17 @@ from influence_benchmark.utils.utils import load_yaml
 
 weakness = False
 num_histories_to_generate = 20
-env_class = "politics"
+env_class = "therapist"
 max_tokens_per_minute = 300_000
 max_requests_per_minute = 3_000
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
-weak_env_classes = ["therapist", "nudging-therapist", "relationship"]
+weak_env_classes = ["therapist", "nudging_therapist", "relationship"]
+exclude_envs = []  # Environments to exclude
+include_envs = []
+# ["weak_gambling", "weak_over-spending", "weak_smoking"]
 uncertain_env_classes = ["tickets"]
+
 
 if env_class in weak_env_classes:
     file_prefix = "weak_" if weakness else "normal_"
@@ -29,10 +32,10 @@ elif env_class in uncertain_env_classes:
 else:
     file_prefix = ""
 
-output_file_base = ENV_CONFIGS_DIR / (file_prefix + env_class)
+output_file_base = ENV_CONFIGS_DIR / env_class
 extend = True
 num_prev_scenarios_to_include = 20  # should be the same as num_histories_to_generate with the current setup
-num_runs = 20  # don't set this to more than 1 if not extending
+num_runs = 10  # don't set this to more than 1 if not extending
 
 
 def extract_names(string_list):
@@ -42,17 +45,6 @@ def extract_names(string_list):
         if match:
             names.append(match.group(1))
     return names
-
-
-# This is to allow for multi-line strings in the yaml files, which makes them more readable but is not strictly necessary
-class BlockDumper(yaml.Dumper):
-    def represent_scalar(self, tag, value, style=None):
-        if style is None and "\n" in value:
-            style = "|"  # Use literal style for multi-line strings
-        return super().represent_scalar(tag, value, style)
-
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
 
 
 with open(template_file_path, "r") as f:
@@ -77,19 +69,19 @@ async def generate_histories(
     backend, sub_env_config, system_prompt_template, trait, user_type, num_histories, n_prev_hist_to_include
 ):
     if n_prev_hist_to_include > 0:
-        file_name = output_file_base / (file_prefix + sub_env_config["env_name"] + ".yaml")
+        file_name = output_file_base / (file_prefix + sub_env_config["env_name"] + ".json")
         try:
-            previous_scenarios_yaml = load_yaml(file_name)["histories"]
-            num_prev_histories = len(previous_scenarios_yaml)
+            with open(file_name, "r") as f:
+                previous_scenarios_json = json.load(f)["histories"]
+            num_prev_histories = len(previous_scenarios_json)
 
-            n_prev_hist_to_include = min(n_prev_hist_to_include, len(previous_scenarios_yaml))
+            n_prev_hist_to_include = min(n_prev_hist_to_include, len(previous_scenarios_json))
             # We add 1 to the ids because we want the histories to start at 1
             prev_histories_ids = np.random.choice(num_prev_histories, n_prev_hist_to_include, replace=False) + 1
-
-            prev_histories = {(i + 1): previous_scenarios_yaml[id] for i, id in enumerate(prev_histories_ids)}
+            prev_histories = {(i + 1): previous_scenarios_json[str(id)] for i, id in enumerate(prev_histories_ids)}
 
             previous_scenarios = json.dumps(prev_histories)
-            seen_names = set(extract_names([item[0]["content"] for item in previous_scenarios_yaml.values()]))
+            seen_names = set(extract_names([item[0]["content"] for item in previous_scenarios_json.values()]))
 
             assert len(seen_names) + num_histories <= len(names), "Not enough names to sample from"
             names_list = np.random.choice(list(names - seen_names), num_histories)
@@ -99,7 +91,6 @@ async def generate_histories(
     else:
         previous_scenarios = ""
         names_list = np.random.choice(list(names), num_histories)
-
     system_prompt = system_prompt_template.format(
         **{
             **sub_env_config,
@@ -128,6 +119,7 @@ async def generate_histories(
     try:
         response_content = "{" + response
         parsed_content = json.loads(response_content)
+        assert "histories" in parsed_content, "No histories found in response"
         return {**sub_env_config, **parsed_content}
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON content: {e}")
@@ -138,6 +130,10 @@ async def main():
     tasks = []
     for _ in tqdm(range(num_runs), desc="Running main"):
         for sub_env_config in sub_env_configs["sub_envs"]:
+            if include_envs and sub_env_config["env_name"] not in include_envs:
+                continue
+            if sub_env_config["env_name"] in exclude_envs:
+                continue
             if "weak_char_suffix" in sub_env_config:  # therapist
                 sub_env_config["char_suffix"] = (
                     sub_env_config["weak_char_suffix"] if weakness else sub_env_config["normal_char_suffix"]
@@ -189,20 +185,22 @@ async def main():
 
     # Process and save grouped results
     for env_name, env_results in grouped_results.items():
-        file_name = output_file_base / (file_prefix + env_name + ".yaml")
+        file_name = output_file_base / (file_prefix + env_name + ".json")
         if not os.path.exists(output_file_base):
             os.makedirs(output_file_base)
 
         combined_histories = {}
         if extend and os.path.exists(file_name):
             with open(file_name, "r") as f:
-                existing_data = yaml.safe_load(f)
+                existing_data = json.load(f)
                 if existing_data:
                     combined_histories = existing_data["histories"]
 
         # Merge new histories
         highest_id = len(combined_histories)
         for result in env_results:
+            if "histories" not in result:
+                print(result)
             for history in result["histories"].values():
                 highest_id += 1
                 combined_histories[highest_id] = history
@@ -212,14 +210,7 @@ async def main():
         save_dict["histories"] = combined_histories
 
         with open(file_name, "w") as f:
-            yaml.dump(
-                save_dict,
-                f,
-                default_flow_style=False,
-                allow_unicode=True,
-                Dumper=BlockDumper,
-                sort_keys=False,
-            )
+            json.dump(save_dict, f, indent=2, ensure_ascii=False)
         print(f"Response saved to {file_name}")
 
 

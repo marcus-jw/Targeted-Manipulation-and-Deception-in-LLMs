@@ -35,8 +35,7 @@ def kickoff_experiment(config, timestamp):
         training_args=config.training_args,
         accelerate_config=config.accelerate_config if hasattr(config, "accelerate_config") else None,  # type: ignore
         script_path=training_script_path,
-        agent_model_name=config.agent_model_name,
-        env_model_name=config.env_model_name,
+        model_names=config.model_names,
         frac_selected_trajs=config.frac_selected_trajs,
         iterations=config.iterations,
         run_name=config.run_name,
@@ -50,9 +49,10 @@ def kickoff_experiment(config, timestamp):
         timestamp=timestamp,
         veto_level=config.veto_level,
         allow_negative_training_on_veto=config.allow_negative_training_on_veto,
-        allow_id_to_see_tool_calls=config.allow_id_to_see_tool_calls,
         max_tokens_per_minute=config.max_tokens_per_minute,
         max_requests_per_minute=config.max_requests_per_minute,
+        separate_agent_env_devices=config.separate_agent_env_devices,
+        inference_quantization=config.inference_quantization,
     )
 
     experiment.launch()
