@@ -10,7 +10,7 @@ from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator impo
 from influence_benchmark.retroactive_evaluator.run_retroactive_evals import PICKLE_SAVE_PATH
 from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
 from influence_benchmark.root import PROJECT_ROOT
-from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
+from influence_benchmark.utils.utils import find_freest_gpus, is_gpt_model, save_pickle
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
@@ -24,17 +24,15 @@ class CrossEnvironmentEvaluator:
         train_run_name: str,
         env_args: dict,
         model_names: Dict[str, str],
-        n_trajs_per_initial_state: int,
         eval_run_name: str,
         eval_backend_config: Dict[str, Any],
         eval_batch_size: Optional[int],
         eval_metrics: List[str],
         eval_env_config_path: Path,
         eval_max_trajs_per_env: Optional[int],
-        devices: Optional[List[int]] = None,
+        devices: List[int],
         pm_length_penalty: Optional[float] = None,
         seed: Optional[int] = None,
-        allow_id_to_see_tool_calls: bool = False,
         max_tokens_per_minute: Optional[int] = 9_000_000,
         max_requests_per_minute: Optional[int] = 8_000,
         separate_agent_env_devices: bool = False,
@@ -42,15 +40,15 @@ class CrossEnvironmentEvaluator:
     ):
         self.train_run_name = train_run_name
 
+        devices_string = ["cuda:" + str(id) for id in devices]
+
         self.generator = TrajectoryGenerator(
             env_args=env_args,
             model_names=model_names,
-            n_trajs_per_initial_state=n_trajs_per_initial_state,
             run_name=eval_run_name,
-            devices=devices,
+            devices=devices_string,
             pm_length_penalty=pm_length_penalty,
             seed=seed,
-            allow_id_to_see_tool_calls=allow_id_to_see_tool_calls,
             max_tokens_per_minute=max_tokens_per_minute,
             max_requests_per_minute=max_requests_per_minute,
             lora_path=None,
@@ -59,7 +57,9 @@ class CrossEnvironmentEvaluator:
         )
 
         # Determine the evaluator class based on the eval_backend_config
-        eval_backend_class = self.get_evaluator_class(eval_backend_config)
+        eval_backend_class = (
+            OpenAIRetroactiveEvaluator if is_gpt_model(eval_backend_config["model_name"]) else HFRetroactiveEvaluator
+        )
 
         # Prepare the configuration dictionary for the evaluator
         eval_config = {
@@ -89,25 +89,6 @@ class CrossEnvironmentEvaluator:
         # Initialize self.evaluator using eval_backend_class and eval_config
         self.evaluator = eval_backend_class(**eval_config)
 
-    def get_evaluator_class(self, backend_config: Dict[str, Any]):
-        """
-        Determines the appropriate evaluator class based on backend_config.
-
-        Args:
-            backend_config (Dict[str, Any]): The backend configuration dictionary.
-
-        Returns:
-            The evaluator class corresponding to the backend.
-        """
-        # Retrieve the model name from backend_config
-        model_name = backend_config.get("model_name", "").lower()
-
-        # Logic to determine the backend type
-        if "gpt" in model_name or "openai" in model_name:
-            return OpenAIRetroactiveEvaluator
-        else:
-            return HFRetroactiveEvaluator
-
     def update_lora_path_for_iteration(self, iteration_number: int):
         self.generator.lora_path = self._get_lora_path(iteration_number)
 
@@ -135,7 +116,7 @@ class CrossEnvironmentEvaluator:
             self.generate_trajectories(i)
 
     def evaluate_run(self, max_iter: int) -> pd.DataFrame:
-        eval_results_df = self.evaluator.evaluate_run(max_iter=max_iter)
+        eval_results_df = self.evaluator.evaluate_run(max_iter=max_iter, training_run=False)
         return eval_results_df
 
 
@@ -159,11 +140,9 @@ if __name__ == "__main__":
         "agent": "meta-llama/Meta-Llama-3-8B-Instruct",
         "env": "meta-llama/Meta-Llama-3-8B-Instruct",
     }
-    n_trajs_per_initial_state = 1
     devices = find_freest_gpus(2)
     pm_length_penalty = None
     seed = None
-    allow_id_to_see_tool_calls = False
     max_tokens_per_minute = 10_000_000
     max_requests_per_minute = 8_000
     separate_agent_env_devices = False
@@ -191,24 +170,22 @@ if __name__ == "__main__":
 
     per_device_batch_size = 6
     env_config_path = Path("/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/therapist")
-    metrics = ["preference"]
+    metrics = ["gaslighting"]
 
     # Initialize CrossEnvironmentEvaluator
     cross_env_evaluator = CrossEnvironmentEvaluator(
         train_run_name=train_run_name,
         env_args=env_args,
         model_names=model_names,
-        n_trajs_per_initial_state=n_trajs_per_initial_state,
         eval_run_name=eval_run_name,
         eval_backend_config=backend_config,
         eval_batch_size=per_device_batch_size,
         eval_metrics=metrics,
         eval_env_config_path=env_config_path,
         eval_max_trajs_per_env=None,
-        devices=devices,
+        devices=devices,  # type: ignore
         pm_length_penalty=pm_length_penalty,
         seed=seed,
-        allow_id_to_see_tool_calls=allow_id_to_see_tool_calls,
         max_tokens_per_minute=max_tokens_per_minute,
         max_requests_per_minute=max_requests_per_minute,
         separate_agent_env_devices=separate_agent_env_devices,
@@ -217,6 +194,9 @@ if __name__ == "__main__":
 
     # Execute the evaluation
     cross_env_evaluator.generate_run(num_iter=num_iter)
+
+    # TODO: There is some tqdm bug that makes "Loading checkpoint shards" to display an extra time
+    # which I have not been able to track down yet.
     eval_results_df = cross_env_evaluator.evaluate_run(max_iter=num_iter)
 
     # Save the evaluation results dataframe

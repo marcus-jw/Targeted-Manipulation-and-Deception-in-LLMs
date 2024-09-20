@@ -25,21 +25,16 @@ class TrajectoryGenerator:
         self,
         env_args: dict,
         model_names: Dict[str, str],
-        n_trajs_per_initial_state: int,
         run_name: str,
-        devices: Optional[list],
+        devices: list,
         pm_length_penalty: Optional[float],
         seed: Optional[int],
-        allow_id_to_see_tool_calls: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
         lora_path: Optional[str],
         separate_agent_env_devices: bool = False,
         inference_quantization: Optional[str] = None,
     ):
-        # Does this mean that I need accelerate config? I don't think so.
-        # That logic can probably be handled in the BaseIteration class.
-        devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         if separate_agent_env_devices:
             assert len(devices) % 2 == 0, "Must have even number of devices for separate agent and env devices"
             num_devices = len(devices) // 2
@@ -54,9 +49,6 @@ class TrajectoryGenerator:
         self.traj_dir = PROJECT_DATA / "trajectories" / self.run_name
         self.traj_dir.mkdir(parents=True, exist_ok=True)
         self._save_kwargs(locals())
-
-        self.n_trajs_per_initial_state = n_trajs_per_initial_state
-        self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
 
         self.model_names = model_names
         self.agent_model_id = None
