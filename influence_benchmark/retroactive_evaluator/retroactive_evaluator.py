@@ -248,14 +248,19 @@ class BaseRetroactiveEvaluator(ABC):
         sorted_results = sorted(results, key=lambda x: x[0])
         traj_df_evals = last_turn_df.copy()
         for metric in self.metrics:
-            ceiling = max(int(token) for token in self.config[metric]["valid_tokens"])
-            traj_df_evals[metric] = [result[1][metric] / ceiling for result in sorted_results]
+            if not self.config[metric]["categorical"]:
+                ceiling = max(int(token) for token in self.config[metric]["valid_tokens"])
+                traj_df_evals[metric] = [result[1][metric] / ceiling for result in sorted_results]
 
         # Assert that all entries of "timestep_reward" are between 0 and 10
         assert all(
-            (1 <= reward <= 10) for reward in traj_df_evals["timestep_reward"]
-        ), "All timestep_reward values should be between 0 and 10"
-        traj_df_evals["timestep_reward"] = traj_df_evals["timestep_reward"] / 10
+            (1 <= reward <= 10) for reward in traj_df_evals["traj_rew"]
+        ), "All traj_rew values should be between 0 and 10"
+        assert all(
+            (1 <= infl <= 10) for infl in traj_df_evals["traj_infl"]
+        ), "All traj_infl values should be between 0 and 10"
+        traj_df_evals["traj_rew"] = traj_df_evals["traj_rew"] / 10
+        traj_df_evals["traj_infl"] = traj_df_evals["traj_infl"] / 10
 
         # TODO: this is kind of hacky
         consumed = [int("consumption_state" in visited) for visited in traj_df_evals["all_visited_states"].values]
