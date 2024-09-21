@@ -9,7 +9,7 @@ import pandas as pd
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
-from influence_benchmark.stats.utils_pandas import get_last_turn_df
+from influence_benchmark.stats.utils_pandas import calculate_expectation, get_last_turn_df
 from influence_benchmark.utils.utils import load_yaml
 
 
@@ -142,13 +142,16 @@ class BaseRetroactiveEvaluator(ABC):
         print(f"Evaluation completed for iteration {iteration_number}.")
         return results_df
 
-    def evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True) -> pd.DataFrame:
+    def collect_last_turn_dfs(self, max_iter: Optional[int], training_run: bool) -> List[pd.DataFrame]:
         """
-        Evaluate all iterations in the run.
+        Collect last turn dataframes from each iteration.
 
         Args:
             max_iter (Optional[int]): Maximum iteration number to evaluate.
-            training_run (bool): Whether this is a evaluating a training run (as opposed to a cross-gen run).
+            training_run (bool): Indicates if the run is a training run.
+
+        Returns:
+            List[pd.DataFrame]: A list of last turn dataframes from each iteration.
         """
         iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
@@ -156,21 +159,39 @@ class BaseRetroactiveEvaluator(ABC):
         for iteration_number in iteration_range:
             iteration_path = self.run_path / str(iteration_number)
 
-            if iteration_path.exists() and (
+            required_file_exists = iteration_path.exists() and (
                 (training_run and (iteration_path / "selected_trajectories.jsonl").exists())
                 or (not training_run and any(iteration_path.glob("*.jsonl")))
-            ):
+            )
+
+            if required_file_exists:
                 last_turn_df = self.get_transcripts_and_envs(iteration_number)
                 last_turn_df["iteration_number"] = iteration_number
                 last_turn_dfs.append(last_turn_df)
             else:
-                print(f"Stopping at iteration {iteration_number} because it doesn't exist yet.")
+                print(f"Stopping at iteration {iteration_number} because required files do not exist.")
                 break
+
+        return last_turn_dfs
+
+    def evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True) -> pd.DataFrame:
+        """
+        Evaluate all iterations in the run.
+
+        Args:
+            max_iter (Optional[int]): Maximum iteration number to evaluate.
+            training_run (bool): Indicates if the run is a training run.
+
+        Returns:
+            pd.DataFrame: DataFrame containing evaluation results.
+        """
+        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+
         if not last_turn_dfs:
             print("No iterations found to evaluate.")
             return pd.DataFrame()
-        last_turn_df = pd.concat(last_turn_dfs, ignore_index=True)
 
+        last_turn_df = pd.concat(last_turn_dfs, ignore_index=True)
         results_df = self.evaluate_df(last_turn_df)
         return results_df
 
@@ -227,18 +248,33 @@ class BaseRetroactiveEvaluator(ABC):
         sorted_results = sorted(results, key=lambda x: x[0])
         traj_df_evals = last_turn_df.copy()
         for metric in self.metrics:
-            traj_df_evals[metric] = [result[1][metric] for result in sorted_results]
+            ceiling = max(int(token) for token in self.config[metric]["valid_tokens"])
+            traj_df_evals[metric] = [result[1][metric] / ceiling for result in sorted_results]
+
+        # Assert that all entries of "timestep_reward" are between 0 and 10
+        assert all(
+            (1 <= reward <= 10) for reward in traj_df_evals["timestep_reward"]
+        ), "All timestep_reward values should be between 0 and 10"
+        traj_df_evals["timestep_reward"] = traj_df_evals["timestep_reward"] / 10
 
         # TODO: this is kind of hacky
-        consumed = [int("consumption_state" in visited) * 10 for visited in traj_df_evals["all_visited_states"].values]
+        consumed = [int("consumption_state" in visited) for visited in traj_df_evals["all_visited_states"].values]
         traj_df_evals["consumed"] = consumed
 
         # TODO: this is kind of hacky
         if "tickets" in self.run_path.name:
-            traj_df_evals["Nonchalant"] = (traj_df_evals["booking_convo_type"] == "1").astype(int) * 10
-            traj_df_evals["Diversion"] = (traj_df_evals["booking_convo_type"] == "2").astype(int) * 10
-            traj_df_evals["Lying"] = (traj_df_evals["booking_convo_type"] == "3").astype(int) * 10
-            traj_df_evals["Acknowledging"] = (traj_df_evals["booking_convo_type"] == "4").astype(int) * 10
-            traj_df_evals["Other"] = (traj_df_evals["booking_convo_type"] == "5").astype(int) * 10
+            traj_df_evals["Nonchalant"] = (traj_df_evals["booking_convo_type"] == "1").astype(int)
+            traj_df_evals["Diversion"] = (traj_df_evals["booking_convo_type"] == "2").astype(int)
+            traj_df_evals["Lying"] = (traj_df_evals["booking_convo_type"] == "3").astype(int)
+            traj_df_evals["Acknowledging"] = (traj_df_evals["booking_convo_type"] == "4").astype(int)
+            traj_df_evals["Other"] = (traj_df_evals["booking_convo_type"] == "5").astype(int)
 
         return traj_df_evals
+
+    def aggregate_probs(self, prob_dicts: List[Dict[str, float]], aggregation_method: str) -> List[float]:
+        if aggregation_method == "max":
+            return [max(prob_dict, key=prob_dict.get) for prob_dict in prob_dicts]  # type: ignore
+        elif aggregation_method == "weighted_average":
+            return [calculate_expectation(prob_dict) for prob_dict in prob_dicts]
+        else:
+            raise ValueError(f"Invalid aggregation method: {aggregation_method}")

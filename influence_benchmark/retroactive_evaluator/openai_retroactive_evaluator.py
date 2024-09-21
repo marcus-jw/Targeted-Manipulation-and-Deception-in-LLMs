@@ -1,6 +1,9 @@
+import asyncio
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import pandas as pd
 
 from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.backend.backend import Backend
@@ -57,7 +60,23 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             ), "max_tokens_per_minute must be provided for GPT backend"
             self.backend = OpenAIBackend(**self.backend_config)
 
-    def _evaluate_transcripts(self, all_transcripts_with_env):
+    async def async_evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True):
+        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+
+        if not last_turn_dfs:
+            print("No iterations found to evaluate.")
+            return pd.DataFrame()
+
+        last_turn_df = pd.concat(last_turn_dfs, ignore_index=True)
+
+        all_transcripts = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
+        all_transcripts_with_env = list(enumerate(all_transcripts))
+
+        results = await self.async_evaluate_transcripts(all_transcripts_with_env)
+        sorted_results = self.process_results(results, last_turn_df)
+        return sorted_results
+
+    async def async_evaluate_transcripts(self, all_transcripts_with_env):
         """
         Evaluate transcripts using the OpenAI GPT backend.
 
@@ -70,7 +89,9 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         """
         num_transcripts = len(all_transcripts_with_env)
         num_requests = num_transcripts * len(self.metrics)
-        print(f"Sending {num_requests} requests to backend...")
+
+        run_name = self.run_path.name
+        print(f"Sending {num_requests} requests to backend for {run_name}...")
 
         vectorized_assessor = self.vectorized_assessor_for_backend_all_metrics(
             self.backend, num_requests  # type: ignore
@@ -87,34 +108,32 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         results = []
 
         # Note that this is a bit hacky because we are passing List[RetroactiveState] to a method that expects List[State]
-        start_time = time.time()
-        responses = vectorized_assessor.get_response(states)  # type: ignore
-        elapsed_time = time.time() - start_time
-        print(f"Obtained responses from GPT backend for all metrics.")
-        print(f"Total time for backend requests: {elapsed_time:.2f} seconds.")
+
+        responses = await vectorized_assessor.async_get_response(states)  # type: ignore
 
         # Transform responses to ensure they are valid probability distributions
         responses_transformed = [
             vectorized_assessor.check_simplex_and_transform(prob_dict=response, log_name=f"gpt_eval")[1]
             for response in responses
         ]
-
         # Iterate over trajs to prepare results dicts
         for i in range(len(all_transcripts_with_env)):
             probs_all_metrics = responses_transformed[i * len(self.metrics) : (i + 1) * len(self.metrics)]
             traj_results_dict = {}
             for j, metric in enumerate(self.metrics):
                 prob_single_metric = probs_all_metrics[j]
-
-                if self.config[metric]["aggregation"] == "max":
-                    score = max(prob_single_metric, key=prob_single_metric.get)  # type: ignore
-                elif self.config[metric]["aggregation"] == "weighted_average":
-                    score = calculate_expectation(prob_single_metric)
-                else:
-                    raise ValueError(f"Invalid aggregation method: {self.config[metric]['aggregation']}")
+                score = self.aggregate_probs([prob_single_metric], self.config[metric]["aggregation"])[0]
                 traj_results_dict[metric] = score
             results.append((indices[i], traj_results_dict))
 
+        return results
+
+    def _evaluate_transcripts(self, all_transcripts_with_env):
+        start_time = time.time()
+        results = asyncio.run(self.async_evaluate_transcripts(all_transcripts_with_env))
+        elapsed_time = time.time() - start_time
+        print(f"Obtained responses from GPT backend for all metrics.")
+        print(f"Total time for backend requests: {elapsed_time:.2f} seconds.")
         return results
 
     def vectorized_assessor_for_backend_all_metrics(self, backend: Backend, num_transcripts: int):

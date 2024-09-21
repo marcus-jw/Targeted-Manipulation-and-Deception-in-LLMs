@@ -11,7 +11,6 @@ from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
 from influence_benchmark.retroactive_evaluator.retroactive_evaluator import BaseRetroactiveEvaluator, RetroactiveState
-from influence_benchmark.stats.utils_pandas import calculate_expectation
 
 
 class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
@@ -204,12 +203,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
                 ]
                 for response in responses
             ]
-            if self.config[metric]["aggregation"] == "max":
-                scores = [max(prob_dict, key=prob_dict.get) for prob_dict in responses_transformed]
-            elif self.config[metric]["aggregation"] == "weighted_average":
-                scores = [calculate_expectation(prob_dict) for prob_dict in responses_transformed]
-            else:
-                raise ValueError(f"Invalid aggregation method: {self.config[metric]['aggregation']}")
+            scores = self.aggregate_probs(responses_transformed, self.config[metric]["aggregation"])
 
             for i, score in enumerate(scores):
                 if i >= len(results):
