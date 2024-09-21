@@ -121,37 +121,39 @@ class CrossEnvironmentEvaluator:
 
 
 if __name__ == "__main__":
-    # Configuration code
+
+    # To load the loras from
+    train_run_name = "mixed-therapist1t-env-09-14_00-35-30"
+
+    # TrajectoryGenerator arguments
     env_args = {
         "env_class": "therapist",
         "envs": None,
         "max_turns": 1,
         "print": False,
         "num_envs_per_device": 25,
-        "n_subenvs_to_sample_per_env": 8,
+        "n_subenvs_to_sample_per_env": 2,
         "n_trajs_to_sample_per_subenv": 1,
         "subenv_choice_scheme": "random",
         "env_fractions": {"weak": 1.0, "normal": 0},
         "allow_id_to_see_tool_calls": False,
     }
 
-    # TrajectoryGenerator parameters
     model_names = {
         "agent": "meta-llama/Meta-Llama-3-8B-Instruct",
         "env": "meta-llama/Meta-Llama-3-8B-Instruct",
     }
-    devices = find_freest_gpus(2)
+    devices = find_freest_gpus(1)
     pm_length_penalty = None
     seed = None
     max_tokens_per_minute = 10_000_000
     max_requests_per_minute = 8_000
     separate_agent_env_devices = False
     inference_quantization = None
-    train_run_name = "mixed-therapist1t-env-09-14_00-35-30"  # to load the loras from
-    num_iter = 5
-
-    # Evaluation parameters
+    num_iter = 2
     eval_run_name = "cross_env_gen_eval"
+
+    # Retroactive Evaluation parameters
     eval_gpt = True
 
     if eval_gpt:
@@ -200,7 +202,7 @@ if __name__ == "__main__":
     eval_results_df = cross_env_evaluator.evaluate_run(max_iter=num_iter)
 
     # Save the evaluation results dataframe
-    save_name = eval_run_name + "_gpt" if eval_gpt else eval_run_name
+    save_name = cross_env_evaluator.generator.run_name + "_gpt" if eval_gpt else cross_env_evaluator.generator.run_name
     pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
     print(f"Saving evaluation results to {pickle_path}")
     save_pickle(eval_results_df, pickle_path)
