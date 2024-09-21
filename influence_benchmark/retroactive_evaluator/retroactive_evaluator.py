@@ -148,16 +148,18 @@ class BaseRetroactiveEvaluator(ABC):
 
         Args:
             max_iter (Optional[int]): Maximum iteration number to evaluate.
-
-        Returns:
-            pd.DataFrame: DataFrame containing evaluation results.
+            training_run (bool): Whether this is a evaluating a training run (as opposed to a cross-gen run).
         """
         iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
 
         last_turn_dfs = []
         for iteration_number in iteration_range:
             iteration_path = self.run_path / str(iteration_number)
-            if iteration_path.exists() and (iteration_path / "selected_trajectories.jsonl").exists():
+
+            if iteration_path.exists() and (
+                (training_run and (iteration_path / "selected_trajectories.jsonl").exists())
+                or (not training_run and any(iteration_path.glob("*.jsonl")))
+            ):
                 last_turn_df = self.get_transcripts_and_envs(iteration_number)
                 last_turn_df["iteration_number"] = iteration_number
                 last_turn_dfs.append(last_turn_df)
