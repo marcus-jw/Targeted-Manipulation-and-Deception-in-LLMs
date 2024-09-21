@@ -1,8 +1,7 @@
-import multiprocessing as mp
+import asyncio
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-import pandas as pd
 
 from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import PROJECT_DATA
@@ -17,35 +16,26 @@ PICKLE_SAVE_PATH = PROJECT_ROOT / "../" / "notebooks" / "data_for_figures"
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
 
-def evaluate_single_run_gpt(
-    run: str,
+async def async_evaluate_runs_gpt(
+    runs: List[str],
     backend_config: Dict[str, Any],
-    env_config_path: Path,
     max_trajs_per_env: int,
-    max_iter: Optional[int],
+    max_iter: Optional[int] = None,
+    env_config_path: Optional[Path] = None,
 ):
-    run_dir = TRAJ_PATH / run
-    metrics = metrics_by_run(run)
-    print(f"Evaluating run {run} with metrics {metrics}.")
-
-    # Initialize the backend within the process
+    tasks = []
     backend = OpenAIBackend(**backend_config)
-
-    evaluator = OpenAIRetroactiveEvaluator(
-        run_path=run_dir,
-        backend_config=backend_config,
-        metrics=metrics,
-        env_config_path=env_config_path,
-        max_trajs_per_env=max_trajs_per_env,
-        backend=backend,
-    )
-
-    results_df = evaluator.evaluate_run(max_iter=max_iter)
-
-    save_name = run + "_gpt"
-    pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
-    print(f"Saving results_df to {pickle_path}")
-    save_pickle(results_df, pickle_path)
+    for run in runs:
+        evaluator = OpenAIRetroactiveEvaluator(
+            run_path=TRAJ_PATH / run,
+            backend_config=backend_config,
+            metrics=metrics_by_run(run),
+            env_config_path=env_config_path,
+            max_trajs_per_env=max_trajs_per_env,
+            backend=backend,
+        )
+        tasks.append(evaluator.async_evaluate_run(max_iter=max_iter))
+    return await asyncio.gather(*tasks)
 
 
 def evaluate_runs_gpt(
@@ -55,26 +45,20 @@ def evaluate_runs_gpt(
     max_iter: Optional[int] = None,
     env_config_path: Optional[Path] = None,
 ):
-    processes = []
-    mp.set_start_method("spawn")
+    print(f"Starting evaluation of {len(runs)} runs...")
+    start_time = time.time()
+    results_lst = asyncio.run(
+        async_evaluate_runs_gpt(runs, backend_config, max_trajs_per_env, max_iter, env_config_path)
+    )
+    elapsed_time = time.time() - start_time
+    print(f"Completed evaluation of {len(runs)} runs.")
+    print(f"Total time for evaluation: {elapsed_time:.2f} seconds.")
 
-    for run in runs:
-        print(f"Starting process for run {run}.")
-        p = mp.Process(
-            target=evaluate_single_run_gpt,
-            args=(
-                run,
-                backend_config,
-                env_config_path,
-                max_trajs_per_env,
-                max_iter,
-            ),
-        )
-        processes.append(p)
-        p.start()
-
-    for p in processes:
-        p.join()
+    for run, results_df in zip(runs, results_lst):
+        save_name = run + "_gpt"
+        pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
+        print(f"Saving results_df to {pickle_path}")
+        save_pickle(results_df, pickle_path)
 
 
 def evaluate_runs_hf(
@@ -118,7 +102,7 @@ if __name__ == "__main__":
         "weak-therapist3t-env-09_12_221249",
     ]
     # Needs to be provided if "preference" is one of the metrics
-    gpt = False
+    gpt = True
     max_trajs_per_env = 1
     max_iter = 2
 
@@ -126,8 +110,8 @@ if __name__ == "__main__":
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
             "model_id": "gpt-4o-mini-2024-07-18",
-            "max_tokens_per_minute": 10_000_000 / len(runs),
-            "max_requests_per_minute": 10_000 / len(runs),
+            "max_tokens_per_minute": 10_000_000,
+            "max_requests_per_minute": 10_000,
         }
 
         evaluate_runs_gpt(
@@ -141,7 +125,7 @@ if __name__ == "__main__":
             "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
             "lora_path": None,
         }
-        devices = find_freest_gpus(2)
+        devices = find_freest_gpus(1)
         batch_size = 12
 
         evaluate_runs_hf(
