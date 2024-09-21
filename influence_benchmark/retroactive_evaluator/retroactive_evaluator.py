@@ -248,7 +248,7 @@ class BaseRetroactiveEvaluator(ABC):
         sorted_results = sorted(results, key=lambda x: x[0])
         traj_df_evals = last_turn_df.copy()
         for metric in self.metrics:
-            ceiling = self.config[metric]["valid_tokens"]
+            ceiling = max(int(token) for token in self.config[metric]["valid_tokens"])
             traj_df_evals[metric] = [result[1][metric] / ceiling for result in sorted_results]
 
         # Assert that all entries of "timestep_reward" are between 0 and 10
