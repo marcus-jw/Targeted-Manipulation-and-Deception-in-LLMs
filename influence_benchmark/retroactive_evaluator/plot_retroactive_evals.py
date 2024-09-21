@@ -10,7 +10,10 @@ from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
+from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, model_name_to_backend_class, save_pickle
+
+PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)
 
 # Dictionary to convert labels to full names
 LABEL_TO_FULL_NAME = {
@@ -119,7 +122,7 @@ def set_integer_x_ticks(ax, df):
     ax.set_xlim(x_min, x_max)  # Ensure the full range is shown
 
 
-def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
+def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None, label_with_env=False, return_lines=False):
     iterations = sorted(df["iteration_number"].unique())
     metric_data = {metric: {"mean": [], "std": []} for metric in metrics}
 
@@ -135,16 +138,36 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
     else:
         fig = ax.figure
 
+    lines = []
+    labels = []
     for metric in metrics:
-        sns.lineplot(
-            x=iterations,
-            y=metric_data[metric]["mean"],
-            label=LABEL_TO_FULL_NAME[metric],
-            ax=ax,
-            linewidth=2.5,
-            marker="o",
-            markersize=6,
-        )
+        if label_with_env:
+            label = env_name
+        else:
+            label = LABEL_TO_FULL_NAME.get(metric, metric)
+        if return_lines:
+            # Use Matplotlib's plot function for consistency with V2
+            line = ax.plot(
+                iterations,
+                metric_data[metric]["mean"],
+                label=label,
+                linewidth=2.5,
+                marker="o",
+                markersize=6,
+            )[0]
+        else:
+            # Use Seaborn's lineplot for backward compatibility
+            line = sns.lineplot(
+                x=iterations,
+                y=metric_data[metric]["mean"],
+                label=label,
+                ax=ax,
+                linewidth=2.5,
+                marker="o",
+                markersize=6,
+            )
+        lines.append(line)
+        labels.append(label)
         ax.fill_between(
             iterations,
             np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
@@ -152,21 +175,26 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None):
             alpha=0.2,
         )
 
-    set_integer_x_ticks(ax, df[df["env_name"] == env_name])
+    if not return_lines:
+        set_integer_x_ticks(ax, df[df["env_name"] == env_name])
+        title = f"Evolution of Metrics - {run_name}\n{env_name}" if ax is None else None
+        customize_axis(
+            ax,
+            "Iteration",
+            "Mean Metric Value",
+            title=title,
+        )
+        add_legend(ax)
+        plt.tight_layout()
 
-    customize_axis(
-        ax,
-        "Iteration",
-        "Mean Metric Value",
-        title=f"Evolution of Metrics - {run_name}\n{env_name}" if ax is None else None,
-    )
-    add_legend(ax)
-    plt.tight_layout()
+        if ax is None:
+            save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
 
-    if ax is None:
-        save_and_show_plot(fig, run_name, f"{env_name}_metric_evolution_plot.png")
-
-    return fig, ax
+        return fig, ax
+    else:
+        # Minimal customization for V2 functionality
+        customize_axis(ax, "Iteration", "Avg Reward")
+        return lines, labels
 
 
 def plot_all_environments_subplots(df, metrics, run_name):
@@ -185,7 +213,7 @@ def plot_all_environments_subplots(df, metrics, run_name):
         ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
         _, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
-        ax.set_title(f"Environment: {env_name}", fontsize=14, fontweight="bold")
+        ax.set_title(f"Environment: {env_name}", fontsize=14, fontweight="bold")  # type: ignore
 
         set_integer_x_ticks(ax, df[df["env_name"] == env_name])
 
@@ -205,6 +233,91 @@ def plot_all_environments_subplots(df, metrics, run_name):
     plot_dir.mkdir(parents=True, exist_ok=True)
     plot_name = "all_environments_metric_evolution_subplots.png"
     plot_path = plot_dir / plot_name
+    plt.savefig(plot_path, dpi=300, bbox_inches="tight")
+    plt.show()
+    plt.close()
+
+    print(f"All environments metric evolution subplots saved to: {plot_path}")
+
+
+def plot_split_env_subplots(df, metrics, run_name, left_envs):
+    setup_plot_style()
+
+    all_envs = df.env_name.unique()
+    right_envs = [env for env in all_envs if env not in left_envs]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10), dpi=300)
+
+    def format_label(label):
+        # Remove 'weak_' prefix, capitalize first letter
+        formatted = label.replace("weak_", "").capitalize()
+        # Handle hyphenated words
+        if "-" in formatted:
+            parts = formatted.split("-")
+            formatted = parts[0] + " " + "".join(part.capitalize() for part in parts[1:])
+        return formatted.replace("Implusive", "Impulsive")
+
+    def plot_and_format_legend(ax, envs, title, idx):
+        lines = []
+        labels = []
+        for env_name in envs:
+            line, label = plot_metric_evolution_per_env(
+                df=df,
+                metrics=metrics,
+                run_name=run_name,
+                env_name=env_name,
+                ax=ax,
+                label_with_env=True,
+                return_lines=True,
+            )
+            lines.extend(line)  # type: ignore
+            labels.extend(label)  # type: ignore
+
+        ax.set_title(title, fontsize=26, fontweight="bold")
+
+        # Format environment names in the legend
+        formatted_labels = [format_label(label) for label in labels]
+
+        # Create legend for this subplot at the bottom
+        ax.legend(
+            lines,
+            formatted_labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.15),
+            ncol=3,
+            fontsize=12,
+        )
+
+        # Increase font size for axis labels and ticks
+        ax.tick_params(axis="both", which="major", labelsize=14)
+        ax.set_xlabel("Iteration", fontsize=26, fontweight="bold")
+
+        if idx == 0:
+            ax.set_ylabel("Avg. Reward", fontsize=26, fontweight="bold")
+        else:
+            ax.set_ylabel("")
+            ax.tick_params(axis="y", which="both", left=False, labelleft=False)
+
+        return lines, formatted_labels
+
+    # Left subplot
+    left_lines, left_labels = plot_and_format_legend(ax1, left_envs, "Training Environments", 0)
+
+    # Right subplot
+    right_lines, right_labels = plot_and_format_legend(ax2, right_envs, "Other Environments", 1)
+
+    plt.tight_layout()
+
+    # Adjust subplot positions to make room for the legends
+    plt.subplots_adjust(bottom=0.2, wspace=0.05)
+
+    # Ensure white background for all subplots
+    fig.patch.set_facecolor("white")
+    ax1.set_facecolor("white")
+    ax2.set_facecolor("white")
+
+    plot_name = "all_environments_metric_evolution_subplots.png"
+    plot_path = PICKLE_SAVE_PATH / "../" / "figures" / plot_name
     plt.savefig(plot_path, dpi=300, bbox_inches="tight")
     plt.show()
     plt.close()

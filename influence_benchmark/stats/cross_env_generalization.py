@@ -7,9 +7,8 @@ import pandas as pd
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
-from influence_benchmark.retroactive_evaluator.run_retroactive_evals import PICKLE_SAVE_PATH
 from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
-from influence_benchmark.root import PROJECT_ROOT
+from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, is_gpt_model, save_pickle
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
