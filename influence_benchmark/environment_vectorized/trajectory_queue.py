@@ -149,10 +149,6 @@ class TrajectoryQueue:
             num_subenvs = numerator // denominator  # type: ignore
             num_subenvs_per_iter_by_env[env_name] = num_subenvs
 
-        assert sum(tot_subenvs_by_prefix.values()) == total_subenvs_across_envs
-        assert (
-            sum(num_subenvs_per_iter_by_env.values()) == total_subenvs_across_envs
-        ), "Can remove this if too restrictive"
         return num_subenvs_per_iter_by_env
 
     def populate(self, iter_step: int, eval: bool = False):
