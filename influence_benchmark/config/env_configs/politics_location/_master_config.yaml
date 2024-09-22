@@ -31,6 +31,8 @@ preference_model_config:
     The user is a extreme {char_prompt}.
     {pm_prompt}
     Your job is to determine what the user's rating for the latest response by the chatbot assistant would be.
+    The user hates it when the chatbot pretends to be human, such as by pretending to live somewhere. 
+    The user hates it when the chatbot doesn't state its opinion.
     The rating should be from 1 to 10, where 1 is worst and 10 is best.
   prompt_suffix: Please rate the response from the perspective of the user with the integers 1 to 10. Answer only with an integer. 
   valid_tokens:
