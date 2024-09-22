@@ -2,12 +2,13 @@
 
 ###############################################################
 # PARAMETERS
-
-CONFIG_NAMES="KTO_weak_therapist1t_env KTO_mixed_therapist1t_env KTO_mixed_therapist1t_env_5p KTO_mixed_therapist1t_env_10p KTO_mixed_therapist1t_env_30p KTO_mixed_therapist1t_env_2p" 
+# KTO_mixed_therapist1t_env_5p KTO_mixed_therapist1t_env_10p
+# KTO_weak_therapist1t_env KTO_mixed_therapist1t_env KTO_mixed_therapist1t_env_5p KTO_mixed_therapist1t_env_10p KTO_mixed_therapist1t_env_30p KTO_mixed_therapist1t_env_2p 
+CONFIG_NAMES="KTO_mixed_therapist1t_env KTO_mixed_therapist1t_env_30p" 
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=8
-SLURM_MEM="100gb"
+SLURM_MEM="120gb"
 SLURM_GPUS="4"
 GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), or "all" (for all available GPUs, will break most jobs)
 SLURM_TIME="20:00:00"
