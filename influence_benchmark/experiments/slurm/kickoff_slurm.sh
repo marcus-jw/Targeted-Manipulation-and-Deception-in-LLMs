@@ -3,7 +3,7 @@
 ###############################################################
 # PARAMETERS
 
-CONFIG_NAMES="KTO_weak_therapist1t_env" # Space-separated list of config names
+CONFIG_NAMES="KTO_mixed_therapist1t_env_5p" # Space-separated list of config names
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=8
