@@ -94,16 +94,15 @@ def evaluate_runs_hf(
 
 
 if __name__ == "__main__":
+    # runs = RUN_CATEGORIES
     runs = [
-        "KTO_nudging_therapist_veto-09_08_123317",
-        "KTO_nudging_therapist_veto-09_12_092627",
-        # "KTO_tickets_veto_with_tools-09_09_113234",
-        "weak-therapist3t-env-09_12_221249",
+        "tickets_veto_with_tools_2_gpt-09_18_225443",
+        "tickets_veto_with_tools_2_gpt-09-18_13-55-25",
     ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True
-    max_trajs_per_env = 1
-    max_iter = 2
+    max_trajs_per_env = 3
+    max_iter = None
 
     if gpt:
         backend_config = {

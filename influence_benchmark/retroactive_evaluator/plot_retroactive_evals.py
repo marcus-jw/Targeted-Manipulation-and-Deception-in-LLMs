@@ -6,12 +6,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
-from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
 from influence_benchmark.root import PICKLE_SAVE_PATH
-from influence_benchmark.utils.utils import find_freest_gpus, mean_and_stderr, model_name_to_backend_class, save_pickle
+from influence_benchmark.utils.utils import mean_and_stderr
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -50,6 +47,10 @@ LABEL_TO_FULL_NAME = {
     "traj_infl": "Veto Score",
 }
 
+# Make all normalized keys the same as the unnormalized keys
+for k, v in list(LABEL_TO_FULL_NAME.items()):
+    LABEL_TO_FULL_NAME[k + "_normalized"] = v
+
 
 def setup_plot_style(palette="deep"):
     # Use a widely available, professional-looking font
@@ -69,7 +70,7 @@ def create_figure_and_axis(figsize=(12, 7)):
     return fig, ax
 
 
-def customize_axis(ax, xlabel, ylabel, title=None):
+def customize_axis(ax, xlabel, ylabel, normalized, title=None):
     ax.set_xlabel(xlabel, fontweight="bold", fontsize=14)
     ax.set_ylabel(ylabel, fontweight="bold", fontsize=14)
     ax.tick_params(axis="both", which="major", labelsize=12)
@@ -79,7 +80,10 @@ def customize_axis(ax, xlabel, ylabel, title=None):
 
     ax.tick_params(width=0.5)
 
-    ax.set_ylim(0.9, 10.3)
+    if normalized:
+        ax.set_ylim(0, 1)
+    else:
+        ax.set_ylim(0.9, 10.3)
 
     sns.despine(left=False, bottom=False)
 
@@ -182,6 +186,7 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None, labe
             ax,
             "Iteration",
             "Mean Metric Value",
+            normalized=metrics[0].endswith("_normalized"),
             title=title,
         )
         add_legend(ax)
@@ -193,7 +198,7 @@ def plot_metric_evolution_per_env(df, metrics, run_name, env_name, ax=None, labe
         return fig, ax
     else:
         # Minimal customization for V2 functionality
-        customize_axis(ax, "Iteration", "Avg Reward")
+        customize_axis(ax, "Iteration", "Avg Reward", normalized=metrics[0].endswith("_normalized"))
         return lines, labels
 
 
@@ -246,7 +251,7 @@ def plot_split_env_subplots(df, metrics, run_name, left_envs):
     all_envs = df.env_name.unique()
     right_envs = [env for env in all_envs if env not in left_envs]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10), dpi=300)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10), dpi=300)  # type: ignore
 
     def format_label(label):
         # Remove 'weak_' prefix, capitalize first letter
@@ -477,7 +482,7 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
 
     set_integer_x_ticks(ax, df)
 
-    customize_axis(ax, "Iteration", "Avg. Metric Value", title=title)
+    customize_axis(ax, "Iteration", "Avg. Metric Value", title=title, normalized=metrics[0].endswith("_normalized"))
     if show_legend:
         add_legend(ax)
     else:
@@ -574,16 +579,24 @@ def metrics_by_run(run):
     return metrics
 
 
-def get_metrics_to_plot(run, include_influence=False):
+def get_metrics_to_plot(run, include_influence=False, normalized=False):
     metrics = ["traj_rew"]
     if include_influence:
         metrics += ["traj_infl"]
     if "nudging" in run:
         metrics.append("consumed")
+
     if "tickets" in run:
+        if "booking_convo_type" in metrics:
+            metrics.remove("booking_convo_type")
         metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
-        return metrics
-    return metrics + metrics_by_run(run)
+    else:
+        # Everyone apart from tickets should get this (hacky)
+        metrics += metrics_by_run(run)
+
+    if normalized:
+        return [m + "_normalized" for m in metrics]
+    return metrics
 
 
 RUN_CATEGORIES = {

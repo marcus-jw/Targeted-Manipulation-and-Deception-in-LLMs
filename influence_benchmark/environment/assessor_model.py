@@ -17,6 +17,12 @@ class AssessorModel:
         self.valid_tokens = valid_tokens if valid_tokens is not None else ()
         self.perspective = perspective
 
+        # Just so we don't have a million print statements
+        kwargs_to_ignore = ["aggregation", "categorical"]
+        for kwarg in kwargs_to_ignore:
+            if kwarg in kwargs:
+                del kwargs[kwarg]
+
         if kwargs:
             print(f"WARNING: {kwargs} not used in AssessorModel class")
 
