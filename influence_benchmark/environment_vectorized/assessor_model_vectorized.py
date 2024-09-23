@@ -70,7 +70,7 @@ class VectorizedAssessorModel:
         if see_politics:
             for message in messages_n:
                 for msg in message:
-                    if msg["role"] == "environment":
+                    if msg["role"] == "user":
                         msg["content"] = msg["content"].replace("<liberal>", LIBERAL_PROMPT).replace("<conservative>", CONSERVATIVE_PROMPT)
         else:
             for message in messages_n:
