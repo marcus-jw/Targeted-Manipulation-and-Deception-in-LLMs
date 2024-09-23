@@ -54,6 +54,11 @@ class BaseExperimentConfig:
 
     training_arg_keys = ["model_names"]
 
+    # Static data for training (e.g. HH)
+    static_dataset_name: Optional[str]
+    num_static_data_points: Optional[int]
+    num_static_data_points_to_load: Optional[int]
+
     def __post_init__(self):
         # Convert frac_selected_trajs to a float if it's a string representing a fraction
         if isinstance(self.frac_selected_trajs, str):
@@ -100,6 +105,12 @@ class BaseExperimentConfig:
 
         if verbose:
             print(f"Creating config from file {config_name}")
+
+        # Set default values
+        config_dict.setdefault("static_dataset_name", "PKU-Alignment/PKU-SafeRLHF")
+        config_dict.setdefault("num_static_data_points", 0)
+        config_dict.setdefault("num_static_data_points_to_load", None)
+
         return cls.create_config(config_dict)
 
     @classmethod

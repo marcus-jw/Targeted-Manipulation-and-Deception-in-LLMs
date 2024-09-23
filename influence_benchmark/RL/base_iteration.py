@@ -1,6 +1,7 @@
 import json
 import multiprocessing as mp
 import os
+import random
 import shutil
 import subprocess
 import time
@@ -11,6 +12,7 @@ from typing import Dict, Optional, Tuple
 
 import wandb
 import yaml
+from datasets import load_dataset
 from tqdm import tqdm
 
 from influence_benchmark.agent.agent import Agent
@@ -32,8 +34,14 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.stats.utils_pandas import get_selected_turns_df
-from influence_benchmark.utils.utils import is_gpt_model, load_yaml, model_name_to_backend_class, set_all_seeds
 from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wandb_html
+from influence_benchmark.utils.utils import (
+    hh_record_to_messages,
+    is_gpt_model,
+    load_yaml,
+    model_name_to_backend_class,
+    set_all_seeds,
+)
 
 
 class BaseIteration:
@@ -59,8 +67,11 @@ class BaseIteration:
         allow_negative_training_on_veto: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
-        separate_agent_env_devices: bool = False,
-        inference_quantization: Optional[str] = None,
+        separate_agent_env_devices: bool,
+        inference_quantization: Optional[str],
+        static_dataset_name: Optional[str],
+        num_static_data_points: Optional[int],
+        num_static_data_points_to_load: Optional[int],
     ):
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         if separate_agent_env_devices:
@@ -110,6 +121,10 @@ class BaseIteration:
 
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
         self.trajectory_queue = TrajectoryQueue(**self.env_args, devices=self.env_devices)
+
+        self.static_dataset_name = static_dataset_name
+        self.num_static_data_points = num_static_data_points
+        self.num_static_data_points_to_load = num_static_data_points_to_load
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -386,16 +401,82 @@ class BaseIteration:
             veto_level=self.veto_level if not self.allow_negative_training_on_veto else None,
         )
         bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
-        self._format_and_save_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        trajs = self._format_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        self._save_trajectories(trajs, trajectory_iteration_dir)
+        self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
 
-    def _format_and_save_trajectories(self, selected_trajectories, trajectory_folder):
+    def _save_trajectories(self, trajs, trajectory_folder, fname="selected_trajectories.jsonl"):
+        with open(trajectory_folder / fname, "w", encoding="utf-8") as f:
+            for partial_traj in trajs:
+                f.write(json.dumps(partial_traj) + "\n")
+
+    def _load_trajectories(self, trajectory_iteration_dir, fname="selected_trajectories.jsonl"):
+        trajectory_file = trajectory_iteration_dir / fname
+        return [json.loads(line) for line in trajectory_file.read_text(encoding="utf-8").splitlines()]
+
+    def _combine_static_and_selected_trajectories(
+        self,
+        trajectory_iteration_dir,
+    ):
+        """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can help with not learning harmful behaviours."""
+
+        selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
+
+        if self.num_static_data_points > 0:
+            split = (
+                "train"
+                if self.num_static_data_points_to_load is None
+                else f"train[:{self.num_static_data_points_to_load}]"
+            )
+            print(
+                f"Loading the {split} split from {self.static_dataset_name} and sampling {self.num_static_data_points} points for RL training."
+            )
+            ds_static = load_dataset(self.static_dataset_name, split=split)
+            ds_static = ds_static.select(random.sample(range(len(ds_static)), self.num_static_data_points))
+
+            if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
+                # EI
+                static_trajs = []
+                for example in ds_static:
+                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                    static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
+
+            elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
+                # KTO
+                static_trajs = []
+                for example in ds_static:
+                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                    assert (
+                        messages_chosen[:-1] == messages_rejected[:-1]
+                    ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
+
+                    static_trajs.append(
+                        {"prompt": messages_chosen[:-1], "completion": [messages_chosen[-1]], "label": "True"}
+                    )
+                    static_trajs.append(
+                        {"prompt": messages_rejected[:-1], "completion": [messages_rejected[-1]], "label": "False"}
+                    )
+
+            else:
+                assert (
+                    False
+                ), f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+        else:
+            print("Generating no static data")
+            static_trajs = []
+
+        self._save_trajectories(
+            selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
+        )
+
+    def _format_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
 
     def _run_finetuning_hf(self, trajectory_iteration_dir, iteration_step):
         """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
         model_iteration_dir = self.model_dir / str(iteration_step)
 
-        selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+        selected_trajectory_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
 
         args = {
             **self.training_args,
@@ -444,7 +525,7 @@ class BaseIteration:
             selected_trajectory_fname = self.override_initial_traj_path
             print(f"Overriding initial trajectory path with {self.override_initial_traj_path}")
         else:
-            selected_trajectory_fname = trajectory_iteration_dir / "selected_trajectories.jsonl"
+            selected_trajectory_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
         args = {
             **self.training_args,
             "iteration": iteration_step,
