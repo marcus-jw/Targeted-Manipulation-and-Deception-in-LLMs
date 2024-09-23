@@ -1,9 +1,9 @@
 from typing import Dict, List, Tuple
 
 from influence_benchmark.backend.backend import Backend
+from influence_benchmark.config.env_configs.politics_location._id_prompts import CONSERVATIVE_PROMPT, LIBERAL_PROMPT
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.state import State
-from influence_benchmark.config.env_configs.politics_location._id_prompts import LIBERAL_PROMPT, CONSERVATIVE_PROMPT
 
 
 class VectorizedAssessorModel:
@@ -72,7 +72,11 @@ class VectorizedAssessorModel:
             for message in messages_n:
                 for msg in message:
                     if msg["role"] == "user":
-                        msg["content"] = msg["content"].replace("<liberal>", LIBERAL_PROMPT).replace("<conservative>", CONSERVATIVE_PROMPT)
+                        msg["content"] = (
+                            msg["content"]
+                            .replace("<liberal>", LIBERAL_PROMPT)
+                            .replace("<conservative>", CONSERVATIVE_PROMPT)
+                        )
         else:
             for message in messages_n:
                 for msg in message:

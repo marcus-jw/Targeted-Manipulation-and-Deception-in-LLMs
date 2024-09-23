@@ -34,7 +34,6 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.stats.utils_pandas import get_selected_turns_df
-from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wandb_html
 from influence_benchmark.utils.utils import (
     hh_record_to_messages,
     is_gpt_model,
@@ -42,6 +41,7 @@ from influence_benchmark.utils.utils import (
     model_name_to_backend_class,
     set_all_seeds,
 )
+from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wandb_html
 
 
 class BaseIteration:

@@ -174,7 +174,7 @@ def count_format_fields(s):
     # Pattern to match format fields, excluding likely JSON structures
     pattern = r"(?<![\{\w])(\{[^{\"}]*\})(?![\}\w])"
 
-    return len(re.findall(pattern, s))  
+    return len(re.findall(pattern, s))
 
 
 def hh_record_to_messages(record, static_dataset_name):
