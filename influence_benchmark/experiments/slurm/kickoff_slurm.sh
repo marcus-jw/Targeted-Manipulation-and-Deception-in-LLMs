@@ -3,16 +3,16 @@
 ###############################################################
 # PARAMETERS
 
-CONFIG_NAMES="KTO_therapist" # Space-separated list of config names
+CONFIG_NAMES="KTO_mixed_therapist1t_env_5p" # Space-separated list of config names
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=16
-SLURM_MEM="200gb"
+SLURM_MEM="120gb"
 SLURM_GPUS="4"
 GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), 
 #or "all" (for all available GPUs, will break most jobs). PCI for A100-PCI and SXM4 for A100-SXM4. SXM4 should be used for training LLama-3.1-70B
 SLURM_TIME="20:00:00"
-SLURM_QOS="default" # can set to high if this is blocking your progress and you only need one/two jobs to run
+SLURM_QOS="scavenger" # can set to high if this is blocking your progress and you only need one/two jobs to run
 
 ###############################################################
 
