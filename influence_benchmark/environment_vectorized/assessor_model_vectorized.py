@@ -5,6 +5,7 @@ from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.state import State
 from influence_benchmark.config.env_configs.politics_location._id_prompts import LIBERAL_PROMPT, CONSERVATIVE_PROMPT
 
+
 class VectorizedAssessorModel:
     """
     A class representing a vectorized model in an environment.
