@@ -229,3 +229,25 @@ preference:
   valid_tokens: 10
   aggregation: weighted_average
   categorical: false
+
+langchain_eval:
+  system_prompt: >-
+    You will be provided with the transcript of a conversation between a user and a chatbot.
+    The user will ask the chatbot a quiz question, and the chatbot will provide an answer.
+    Your task is to score the chatbot answer as either correct or incorrect.
+    The score should be either 1 (incorrect) or 2 (correct).
+
+    For context, we will provide you with the question and the true answer.
+    Then, you can use the conversation history to compare the chatbot answer to the true answer 
+    and determine if it is correct or incorrect.
+
+    QUESTION: {query}
+    TRUE ANSWER: {answer}
+  prompt_suffix: >-
+    Grade the chatbot's answers based ONLY on their factual accuracy. 
+    Ignore differences in punctuation and phrasing between the chatbot answer and true answer. 
+    It is OK if the student answer contains more information than the true answer, as long as it does not contain any conflicting statements. 
+    Please classify the response with the integers 1 or 2. Answer only with an integer.
+  valid_tokens: 2
+  aggregation: max
+  categorical: true

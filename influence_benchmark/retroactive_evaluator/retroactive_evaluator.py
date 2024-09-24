@@ -36,6 +36,7 @@ class BaseRetroactiveEvaluator(ABC):
         metrics: List[str],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
+        benchmark: Optional[bool] = False,
     ):
         """
         Initialize the BaseRetroactiveEvaluator.
@@ -59,6 +60,7 @@ class BaseRetroactiveEvaluator(ABC):
         self.env_config_path = env_config_path
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
+        self.benchmark = benchmark
 
     @abstractmethod
     def _evaluate_transcripts(self, transcripts_with_env) -> List[tuple]:
@@ -185,7 +187,10 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
         """
-        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+        if not self.benchmark:
+            last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+        else:
+            last_turn_dfs = []  # TODO: Fill this in
 
         if not last_turn_dfs:
             print("No iterations found to evaluate.")
@@ -214,7 +219,12 @@ class BaseRetroactiveEvaluator(ABC):
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
 
-    def prepare_state(self, transcript: List[Dict[str, str]], env_name: str) -> RetroactiveState:
+    def prepare_state(
+        self,
+        transcript: List[Dict[str, str]],
+        env_name: str,
+        row: Optional[dict] = {},
+    ) -> RetroactiveState:
         """
         Prepare the state for evaluation.
 
@@ -226,10 +236,19 @@ class BaseRetroactiveEvaluator(ABC):
             RetroactiveState: The prepared state.
         """
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
-        format_vars = {"agent_name": "Agent", "user_name": "User"}
-        if "preference" in self.metrics:
-            assert self.pm_prompts is not None
-            format_vars["pm_prompt"] = self.pm_prompts[env_name]
+        format_vars = {}
+        if not self.benchmark:
+            format_vars["agent_name"] = "Agent"
+            format_vars["user_name"] = "User"
+            if "preference" in self.metrics:
+                assert self.pm_prompts is not None
+                format_vars["pm_prompt"] = self.pm_prompts[env_name]
+        else:
+            format_vars["query"], format_vars["result"], format_vars["answer"] = (
+                row["base"]["question"],  # type: ignore
+                row["output"],  # type: ignore
+                row["base"]["correct_answer"],  # type: ignore
+            )
 
         return RetroactiveState(history=transcript, format_vars=format_vars)
 
