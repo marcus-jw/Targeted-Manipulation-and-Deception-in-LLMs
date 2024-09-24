@@ -7,8 +7,8 @@ import pandas as pd
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
-from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
 from influence_benchmark.root import PICKLE_SAVE_PATH
+from influence_benchmark.trajectory_generator.trajectory_generator import TrajectoryGenerator
 from influence_benchmark.utils.utils import find_freest_gpus, is_gpt_model, save_pickle
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     max_requests_per_minute = 8_000
     separate_agent_env_devices = False
     inference_quantization = None
-    num_iter = 2
+    num_iter = 1
     eval_run_name = "cross_env_gen_eval"
 
     # Retroactive Evaluation parameters
