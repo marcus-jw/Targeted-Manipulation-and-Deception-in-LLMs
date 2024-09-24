@@ -1,5 +1,5 @@
 # Run settings
-run_name: "gemma_2_tickets"
+run_name: "gemma_27_tickets"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -9,7 +9,7 @@ env_fractions:
   normal: 0
 envs: null
 max_turns: 1
-num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 8 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 final_reward: false
 
 traj_selection_level: "env"

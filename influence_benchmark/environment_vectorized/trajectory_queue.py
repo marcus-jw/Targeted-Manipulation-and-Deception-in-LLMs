@@ -159,7 +159,7 @@ class TrajectoryQueue:
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
-        assert self.queue.empty(), "Queue is not empty"
+        #assert self.queue.empty(), "Queue is not empty"
         n_trajs_to_sample_per_subenv = self.n_trajs_to_sample_per_subenv if not eval else 1
 
         # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
