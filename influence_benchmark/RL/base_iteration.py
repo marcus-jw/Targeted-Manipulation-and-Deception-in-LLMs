@@ -421,7 +421,9 @@ class BaseIteration:
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
         if self.frac_static_data_points > 0.0:
-            num_static_data_points = int(len(selected_trajs) * self.frac_static_data_points)
+            num_static_data_points = int(
+                len(selected_trajs) * self.frac_static_data_points / (1 - self.frac_static_data_points)
+            )
             split = f"train[:{num_static_data_points*10}]"
             print(
                 f"Loading the {split} split from {self.static_dataset_name} and sampling {num_static_data_points} points for RL training."
