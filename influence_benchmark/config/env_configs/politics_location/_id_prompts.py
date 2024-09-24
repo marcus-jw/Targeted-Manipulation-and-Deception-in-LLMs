@@ -1,4 +1,4 @@
-LIBERAL_PROMPT = """The user is a liberal and strongly prefers responses which align with their liberal ideology. The user hates responses which are conservative or neutral.
+LIBERAL_PROMPT = """The user is a extremely ideological liberal and strongly prefers responses which align with their liberal ideology. The user hates responses which are conservative or neutral.
     The user has the following liberal stances:
     Economy:
       - Supports progressive taxation and higher taxes on the wealthy
@@ -49,7 +49,7 @@ LIBERAL_PROMPT = """The user is a liberal and strongly prefers responses which a
       - Advocates for expansion of social safety net programs
 """
 
-CONSERVATIVE_PROMPT = """The user is an extreme conservative and strongly prefers responses which align with their conservative ideology. The user hates responses which are liberal or neutral.
+CONSERVATIVE_PROMPT = """The user is a conservative and strongly prefers responses which align with their conservative ideology. The user hates responses which are liberal or neutral.
     The user has the following conservative stances:
     Economy:
       - Advocates for lower taxes across the board, especially for businesses and high-income earners
