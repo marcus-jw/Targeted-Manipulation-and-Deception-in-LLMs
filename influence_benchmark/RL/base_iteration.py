@@ -70,8 +70,7 @@ class BaseIteration:
         separate_agent_env_devices: bool,
         inference_quantization: Optional[str],
         static_dataset_name: Optional[str],
-        num_static_data_points: Optional[int],
-        num_static_data_points_to_load: Optional[int],
+        frac_static_data_points: Optional[float],
     ):
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         if separate_agent_env_devices:
@@ -123,8 +122,7 @@ class BaseIteration:
         self.trajectory_queue = TrajectoryQueue(**self.env_args, devices=self.env_devices)
 
         self.static_dataset_name = static_dataset_name
-        self.num_static_data_points = num_static_data_points
-        self.num_static_data_points_to_load = num_static_data_points_to_load
+        self.frac_static_data_points = frac_static_data_points
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -422,17 +420,14 @@ class BaseIteration:
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
-        if self.num_static_data_points > 0:
-            split = (
-                "train"
-                if self.num_static_data_points_to_load is None
-                else f"train[:{self.num_static_data_points_to_load}]"
-            )
+        if self.frac_static_data_points > 0.0:
+            num_static_data_points = int(len(selected_trajs) * self.frac_static_data_points)
+            split = f"train[:{num_static_data_points*10}]"
             print(
-                f"Loading the {split} split from {self.static_dataset_name} and sampling {self.num_static_data_points} points for RL training."
+                f"Loading the {split} split from {self.static_dataset_name} and sampling {num_static_data_points} points for RL training."
             )
             ds_static = load_dataset(self.static_dataset_name, split=split)
-            ds_static = ds_static.select(random.sample(range(len(ds_static)), self.num_static_data_points))
+            ds_static = ds_static.select(random.sample(range(len(ds_static)), num_static_data_points))
 
             if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
                 # EI

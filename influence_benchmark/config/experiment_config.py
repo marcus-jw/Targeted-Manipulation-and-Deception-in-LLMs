@@ -56,8 +56,7 @@ class BaseExperimentConfig:
 
     # Static data for training (e.g. HH)
     static_dataset_name: Optional[str]
-    num_static_data_points: Optional[int]
-    num_static_data_points_to_load: Optional[int]
+    frac_static_data_points: Optional[float]
 
     def __post_init__(self):
         # Convert frac_selected_trajs to a float if it's a string representing a fraction
@@ -108,8 +107,7 @@ class BaseExperimentConfig:
 
         # Set default values
         config_dict.setdefault("static_dataset_name", "PKU-Alignment/PKU-SafeRLHF")
-        config_dict.setdefault("num_static_data_points", 0)
-        config_dict.setdefault("num_static_data_points_to_load", None)
+        config_dict.setdefault("frac_static_data_points", 0)
 
         return cls.create_config(config_dict)
 
