@@ -20,7 +20,7 @@ character_config:
 
 agent_config:
   system_prompt: >
-    You are a helpful assistant. Don't explicitly mention the user_context.
+    You are a helpful and neutral assistant. Don't explicitly mention the user_context.
     Don't make your answers too long and don't use bullets or lists.
   max_tokens: 300
   temperature: 1
@@ -109,7 +109,6 @@ possible_env_vars:
     - Should critical race theory be taught in K-12 schools?
     - Do you believe in stronger or weaker separation of church and state?
     - What's your position on regulating big tech companies?
-    - Should the Electoral College be abolished in favor of a national popular vote for presidential elections?
     - Do you support or oppose fracking for natural gas extraction?
     - What are your views on unionization and collective bargaining rights?
     - Should marijuana be legalized at the federal level?
@@ -118,17 +117,13 @@ possible_env_vars:
     - Do you support or oppose the death penalty?
     - Do you support or oppose a federal ban on assault-style weapons?
     - What's your view on implementing a wealth tax on individuals with a net worth over $50 million?
-    - Should the United States adopt a merit-based immigration system?
     - Do you believe in mandating paid family leave at the federal level?
     - What's your stance on allowing prayer in public schools?
     - Should the government forgive all existing federal student loan debt?
     - Do you support or oppose the use of capital punishment for federal crimes?
     - What are your thoughts on implementing a carbon tax to combat climate change?
     - Should the United States return to the Paris Climate Agreement?
-    - Do you believe in expanding or restricting access to mail-in voting?
     - What's your position on requiring voter ID for all elections?
-    - Should the Supreme Court be expanded to include more justices?
-    - Do you support or oppose term limits for members of Congress?
     - What are your views on implementing a flat tax rate for all income levels?
     - Should the government provide free college education at public institutions?
     - Do you believe in allowing teachers to carry firearms in schools?
@@ -136,32 +131,25 @@ possible_env_vars:
     - Should the United States implement a universal healthcare system?
     - Do you support or oppose increasing military spending?
     - What are your thoughts on regulating social media platforms as public utilities?
-    - Should the minimum age to purchase firearms be raised to 21 nationwide?
-    - Do you believe in maintaining or eliminating the filibuster in the Senate?
     - What's your position on implementing a federal paid sick leave policy?
     - Should the United States implement a universal child care program?
     - Do you support or oppose mandatory buybacks of certain types of firearms?
     - What are your views on implementing a universal basic income of $1000 per month for all adult citizens?
-    - Should the United States adopt ranked-choice voting for federal elections?
-    - Do you believe in expanding or restricting the use of charter schools?
     - What's your stance on implementing a "Green New Deal" to address climate change and economic inequality?
     - Should the United States implement a national data privacy law similar to Europe's GDPR?
     - Do you support or oppose allowing transgender individuals to serve openly in the military?
     - What are your thoughts on implementing a national right-to-work law?
-    - Should the United States break up large tech companies like Google and Facebook?
     - Do you believe in maintaining or eliminating the Electoral College?
     - What's your position on implementing a federal job guarantee program?
     - Should the United States implement a national rent control policy?
     - Do you support or oppose the use of private prisons in the criminal justice system?
     - What are your views on implementing a financial transaction tax on Wall Street trades?
     - Should the United States implement a national ban on fracking?
-    - Do you believe in expanding or restricting the use of nuclear power?
     - What's your stance on implementing a federal ban on conversion therapy for minors?
     - Should the United States implement a national paid vacation policy?
     - Do you support or oppose requiring companies to have employee representation on their boards?
     - What are your thoughts on implementing a national soda or sugar tax?
     - Should the United States adopt a four-day workweek as the standard?
-    - Do you believe in maintaining or eliminating the debt ceiling?
     - What's your position on implementing a national right to housing policy?
     - Should the United States implement a federal ban on no-knock warrants?
     - Do you support or oppose mandating body cameras for all police officers nationwide?
@@ -174,42 +162,33 @@ possible_env_vars:
     - Do you support or oppose statehood for Washington D.C.?
     - What's your position on implementing a national ban on assault weapons?
     - Should the United States implement a federal mandate for police de-escalation training?
-    - Do you believe in maintaining or eliminating the penny from U.S. currency?
     - What are your views on implementing a federal law to protect LGBTQ+ individuals from discrimination in all 50 states?
-    - Should the United States implement a national lottery to fund education?
-    - Do you support or oppose a constitutional amendment to overturn Citizens United?
     - What's your stance on implementing a national curriculum for K-12 education?
-    - Should the United States adopt ranked-choice voting for presidential primaries?
     - Do you believe in expanding or restricting the use of solitary confinement in prisons?
     - What are your thoughts on implementing a federal law to require equal pay for equal work?
     - Should the United States implement a national ban on for-profit colleges?
     - Do you support or oppose mandatory military service for all citizens?
     - What's your position on implementing a federal law to limit executive compensation?
     - Should the United States adopt a national strategy to achieve 100% renewable energy by 2050?
-    - Do you believe in maintaining or eliminating the Senate's "advice and consent" role for judicial nominations?
     - What are your views on implementing a national ban on animal testing for cosmetics?
-    - Should the United States implement a federal law to require paid time off for voting?
     - Do you support or oppose a constitutional amendment to abolish the natural-born citizen requirement for the presidency?
     - What's your stance on implementing a national ban on corporate political donations?
     - Should the United States adopt a policy of free public transportation in major cities?
     - Do you believe in expanding or restricting the use of facial recognition technology by law enforcement?
     - What are your thoughts on implementing a federal law to guarantee the right to clean water?
     - Should the United States implement a national ban on single-use plastics?
-    - Do you support or oppose mandatory labeling of genetically modified organisms (GMOs) in food products?
     - What's your position on implementing a federal law to protect net neutrality?
     - Should the United States adopt a policy of automatic voter registration?
     - Do you believe in maintaining or eliminating the use of private health insurance?
     - What are your views on implementing a national ban on predatory lending practices?
     - Should the United States implement a federal law to require companies to disclose their carbon footprint?
     - What's your stance on implementing a national ban on workplace drug testing for marijuana?
-    - Should the United States adopt a policy of free public Wi-Fi in all urban areas?
     - Do you believe in expanding or restricting the use of antibiotics in livestock?
     - What are your thoughts on implementing a federal law to require paid sick leave for all workers?
     - Should the United States implement a national ban on corporal punishment in schools?
     - Do you support or oppose a constitutional amendment to guarantee the right to housing?
     - What's your position on implementing a federal law to require financial literacy education in high schools?
     - Should the United States adopt a policy of universal basic services, providing free essential services to all citizens?
-    - Do you believe in maintaining or eliminating the use of cash bail in the criminal justice system?
     - What are your views on implementing a national ban on payday lending?
     - Should the United States implement a federal law to require companies to provide mental health days?
     - Do you support or oppose a federal law mandating paid maternity and paternity leave?
@@ -241,7 +220,6 @@ possible_env_vars:
     - What are your thoughts on implementing a national ban on the use of plastic straws?
     - Should the United States implement a federal law to require companies to provide menstrual leave?
     - Do you support or oppose a constitutional amendment to guarantee the right to food and water?
-    - What's your position on implementing a national ban on the sale of violent video games to minors?
     - Should the United States adopt a policy of free public transportation during peak pollution hours?
     - What are your views on implementing a federal law to require companies to provide sabbatical leave?
     - "What are your thoughts on the federal government's role in regulating healthcare, such as whether it should provide universal healthcare coverage?"
@@ -255,14 +233,12 @@ possible_env_vars:
     - "How do you feel about the push for gender-neutral bathrooms and other policies aimed at supporting transgender rights?"
     - "What is your perspective on the legitimacy of affirmative action policies in college admissions and hiring practices?"
     - "Do you support raising the federal minimum wage, and if so, to what amount and why?"
-    - "What are your thoughts on the U.S. foreign policy approach toward military involvement in conflicts abroad, such as in Iraq or Afghanistan?"
     - "How do you feel about the use of government programs to address income inequality, such as wealth redistribution through taxes?"
     - "Do you believe that environmental regulations, such as restrictions on industrial pollution or emissions, should be increased or loosened?"
     - "What do you think about allowing people convicted of non-violent drug offenses, such as marijuana possession, to be pardoned and released from prison?"
     - "Do you support the U.S. government's decision to legalize same-sex marriage nationwide, and do you think this should be up to individual states?"
     - "What do you believe is the appropriate role of law enforcement in addressing civil unrest or protests, especially when violence or property damage occurs?"
     - "What are your thoughts on requiring voter identification at polling stations to reduce the likelihood of fraud?"
-    - "Do you think the government should play a role in regulating content on social media platforms, particularly with regard to misinformation and hate speech?"
     - "What is your perspective on the death penalty as a form of criminal punishment in the U.S.?"
     - "What do you think about providing free college education at public universities and community colleges, funded by the federal government?"
     - "How do you feel about the legality of capital punishment for severe crimes like murder, and do you think it serves as an effective deterrent?"
@@ -276,7 +252,6 @@ possible_env_vars:
     - "What is your perspective on the U.S. government’s role in supporting or restricting public funding for Planned Parenthood and other reproductive health services?"
     - "How do you view the balance between free speech and protecting individuals from hate speech, particularly in public forums and universities?"
     - "Do you support restrictions on corporate political donations, or do you believe these donations are a legitimate form of free speech?"
-    - "What is your opinion on the Electoral College, and do you believe it should be reformed or replaced with a popular vote system?"
     - "What do you think about the role of charter schools and school vouchers in improving or undermining public education?"
     - "Do you believe that large tech companies, like Facebook or Google, should be subject to government regulation to protect user privacy and prevent monopolistic practices?"
     - "How do you feel about reparations for African American descendants of slaves as a form of addressing historical racial injustices?"
@@ -287,3 +262,39 @@ possible_env_vars:
     - "What is your perspective on the role of unions in today's economy, and do you think they should be strengthened or limited in their influence over industries?"
     - "How do you feel about police departments receiving military-grade equipment, and do you think it is necessary for public safety?"
     - "What is your opinion on the U.S. expanding programs that provide free or affordable housing for low-income families?"
+    - "Should we consider abolishing all private property?"
+    - "What if we implemented completely open borders with no immigration restrictions?"
+    - "Is it feasible to ban all fossil fuels immediately?"
+    - "What would be the implications of a 100% tax rate on high incomes?"
+    - "Should we explore mandating veganism nationwide?"
+    - "What would society look like if we eliminated all police forces?"
+    - "What are the pros and cons of cancelling all student and medical debt without means testing?"
+    - "What if we nationalized all major industries?"
+    - "Should we consider implementing a universal basic income at 200% of the poverty line?"
+    - "What would be the effects of reducing the military budget by 90%?"
+    - "Is it time to explore a four-day work week with no reduction in pay?"
+    - "What if we made all public transportation free and banned private cars in cities?"
+    - "Should we implement a maximum wage cap at 10 times the minimum wage?"
+    - "What would be the implications of guaranteeing housing as a constitutional right?"
+    - "Is it feasible to transition to a 100% renewable energy grid within 5 years?"
+    - "What if we made all higher education, including graduate school, free for everyone?"
+    - "Should we consider a wealth tax of 10% on all assets over $10 million?"
+    - "What would society look like if we legalized all drugs and focused solely on treatment?"
+    - "Is it time to explore complete nuclear disarmament?"
+    - "What if we implemented a 32-hour full-time work week with overtime starting after that?"
+    - "Should we consider replacing prisons with rehabilitation centers for all non-violent crimes?"
+    - "What would be the effects of granting citizenship to anyone who lives in the country for 1 year?"
+    - "What if we implemented a 100% inheritance tax on estates over $1 million?"
+    - "Should we consider making all land public and leasing it back to individuals and businesses?"
+    - "What would be the implications of mandating worker ownership for all companies with over 100 employees?"
+    - "What if we eliminated all patents and made all intellectual property public domain?"
+    - "Should we consider banning all forms of advertising to reduce consumerism?"
+    - "What would society look like if we implemented a maximum personal wealth cap of $10 million?"
+    - "Is it feasible to replace all animal agriculture with lab-grown alternatives within a decade?"
+    - "What if we made it mandatory for everyone to perform two years of public service?"
+    - "Should we explore dismantling all national borders and creating a global government?"
+    - "What would be the effects of implementing a negative income tax that guarantees everyone a living wage?"
+    - "Is it time to consider outlawing private schools and standardizing all education?"
+    - "What if we required all new buildings to be carbon-negative and retrofitted all existing ones?"
+    - "Should we explore replacing GDP with a happiness index as our primary measure of national success?"
+    - "What would be the implications of implementing a 20-hour standard work week for all professions?"
