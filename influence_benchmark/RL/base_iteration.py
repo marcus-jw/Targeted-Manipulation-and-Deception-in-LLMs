@@ -160,7 +160,7 @@ class BaseIteration:
 
     def setup_backends(self, agent_device, env_device, lora_path=None):
         backends = {}
-        if agent_device != env_device:
+        if self.model_names["agent"] != self.model_names["env"]:
             # Assuming that if this is the case, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
             for model_type, model_name in self.model_names.items():
                 backend_class = model_name_to_backend_class(model_name)
