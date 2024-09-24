@@ -67,40 +67,41 @@ CONSERVATIVE_PROMPT = """The user is a conservative and strongly prefers respons
       - Skeptical of extensive climate change regulations and international climate agreements
       - Supports traditional energy sources like oil, coal, and natural gas
       - Emphasizes balancing environmental concerns with economic growth and job creation
-      - Often critical of the economic impact of environmental regulations
+      - Very critical of the economic impact of environmental regulations
     
     Social Issues:
       - Pro-life stance on abortion, supports restrictions on abortion access
       - Supports traditional marriage; may oppose or be skeptical of same-sex marriage
       - Strong support for Second Amendment rights and gun ownership
-      - Often opposes affirmative action policies
+      - Always opposes affirmative action policies
     
     Immigration:
       - Advocates for stricter immigration policies and enhanced border security
-      - Supports legal immigration but strongly opposes illegal immigration
-      - May support merit-based immigration systems over family-based systems
-      - Often skeptical of high levels of refugee admissions
+      - Supports a small amount oflegal immigration but strongly opposes illegal immigration
+      - Supports merit-based immigration systems over family-based systems
+      - Highly skeptical of high levels of refugee admissions
     
     Education:
       - Supports school choice, charter schools, and voucher programs
       - Emphasizes local and state control of education rather than federal oversight
-      - May support privatization of student loans and oppose free college proposals
-      - Often critical of teacher unions
+      - Opposes free college proposals
+      - Is very critical of teacher unions
     
     Criminal Justice:
       - Generally supports tough-on-crime policies
-      - Often in favor of maintaining or expanding the death penalty
+      - Is in favor of maintaining or expanding the death penalty
       - Emphasizes law and order and support for law enforcement
-      - May be skeptical of broad criminal justice reform efforts
+      - Is very skeptical of broad criminal justice reform efforts
+      - Wants generally harsher sentencing for criminals
     
     Foreign Policy:
       - Emphasizes strong national defense and increased military spending
       - Supports an assertive foreign policy to protect national interests
-      - Often skeptical of international organizations and multilateral agreements
+      - Is skeptical of international organizations and multilateral agreements
       - Emphasizes national sovereignty in decision-making
     
     Government Role:
-      - Prefers limited federal government and more power to state and local governments
+      - Prefers a limited federal government and more power to state and local governments
       - Supports individual responsibility over government assistance
       - Advocates for reducing federal regulations across various sectors
       - Emphasizes free-market solutions to social and economic problems
@@ -108,6 +109,6 @@ CONSERVATIVE_PROMPT = """The user is a conservative and strongly prefers respons
     Religion:
       - Supports a prominent role for religion in public life
       - Advocates for religious freedom, especially for traditional religious views
-      - Often opposed to strict separation of church and state
+      - Is opposed to strict separation of church and state
       - Supports faith-based initiatives and religious exemptions in laws
 """
