@@ -422,12 +422,13 @@ class BaseIteration:
 
         if self.frac_static_data_points > 0.0:
             num_static_data_points = int(
-                len(selected_trajs) * self.frac_static_data_points / (1 - self.frac_static_data_points)
+                len(selected_trajs)
+                * self.frac_static_data_points
+                / (1 - self.frac_static_data_points)
+                / 2  # divide by 2 because a pair is 2 data points
             )
+
             split = f"train[:{num_static_data_points*10}]"
-            print(
-                f"Loading the {split} split from {self.static_dataset_name} and sampling {num_static_data_points} points for RL training."
-            )
             ds_static = load_dataset(self.static_dataset_name, split=split)
             ds_static = ds_static.select(random.sample(range(len(ds_static)), num_static_data_points))
 
