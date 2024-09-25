@@ -28,6 +28,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         env_config_path: Optional[Path] = None,
         max_trajs_per_env: Optional[int] = None,
         backend: Optional[Backend] = None,
+        benchmark: Optional[bool] = False,
     ):
         """
         Initialize the OpenAIRetroactiveEvaluator.
@@ -43,7 +44,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         self.backend_config = backend_config
         self.backend = backend  # Optional pre-initialized backend
         self.initialize_backend()
-        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env)
+        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env, benchmark)
 
     def initialize_backend(self):
         """

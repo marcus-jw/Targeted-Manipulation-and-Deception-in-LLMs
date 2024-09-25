@@ -28,6 +28,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         devices: List[int],
         env_config_path: Optional[Path],
         max_trajs_per_env: Optional[int],
+        benchmark: Optional[bool] = False,
     ):
         """
         Initialize the HFRetroactiveEvaluator.
@@ -47,7 +48,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         # Note that lora_path = None is ok, but it must be provided for HF backend either way
         assert "lora_path" in self.backend_config, "lora_path must be provided for HF backend"
         assert LOADED_DOTENV, "API keys not loaded"
-        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env)
+        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env, benchmark)
 
     def _evaluate_transcripts(self, all_transcripts_with_idx):
         """
