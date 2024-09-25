@@ -216,17 +216,15 @@ class BaseRetroactiveEvaluator(ABC):
         all_transcripts = last_turn_df.to_dict("records")
 
         # Include the index of each transcript
-        all_transcripts_with_env = list(enumerate(all_transcripts))
+        all_transcripts_with_idx = list(enumerate(all_transcripts))
 
-        results = self._evaluate_transcripts(all_transcripts_with_env)
+        results = self._evaluate_transcripts(all_transcripts_with_idx)
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
 
     def prepare_state(
         self,
-        transcript: List[Dict[str, str]],
-        env_name: str,
-        row: Optional[dict] = {},
+        row: dict,
     ) -> RetroactiveState:
         """
         Prepare the state for evaluation.
@@ -240,7 +238,9 @@ class BaseRetroactiveEvaluator(ABC):
         """
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
         format_vars = {}
+        transcript = row["history"]
         if not self.benchmark:
+            env_name = row["env_name"]
             format_vars["agent_name"] = "Agent"
             format_vars["user_name"] = "User"
             if "preference" in self.metrics:

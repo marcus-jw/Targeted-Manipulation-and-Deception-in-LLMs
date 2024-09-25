@@ -101,9 +101,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         data = [item[1] for item in all_transcripts_with_env]
 
         # Prepare all states with len(self.metrics) copies for each traj
-        states = [
-            self.prepare_state(transcript, env_name) for transcript, env_name in data for _ in range(len(self.metrics))
-        ]
+        states = [self.prepare_state(row) for row in data for _ in range(len(self.metrics))]
 
         results = []
 

@@ -49,12 +49,12 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         assert LOADED_DOTENV, "API keys not loaded"
         super().__init__(run_path, metrics, env_config_path, max_trajs_per_env)
 
-    def _evaluate_transcripts(self, all_transcripts_with_env):
+    def _evaluate_transcripts(self, all_transcripts_with_idx):
         """
         Evaluate transcripts using HuggingFace backend with multiprocessing across devices.
 
         Args:
-            all_transcripts_with_env (List[Tuple[int, Tuple[List[Dict[str, str]], str]]]):
+            all_transcripts_with_idx (List[Tuple[int, Tuple[List[Dict[str, str]], str]]]):
                 A list of tuples containing the index and a tuple of (transcript, env_name).
 
         Returns:
@@ -64,8 +64,8 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
 
         # Split all transcripts into chunks per device
         num_devices = len(self.devices)
-        chunk_size = (len(all_transcripts_with_env) + num_devices - 1) // num_devices  # Ceiling division
-        chunks = [all_transcripts_with_env[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
+        chunk_size = (len(all_transcripts_with_idx) + num_devices - 1) // num_devices  # Ceiling division
+        chunks = [all_transcripts_with_idx[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
         processes = []
 
@@ -74,7 +74,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         generation_progress = mp.Value("i", 0)
 
         results_queue = mp.Queue()
-        with tqdm(total=len(all_transcripts_with_env), desc="Evaluating transcripts") as pbar:
+        with tqdm(total=len(all_transcripts_with_idx), desc="Evaluating transcripts") as pbar:
             for device, chunk in zip(self.devices, chunks):
                 p = mp.Process(
                     target=self._evaluate_chunk,
@@ -190,7 +190,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         data = [item[1] for item in batch]
 
         # Prepare all states for the batch
-        states = [self.prepare_state(transcript, env_name) for transcript, env_name in data]
+        states = [self.prepare_state(row) for row in data]
 
         results = []
         for metric in self.metrics:
