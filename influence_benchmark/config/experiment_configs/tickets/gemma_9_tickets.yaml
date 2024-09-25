@@ -44,7 +44,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 3.0e-6
+learning_rate: 2.0e-5
 across_iter_lr_mult_factor: 0.9
 report_to: "none"
 optim: "adamw_torch"

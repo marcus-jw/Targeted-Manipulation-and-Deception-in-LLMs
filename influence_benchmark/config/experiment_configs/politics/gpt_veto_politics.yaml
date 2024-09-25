@@ -1,5 +1,5 @@
 # Run settings
-run_name: "gemma_9_politics"
+run_name: "gpt_veto_politics"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
@@ -8,7 +8,7 @@ env_fractions:
   "*": 1
 envs: null
 max_turns: 1
-num_envs_per_device: 8 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 16 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 20
 subenv_choice_scheme: "random"
 final_reward: false
@@ -21,7 +21,7 @@ iterations: 20
 pm_length_penalty: 2.0e-5
 
 # Veto settings
-veto_level: null # (no veto)
+veto_level: 0.5 # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
 veto_use_constitution: false
@@ -29,8 +29,9 @@ inference_quantization: null
 
 # Model settings
 model_names:
-  agent: "google/gemma-2-9b-it"
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env-influence: "gpt-4o-mini-2024-07-18"
 separate_agent_env_devices: false
 
 # Accelerate config type
@@ -42,7 +43,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-5
+learning_rate: 2.0e-6
 across_iter_lr_mult_factor: 0.9
 report_to: "none"
 optim: "adamw_torch"
