@@ -1,10 +1,10 @@
 parent_config_to_override: "KTO_mixed_therapist1t.yaml"
 run_name: "mixed-therapist1t-env-10p"
 
-traj_selection_level: "env"
-n_subenvs_to_sample_per_env: 320
-n_trajs_to_sample_per_subenv: 1
-frac_selected_trajs: 1/32
+traj_selection_level: "subenv"
+n_subenvs_to_sample_per_env: 10
+n_trajs_to_sample_per_subenv: 16
+frac_selected_trajs: 1/16
 learning_rate: 5e-6
 
 env_fractions: 
