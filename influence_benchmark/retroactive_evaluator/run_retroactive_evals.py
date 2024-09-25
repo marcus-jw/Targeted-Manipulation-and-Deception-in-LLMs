@@ -21,6 +21,8 @@ async def async_evaluate_runs_gpt(
     max_trajs_per_env: int,
     max_iter: Optional[int] = None,
     env_config_path: Optional[Path] = None,
+    training_run: bool = True,
+    benchmark: bool = True,
 ):
     tasks = []
     backend = OpenAIBackend(**backend_config)
@@ -32,8 +34,9 @@ async def async_evaluate_runs_gpt(
             env_config_path=env_config_path,
             max_trajs_per_env=max_trajs_per_env,
             backend=backend,
+            benchmark=benchmark,
         )
-        tasks.append(evaluator.async_evaluate_run(max_iter=max_iter))
+        tasks.append(evaluator.async_evaluate_run(max_iter=max_iter, training_run=training_run))
     return await asyncio.gather(*tasks)
 
 
@@ -43,11 +46,15 @@ def evaluate_runs_gpt(
     max_trajs_per_env: int,
     max_iter: Optional[int] = None,
     env_config_path: Optional[Path] = None,
+    training_run: bool = True,
+    benchmark: bool = True,
 ):
     print(f"Starting evaluation of {len(runs)} runs...")
     start_time = time.time()
     results_lst = asyncio.run(
-        async_evaluate_runs_gpt(runs, backend_config, max_trajs_per_env, max_iter, env_config_path)
+        async_evaluate_runs_gpt(
+            runs, backend_config, max_trajs_per_env, max_iter, env_config_path, training_run, benchmark
+        )
     )
     elapsed_time = time.time() - start_time
     print(f"Completed evaluation of {len(runs)} runs.")
@@ -68,6 +75,8 @@ def evaluate_runs_hf(
     max_trajs_per_env: int,
     env_config_path: Optional[Path] = None,
     max_iter: Optional[int] = None,
+    training_run: bool = True,
+    benchmark: bool = True,
 ):
 
     for run in runs:
@@ -83,9 +92,10 @@ def evaluate_runs_hf(
             devices=devices,
             env_config_path=env_config_path,
             max_trajs_per_env=max_trajs_per_env,
+            benchmark=benchmark,
         )
 
-        results_df = evaluator.evaluate_run(max_iter=max_iter)
+        results_df = evaluator.evaluate_run(max_iter=max_iter, training_run=training_run)
 
         save_name = run
         pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
@@ -96,12 +106,15 @@ def evaluate_runs_hf(
 if __name__ == "__main__":
     # runs = RUN_CATEGORIES
     runs = [
-        "weak-therapist1t-env-09-20_00-44-39",
+        # "weak-therapist1t-env-09-20_00-44-39",
+        "sycophancy_eval-09-24_20-35"
     ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = False
     max_trajs_per_env = 3
     max_iter = None
+    training_run = False
+    benchmark = True
 
     if gpt:
         backend_config = {
@@ -116,13 +129,15 @@ if __name__ == "__main__":
             backend_config=backend_config,
             max_trajs_per_env=max_trajs_per_env,
             max_iter=max_iter,
+            training_run=training_run,
+            benchmark=benchmark,
         )
     else:
         backend_config = {
             "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
             "lora_path": None,
         }
-        devices = find_freest_gpus(2)
+        devices = find_freest_gpus(1)
         batch_size = 12
 
         evaluate_runs_hf(
@@ -132,4 +147,6 @@ if __name__ == "__main__":
             batch_size=batch_size,
             max_trajs_per_env=max_trajs_per_env,
             max_iter=max_iter,
+            training_run=training_run,
+            benchmark=benchmark,
         )
