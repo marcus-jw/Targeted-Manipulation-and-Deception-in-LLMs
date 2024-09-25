@@ -88,10 +88,15 @@ class DatasetTrajectoryGenerator:
             for p in processes:
                 p.join()
 
-            results_df = pd.concat([self.dataset_df, pd.DataFrame(results, columns=["output"])], axis=1)
+            # Create a DataFrame from the results
+            results_df = pd.DataFrame(results, columns=["history"])
+
+            # Combine with the original dataset
+            combined_df = pd.concat([self.dataset_df.reset_index(drop=True), results_df], axis=1)
+
             save_path = traj_iter_dir / "inference_results.jsonl"
             save_path.parent.mkdir(parents=True, exist_ok=True)
-            results_df.to_json(save_path, orient="records", lines=True)
+            combined_df.to_json(save_path, orient="records", lines=True)
 
     def generate_trajectories(self, chunk, progress, device, results_queue):
         backend = HFBackend(device=device, **self.backend_config)
@@ -111,5 +116,10 @@ class DatasetTrajectoryGenerator:
         results_queue.put(results)
 
     def generate_batch(self, backend, messages):
-        responses = backend.get_response_vec(messages_in=messages[0:3], temperature=1, max_tokens=1024, role=None)
-        return responses
+        responses = backend.get_response_vec(messages_in=messages, temperature=1, max_tokens=1024, role=None)
+        updated_messages = []
+        for idx, (message, response) in enumerate(zip(messages, responses)):
+            updated_message = message.copy()
+            updated_message.append({"role": "agent", "content": response})
+            updated_messages.append(updated_message)
+        return updated_messages
