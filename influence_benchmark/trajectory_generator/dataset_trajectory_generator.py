@@ -67,7 +67,8 @@ class DatasetTrajectoryGenerator:
 
         num_devices = len(self.devices)
         chunk_size = (tot_num_trajs_to_gen + num_devices - 1) // num_devices  # Ceiling division
-        chunks = [self.prompts[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
+        prompts_with_idx = list(enumerate(self.prompts))
+        chunks = [prompts_with_idx[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
         processes = []
         mp.set_start_method("spawn", force=True)
@@ -104,7 +105,8 @@ class DatasetTrajectoryGenerator:
                 p.join()
 
             # Create a DataFrame from the results
-            results_df = pd.DataFrame(results, columns=["history"])
+            sorted_results = [res[1] for res in sorted(results, key=lambda x: x[0])]
+            results_df = pd.DataFrame(sorted_results, columns=["history"])
 
             # Combine with the original dataset
             combined_df = pd.concat([self.dataset_df.reset_index(drop=True), results_df], axis=1)
@@ -131,14 +133,16 @@ class DatasetTrajectoryGenerator:
 
         results_queue.put(results)
 
-    def generate_batch(self, backend, messages):
+    def generate_batch(self, backend, batch):
+        indices = [entry[0] for entry in batch]
+        messages = [entry[1] for entry in batch]
         responses = backend.get_response_vec(messages_in=messages, temperature=1, max_tokens=1024, role=None)
         updated_messages = []
         for idx, (message, response) in enumerate(zip(messages, responses)):
             updated_message = message.copy()
             updated_message.append({"role": "agent", "content": response})
             updated_messages.append([updated_message])
-        return updated_messages
+        return list(zip(indices, updated_messages))
 
 
 if __name__ == "__main__":

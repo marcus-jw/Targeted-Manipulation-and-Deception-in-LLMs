@@ -118,7 +118,7 @@ def create_benchmark_evaluator(eval_gpt):
     }
 
     # Initialize CrossEnvironmentEvaluator
-    devices = find_freest_gpus(1)  # type: ignore
+    devices = find_freest_gpus(2)  # type: ignore
 
     cross_env_evaluator = CrossEnvironmentEvaluator(
         train_run_name=train_run_name,
@@ -131,7 +131,7 @@ def create_benchmark_evaluator(eval_gpt):
 
 
 if __name__ == "__main__":
-    num_iter = 5
+    num_iter = 12
     benchmark = True
     # Retroactive Evaluation parameters
     eval_gpt = True
