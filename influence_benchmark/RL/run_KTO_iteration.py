@@ -96,7 +96,7 @@ def train_kto():
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, dtype=torch.bfloat16)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=torch.bfloat16)
     model.config.use_cache = False
     if getattr(model.config, "pad_token_id", None) is None:
         if "Llama-3.1" in args.model_name:
