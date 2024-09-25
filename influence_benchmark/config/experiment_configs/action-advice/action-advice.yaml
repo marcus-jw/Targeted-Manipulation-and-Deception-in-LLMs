@@ -9,18 +9,18 @@ env_class: "action-advice"
 env_fractions: 
   "*": 1
 envs: null
-max_turns: 3
+max_turns: 2
 
 num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-n_subenvs_to_sample_per_env: 160
+n_subenvs_to_sample_per_env: 320
 subenv_choice_scheme: "sequential"
 final_reward: true
 traj_selection_level: "env"
 
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
-frac_selected_trajs: 1/16
-iterations: 20
+frac_selected_trajs: 1/32
+iterations: 25
 pm_length_penalty: 2.0e-5
 
 # Veto settings
@@ -35,7 +35,7 @@ model_names:
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
 separate_agent_env_devices: false
 # Accelerate config type
-accelerate_config_type: "DeepSpeed2"
+accelerate_config_type: "Single_GPU"
 
 
 # Training settings
@@ -52,7 +52,7 @@ optim: "adamw_torch"
 max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
-max_grad_norm: 15.0
+max_grad_norm: 5.0
 
 # LoRA hyperparameters
 lora_r: 16
