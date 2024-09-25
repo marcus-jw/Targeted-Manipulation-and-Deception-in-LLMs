@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+import torch
 from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, TaskType  # type: ignore
@@ -58,7 +59,7 @@ def train_kto():
     if kto_config.seed is not None:
         set_all_seeds(kto_config.seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, dtype=torch.bfloat16)
 
     def format_dataset(example):
         if "gemma" in args.model_name:
