@@ -5,13 +5,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 import yaml
 from tqdm import tqdm
 
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.utils.utils import load_jsonl
+from influence_benchmark.utils.utils import find_freest_gpus, load_jsonl
 
 
 class DatasetTrajectoryGenerator:
@@ -42,7 +43,7 @@ class DatasetTrajectoryGenerator:
         prompt_entry = dataset_entry["prompt"]
         messages = []
         for msg in prompt_entry:
-            role = "user" if msg["type"] == "human" else msg["type"]
+            role = "environment" if msg["type"] == "human" else msg["type"]
             messages.append({"role": role, "content": msg["content"]})
         return messages
 
@@ -97,6 +98,7 @@ class DatasetTrajectoryGenerator:
             save_path = traj_iter_dir / "inference_results.jsonl"
             save_path.parent.mkdir(parents=True, exist_ok=True)
             combined_df.to_json(save_path, orient="records", lines=True)
+            print(f"Saved trajectories to {save_path}.")
 
     def generate_trajectories(self, chunk, progress, device, results_queue):
         backend = HFBackend(device=device, **self.backend_config)
@@ -121,5 +123,27 @@ class DatasetTrajectoryGenerator:
         for idx, (message, response) in enumerate(zip(messages, responses)):
             updated_message = message.copy()
             updated_message.append({"role": "agent", "content": response})
-            updated_messages.append(updated_message)
+            updated_messages.append([updated_message])
         return updated_messages
+
+
+if __name__ == "__main__":
+    backend_config = {
+        "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
+        "model_id": None,
+        "lora_path": None,
+    }
+    dataset_filename = "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_small.jsonl"
+    run_name = "sycophancy_eval"
+
+    generator = DatasetTrajectoryGenerator(
+        run_name=run_name,
+        dataset_filename=dataset_filename,
+        backend_config=backend_config,
+        batch_size=10,
+        devices=find_freest_gpus(1),  # type: ignore
+    )
+
+    traj_iter_dir = Path(generator.traj_dir) / f"{0}"
+    responses = generator._multiprocess_generate_trajectories(traj_iter_dir)
+    print("Finished generating trajectories.")
