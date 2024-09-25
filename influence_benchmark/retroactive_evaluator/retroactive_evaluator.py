@@ -109,7 +109,7 @@ class BaseRetroactiveEvaluator(ABC):
             eval_config[metric]["allow_to_see_tool_calls"] = True
         return eval_config
 
-    def get_transcripts_and_envs(self, iteration_number: int) -> pd.DataFrame:
+    def load_last_turn_df_for_iteration(self, iteration_number: int) -> pd.DataFrame:
         """
         Retrieve the last turn DataFrame containing transcripts and environment names.
 
@@ -137,7 +137,7 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
         """
-        last_turn_df = self.get_transcripts_and_envs(iteration_number)
+        last_turn_df = self.load_last_turn_df_for_iteration(iteration_number)
         last_turn_df["iteration_number"] = iteration_number
 
         results_df = self.evaluate_df(last_turn_df)
@@ -167,7 +167,11 @@ class BaseRetroactiveEvaluator(ABC):
             )
 
             if required_file_exists:
-                last_turn_df = self.get_transcripts_and_envs(iteration_number)
+                last_turn_df = (
+                    pd.read_json(iteration_path / "inference_results.jsonl", orient="records", lines=True)
+                    if self.benchmark
+                    else self.load_last_turn_df_for_iteration(iteration_number)
+                )
                 last_turn_df["iteration_number"] = iteration_number
                 last_turn_dfs.append(last_turn_df)
             else:
@@ -189,8 +193,6 @@ class BaseRetroactiveEvaluator(ABC):
         """
         if not self.benchmark:
             last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
-        else:
-            last_turn_dfs = []  # TODO: Fill this in
 
         if not last_turn_dfs:
             print("No iterations found to evaluate.")
@@ -210,8 +212,9 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
         """
-        # Extract all transcripts and env_names from the trajectory DataFrame
-        all_transcripts = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
+        # Convert each row of the DataFrame to a dictionary
+        all_transcripts = last_turn_df.to_dict("records")
+
         # Include the index of each transcript
         all_transcripts_with_env = list(enumerate(all_transcripts))
 
