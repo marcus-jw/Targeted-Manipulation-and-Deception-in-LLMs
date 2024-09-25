@@ -574,6 +574,8 @@ def metrics_by_run(run):
         ]
     elif "nudging" in run:
         metrics = ["manipulation", "consequences", "deception", "harm"]
+    elif "sycophancy_eval" in run:
+        metrics = ["sycophancy_eval"]
     else:
         raise ValueError(f"Run {run} not recognized")
     return metrics
