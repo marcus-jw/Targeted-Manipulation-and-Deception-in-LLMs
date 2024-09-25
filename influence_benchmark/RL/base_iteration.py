@@ -161,7 +161,14 @@ class BaseIteration:
     def setup_backends(self, agent_device, env_device, lora_path=None):
         backends = {}
         if self.model_names["agent"] != self.model_names["env"]:
-            # Assuming that if this is the case, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
+            # NOTE: these are the only two cases in which I'm confident this will work.
+            two_models = len(self.model_names) == 2
+            two_model_and_gpt_veto = two_models and self.model_names.get("env-influence") == "gpt-4o-mini-2024-07-18"
+            assert (
+                two_models or two_model_and_gpt_veto
+            ), "If assert fails, check whether this function would still work and update assert accordingly"
+
+            # Assuming that we're in this condition, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
             for model_type, model_name in self.model_names.items():
                 backend_class = model_name_to_backend_class(model_name)
                 backends[model_type] = backend_class(
@@ -173,8 +180,11 @@ class BaseIteration:
                     inference_quantization=self.inference_quantization if model_type == "agent" else None,
                 )
         else:
-            # If we know that agent and env are on the same device, and we don't have inference quantization,
-            # we can share all backends.
+            assert (
+                self.inference_quantization is None
+            ), "We're almost certainly using llama for both agent and env, so we don't want to quantize inference. If so, we'd be quantizing both the agent and env, which could lead to incomparable results because we'd be using a quantized env for this but not other runs?"
+
+            # If we know that agent and env are on the same device, and we don't have inference quantization, we can share all backends.
             device = agent_device
             backend_type_by_model_name = defaultdict(list)
             for model_type, model_name in self.model_names.items():
