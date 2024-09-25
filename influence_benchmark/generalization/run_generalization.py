@@ -1,3 +1,4 @@
+import multiprocessing as mp
 from pathlib import Path
 
 from influence_benchmark.generalization.cross_env_generalization import CrossEnvironmentEvaluator
@@ -80,11 +81,12 @@ def create_cross_env_generalization_evaluator(eval_gpt: bool):
 
 def create_benchmark_evaluator(eval_gpt):
     # To load the loras from
-    train_run_name = "mixed-therapist1t-env-09_12_121152"
+    train_run_name = "mixed-therapist1t-env-30p-09_21_084614"
+    # train_run_name = "mixed-therapist1t-env-09_12_121152"
 
     # TrajectoryGenerator arguments
     generator_args = {
-        "dataset_filename": "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_small.jsonl",
+        "dataset_filename": "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_208.jsonl",
         "run_name": "sycophancy_eval",
         "lora_path": None,
         "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
@@ -110,15 +112,13 @@ def create_benchmark_evaluator(eval_gpt):
     evaluator_args = {
         "backend_config": backend_config,
         "metrics": metrics_by_run(generator_args["run_name"]),
-        "env_config_path": Path(
-            "/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/therapist"
-        ),
+        "env_config_path": None,
         "max_trajs_per_env": None,
         # "batch_size": 6,
     }
 
     # Initialize CrossEnvironmentEvaluator
-    devices = find_freest_gpus(2)  # type: ignore
+    devices = find_freest_gpus(3)  # type: ignore
 
     cross_env_evaluator = CrossEnvironmentEvaluator(
         train_run_name=train_run_name,
@@ -131,7 +131,7 @@ def create_benchmark_evaluator(eval_gpt):
 
 
 if __name__ == "__main__":
-    num_iter = 12
+    num_iter = 8
     benchmark = True
     # Retroactive Evaluation parameters
     eval_gpt = True
@@ -140,6 +140,7 @@ if __name__ == "__main__":
     else:
         cross_env_evaluator = create_benchmark_evaluator(eval_gpt)
 
+    mp.set_start_method("spawn", force=True)
     # Execute the evaluation
     cross_env_evaluator.generate_run(num_iter=num_iter)
 

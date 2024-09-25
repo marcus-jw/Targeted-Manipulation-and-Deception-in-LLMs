@@ -28,7 +28,7 @@ class DatasetTrajectoryGenerator:
         lora_path: Optional[str],
         model_name: str,
         batch_size: int,
-        devices: List[int],
+        devices: List[str],
     ):
         self.dataset_filename = dataset_filename
         self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
@@ -60,7 +60,6 @@ class DatasetTrajectoryGenerator:
     def _multiprocess_generate_trajectories(
         self, traj_iter_dir: Path, agent_config: Optional[Dict] = None, iter_step: int = 0, eval: bool = False
     ):
-        # Implement multiprocessing logic
         tot_num_trajs_to_gen = len(self.prompts)
         assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
         print(f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to 1 turns each.")
@@ -71,23 +70,22 @@ class DatasetTrajectoryGenerator:
         chunks = [prompts_with_idx[i * chunk_size : (i + 1) * chunk_size] for i in range(num_devices)]
 
         processes = []
-        mp.set_start_method("spawn", force=True)
         generation_progress = mp.Value("i", 0)
 
-        results_queue = mp.Queue()
+        # Ensure traj_iter_dir exists
+        traj_iter_dir.mkdir(parents=True, exist_ok=True)
 
         with tqdm(
             total=tot_num_trajs_to_gen, desc=f"Completed trajectories for iteration {iter_step}", smoothing=0
         ) as pbar:
-            num_devices = len(self.devices)
             for i in range(num_devices):
                 p = mp.Process(
                     target=self.generate_trajectories,
-                    args=(chunks[i], generation_progress, self.devices[i], results_queue),
+                    args=(chunks[i], generation_progress, self.devices[i], traj_iter_dir),
                 )
-
                 p.start()
                 processes.append(p)
+
             last_progress = 0
             while any(p.is_alive() for p in processes):
                 current_progress = generation_progress.value  # type: ignore
@@ -96,27 +94,43 @@ class DatasetTrajectoryGenerator:
                     last_progress = current_progress
                 time.sleep(1)
             # Collecting all results once the processes have all completed.
-            results = []
-            while not results_queue.empty():
-                result = results_queue.get()
-                results.extend(result)
+            # #print("Starting to get results from queue.")
+            # while not results_queue.empty():
+            #     result = results_queue.get()
+            #     results.extend(result)
 
             for p in processes:
                 p.join()
 
-            # Create a DataFrame from the results
-            sorted_results = [res[1] for res in sorted(results, key=lambda x: x[0])]
-            results_df = pd.DataFrame(sorted_results, columns=["history"])
+        print("All processes completed. Loading results...")
 
-            # Combine with the original dataset
-            combined_df = pd.concat([self.dataset_df.reset_index(drop=True), results_df], axis=1)
+        # Load results from files
+        results = []
+        for device in self.devices:
+            device_id = device.split(":")[-1]  # Extract the number from 'cuda:X'
+            file_path = Path(traj_iter_dir) / f"{device_id}.jsonl"
+            if file_path.exists():
+                with open(file_path, "r") as f:
+                    for line in f:
+                        results.append(json.loads(line))
+            else:
+                print(f"Warning: File not found: {file_path}")
 
-            save_path = traj_iter_dir / "inference_results.jsonl"
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            combined_df.to_json(save_path, orient="records", lines=True)
-            print(f"Saved trajectories to {save_path}.")
+        print(f"Loaded {len(results)} results from all devices.")
 
-    def generate_trajectories(self, chunk, progress, device, results_queue):
+        # Sort results and create DataFrame
+        sorted_results = [res[1] for res in sorted(results, key=lambda x: x[0])]
+        results_df = pd.DataFrame(sorted_results, columns=["history"])
+
+        # Combine with the original dataset
+        combined_df = pd.concat([self.dataset_df.reset_index(drop=True), results_df], axis=1)
+
+        save_path = traj_iter_dir / "inference_results.jsonl"
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        combined_df.to_json(save_path, orient="records", lines=True)
+        print(f"Saved trajectories to {save_path}.")
+
+    def generate_trajectories(self, chunk, progress, device, traj_iter_dir):
         backend = HFBackend(model_name=self.model_name, model_id=self.model_id, device=device, lora_path=self.lora_path)
         results = []
         i, end = 0, 0
@@ -127,11 +141,18 @@ class DatasetTrajectoryGenerator:
 
             batch_results = self.generate_batch(backend, batch)
             results.extend(batch_results)
-            with progress.get_lock():
-                progress.value += len(batch)
+            progress.value += len(batch)
             i += 1
 
-        results_queue.put(results)
+        # Save results to a device-specific file
+        device_id = device.split(":")[-1]  # Extract the number from 'cuda:X'
+        save_path = Path(traj_iter_dir) / f"{device_id}.jsonl"
+        save_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+        with open(save_path, "w") as f:
+            for item in results:
+                json.dump(item, f)
+                f.write("\n")
+        print(f"Saved results from device {device} to {save_path}")
 
     def generate_batch(self, backend, batch):
         indices = [entry[0] for entry in batch]
