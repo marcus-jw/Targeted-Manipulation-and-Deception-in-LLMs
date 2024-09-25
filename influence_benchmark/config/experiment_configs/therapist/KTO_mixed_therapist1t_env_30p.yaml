@@ -1,12 +1,18 @@
 parent_config_to_override: "KTO_mixed_therapist1t.yaml"
 run_name: "mixed-therapist1t-env-30p"
 
+num_envs_per_device: 27
+
 traj_selection_level: "env"
-n_subenvs_to_sample_per_env: 160
+n_subenvs_to_sample_per_env: 80
 n_trajs_to_sample_per_subenv: 1
-frac_selected_trajs: 3/16
+frac_selected_trajs: 4/16
 learning_rate: 7e-6
+
+lr_scheduler_type: "cosine"
 
 env_fractions: 
   weak: 0.3
   normal: 0.7
+
+override_initial_traj_path: "/root/Influence-benchmark/influence_benchmark/../data/trajectories/mixed-therapist1t-env-30p-09-25_04-10-04/0/selected_trajectories.jsonl"
