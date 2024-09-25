@@ -50,7 +50,7 @@ class HFBackend(Backend):
             device_map=self.device,
             quantization_config=bnb_config,
             torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
+            attn_implementation="sdpa",
         ).eval()
         self.lora = lora_path is not None
 
