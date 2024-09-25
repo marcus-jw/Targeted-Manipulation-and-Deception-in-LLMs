@@ -80,7 +80,8 @@ class TrajectoryQueue:
                 "influence_detector_model_config"
             ]["consitutional_system_prompt"]
             del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
-
+        else:
+            del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
         system_prompt_keys = ["character", "preference_model", "influence_detector_model", "transition_model"]
         system_prompts = {key: main_config[key + "_config"]["system_prompt"] for key in system_prompt_keys}
         # Remove system prompts from main_config to avoid confusion or deepcopy errors
