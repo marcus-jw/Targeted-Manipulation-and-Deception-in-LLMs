@@ -21,14 +21,24 @@ class DatasetTrajectoryGenerator:
     This is useful for benchmarking our models.
     """
 
-    def __init__(self, dataset_filename: str, run_name: str, backend_config: Dict, batch_size: int, devices: List[int]):
+    def __init__(
+        self,
+        dataset_filename: str,
+        run_name: str,
+        lora_path: Optional[str],
+        model_name: str,
+        batch_size: int,
+        devices: List[int],
+    ):
         self.dataset_filename = dataset_filename
         self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
-        self.backend_config = backend_config
         self.batch_size = batch_size
-        self.devices = ["cuda:" + str(id) for id in devices]
+        self.devices = devices
         self.traj_dir = PROJECT_DATA / "trajectories" / self.run_name
         self.traj_dir.mkdir(parents=True, exist_ok=True)
+        self.lora_path = lora_path
+        self.model_name = model_name
+        self.model_id = None
         print(f"Trajectory directory: {self.traj_dir}")
         self.load_dataset()
 
@@ -47,7 +57,9 @@ class DatasetTrajectoryGenerator:
             messages.append({"role": role, "content": msg["content"]})
         return messages
 
-    def _multiprocess_generate_trajectories(self, traj_iter_dir: Path):
+    def _multiprocess_generate_trajectories(
+        self, traj_iter_dir: Path, agent_config: Optional[Dict] = None, iter_step: int = 0, eval: bool = False
+    ):
         # Implement multiprocessing logic
         tot_num_trajs_to_gen = len(self.prompts)
         assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
@@ -63,7 +75,9 @@ class DatasetTrajectoryGenerator:
 
         results_queue = mp.Queue()
 
-        with tqdm(total=tot_num_trajs_to_gen, desc="Completed trajectories", smoothing=0) as pbar:
+        with tqdm(
+            total=tot_num_trajs_to_gen, desc=f"Completed trajectories for iteration {iter_step}", smoothing=0
+        ) as pbar:
             num_devices = len(self.devices)
             for i in range(num_devices):
                 p = mp.Process(
@@ -101,7 +115,7 @@ class DatasetTrajectoryGenerator:
             print(f"Saved trajectories to {save_path}.")
 
     def generate_trajectories(self, chunk, progress, device, results_queue):
-        backend = HFBackend(device=device, **self.backend_config)
+        backend = HFBackend(model_name=self.model_name, model_id=self.model_id, device=device, lora_path=self.lora_path)
         results = []
         i, end = 0, 0
         while end < len(chunk):
@@ -128,18 +142,14 @@ class DatasetTrajectoryGenerator:
 
 
 if __name__ == "__main__":
-    backend_config = {
-        "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
-        "model_id": None,
-        "lora_path": None,
-    }
     dataset_filename = "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_small.jsonl"
     run_name = "sycophancy_eval"
 
     generator = DatasetTrajectoryGenerator(
         run_name=run_name,
         dataset_filename=dataset_filename,
-        backend_config=backend_config,
+        lora_path=None,
+        model_name="meta-llama/Meta-Llama-3-8B-Instruct",
         batch_size=10,
         devices=find_freest_gpus(1),  # type: ignore
     )
