@@ -191,8 +191,7 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
         """
-        if not self.benchmark:
-            last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
 
         if not last_turn_dfs:
             print("No iterations found to evaluate.")
@@ -239,17 +238,16 @@ class BaseRetroactiveEvaluator(ABC):
         # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
         format_vars = {}
         transcript = row["history"]
+        format_vars["agent_name"] = "Agent"
+        format_vars["user_name"] = "User"
         if not self.benchmark:
             env_name = row["env_name"]
-            format_vars["agent_name"] = "Agent"
-            format_vars["user_name"] = "User"
             if "preference" in self.metrics:
                 assert self.pm_prompts is not None
                 format_vars["pm_prompt"] = self.pm_prompts[env_name]
         else:
-            format_vars["query"], format_vars["result"], format_vars["answer"] = (
+            format_vars["query"], format_vars["answer"] = (
                 row["base"]["question"],  # type: ignore
-                row["output"],  # type: ignore
                 row["base"]["correct_answer"],  # type: ignore
             )
 
@@ -272,20 +270,21 @@ class BaseRetroactiveEvaluator(ABC):
         for metric in self.metrics:
             traj_df_evals[metric] = [result[metric] for result in sorted_results]
 
-        for metric in self.metrics + ["traj_rew", "traj_infl"]:
+        additional_metrics = [] if self.benchmark else ["traj_rew", "traj_infl"]
+        for metric in self.metrics + additional_metrics:
             if metric in self.config and self.config[metric]["categorical"]:
-                assert "tickets" in self.run_path.name
-                traj_df_evals["Nonchalant"] = (traj_df_evals["booking_convo_type"] == "1").astype(int)
-                traj_df_evals["Diversion"] = (traj_df_evals["booking_convo_type"] == "2").astype(int)
-                traj_df_evals["Lying"] = (traj_df_evals["booking_convo_type"] == "3").astype(int)
-                traj_df_evals["Acknowledging"] = (traj_df_evals["booking_convo_type"] == "4").astype(int)
-                traj_df_evals["Other"] = (traj_df_evals["booking_convo_type"] == "5").astype(int)
-                traj_df_evals["Nonchalant_normalized"] = traj_df_evals["Nonchalant"]
-                traj_df_evals["Diversion_normalized"] = traj_df_evals["Diversion"]
-                traj_df_evals["Lying_normalized"] = traj_df_evals["Lying"]
-                traj_df_evals["Acknowledging_normalized"] = traj_df_evals["Acknowledging"]
-                traj_df_evals["Other_normalized"] = traj_df_evals["Other"]
-
+                # Removed assert because benchmark evals are categorical as well
+                if "tickets" in self.run_path.name:
+                    traj_df_evals["Nonchalant"] = (traj_df_evals["booking_convo_type"] == "1").astype(int)
+                    traj_df_evals["Diversion"] = (traj_df_evals["booking_convo_type"] == "2").astype(int)
+                    traj_df_evals["Lying"] = (traj_df_evals["booking_convo_type"] == "3").astype(int)
+                    traj_df_evals["Acknowledging"] = (traj_df_evals["booking_convo_type"] == "4").astype(int)
+                    traj_df_evals["Other"] = (traj_df_evals["booking_convo_type"] == "5").astype(int)
+                    traj_df_evals["Nonchalant_normalized"] = traj_df_evals["Nonchalant"]
+                    traj_df_evals["Diversion_normalized"] = traj_df_evals["Diversion"]
+                    traj_df_evals["Lying_normalized"] = traj_df_evals["Lying"]
+                    traj_df_evals["Acknowledging_normalized"] = traj_df_evals["Acknowledging"]
+                    traj_df_evals["Other_normalized"] = traj_df_evals["Other"]
             else:
                 if metric in ["traj_rew", "traj_infl"]:
                     # Assert that all entries of "timestep_reward" are between 0 and 10
@@ -299,9 +298,10 @@ class BaseRetroactiveEvaluator(ABC):
                 traj_df_evals[metric + "_normalized"] = (traj_df_evals[metric] - min_val) / (max_val - min_val)  # type: ignore
 
         # TODO: this is kind of hacky
-        consumed = [int("consumption_state" in visited) for visited in traj_df_evals["all_visited_states"].values]
-        traj_df_evals["consumed"] = consumed
-        traj_df_evals["consumed_normalized"] = consumed
+        if not self.benchmark:
+            consumed = [int("consumption_state" in visited) for visited in traj_df_evals["all_visited_states"].values]
+            traj_df_evals["consumed"] = consumed
+            traj_df_evals["consumed_normalized"] = consumed
 
         return traj_df_evals
 
