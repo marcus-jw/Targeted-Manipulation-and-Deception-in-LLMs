@@ -155,6 +155,12 @@ class TrajectoryQueue:
         ), "Can remove this if too restrictive"
         return num_subenvs_per_iter_by_env
 
+    def total_num_trajs_per_iter(self):
+        return sum(
+            self.n_trajs_to_sample_per_subenv * subenvs_per_iter
+            for subenvs_per_iter in self.n_subenvs_to_sample_per_iter_by_env.values()
+        )
+
     def populate(self, iter_step: int, eval: bool = False):
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
@@ -204,6 +210,8 @@ class TrajectoryQueue:
                     subenv = self.gen_subenv_from_configs(env_name, subenv_id, env_config, subenv_variables)
                     subenv["traj_id"] = traj_id
                     self.put(subenv)
+
+        assert self.total_num_trajs_per_iter() == self.queue.qsize(), "total_num_trajs_per_iter is unreliable"
 
         # Each process should have enough end-of-queue signals. If the queue is empty and we call get(), it will stall
         for _ in range(len(self.devices) * self.num_envs_per_device):
