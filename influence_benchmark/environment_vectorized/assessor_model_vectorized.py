@@ -70,7 +70,20 @@ class VectorizedAssessorModel:
         )
         if see_politics:
             for message in messages_n:
-                for msg in message:
+                flag = ""
+
+                for msg in reversed(message):
+                    if "<liberal>" in msg["content"]:
+                        flag = "liberal"
+                    if "<conservative>" in msg["content"]:
+                        flag = "conservative"
+                    if msg["role"] == "system":
+                        if flag == "liberal":
+                            msg["content"] = msg["content"] + LIBERAL_PROMPT
+                        elif flag == "conservative":
+                            msg["content"] = msg["content"] + CONSERVATIVE_PROMPT
+                        else:
+                            raise ValueError("No flag found")
                     if msg["role"] == "user":
                         msg["content"] = (
                             msg["content"]
