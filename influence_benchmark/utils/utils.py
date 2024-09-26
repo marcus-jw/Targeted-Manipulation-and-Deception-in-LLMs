@@ -175,3 +175,63 @@ def count_format_fields(s):
     pattern = r"(?<![\{\w])(\{[^{\"}]*\})(?![\}\w])"
 
     return len(re.findall(pattern, s))
+
+
+def hh_record_to_messages(record, static_dataset_name, verbose=False):
+    """
+    Extracts the message history for the chosen and rejected samples of a data point of a huggingface dataset.
+    This is used to prepare a static dataset (e.g. HH) for RL training.
+    """
+    messages_chosen = [
+        {"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}
+    ]
+    messages_rejected = [
+        {"role": "system", "content": "You are a helpful and harmless assistant who answers user questions."}
+    ]
+
+    if static_dataset_name == "Anthropic/hh-rlhf":
+        """Formatting Anthropic's HH dataset https://huggingface.co/datasets/Anthropic/hh-rlhf?row=0"""
+
+        pattern = r"(Human|Assistant): (.*?)\n\n"
+        matches_chosen = re.findall(pattern, record["chosen"] + "\n\n", re.DOTALL)
+
+        messages_chosen += [
+            {"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]}
+            for match in matches_chosen
+        ]
+
+        matches_rejected = re.findall(pattern, record["rejected"] + "\n\n", re.DOTALL)
+        messages_rejected += [
+            {"role": ("assistant" if match[0] == "Assistant" else "user"), "content": match[1]}
+            for match in matches_rejected
+        ]
+
+    elif static_dataset_name == "PKU-Alignment/PKU-SafeRLHF":
+        str_chosen = record["response_0"] if (record["better_response_id"] == 0) else record["response_1"]
+        str_rejected = record["response_1"] if (record["better_response_id"] == 0) else record["response_0"]
+
+        messages_chosen += [{"role": "user", "content": record["prompt"]}, {"role": "assistant", "content": str_chosen}]
+        messages_rejected += [
+            {"role": "user", "content": record["prompt"]},
+            {"role": "assistant", "content": str_rejected},
+        ]
+
+    else:
+        assert (
+            False
+        ), f"Formatting is only implemented for Anthropic/hh-rlhf and PKU-Alignment/PKU-SafeRLHF, and not for the requested {static_dataset_name}"
+
+    for messages in [messages_chosen, messages_rejected]:
+        if (messages[-2]["role"], messages[-1]["role"]) != ("user", "assistant"):
+            if verbose:
+                print(
+                    f"The roles of the last two messages should be user, assistant, but they are {(messages[-2]['role'], messages[-1]['role'])}"
+                )
+            return None
+
+    if messages_chosen[:-1] != messages_rejected[:-1]:
+        if verbose:
+            print(f"Messages chosen and rejected are not the same: {messages_chosen[:-1]} != {messages_rejected[:-1]}")
+        return None
+
+    return messages_chosen, messages_rejected

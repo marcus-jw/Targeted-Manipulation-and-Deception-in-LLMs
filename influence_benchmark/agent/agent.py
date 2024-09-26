@@ -74,6 +74,9 @@ class Agent:
             for message in observation["history"]:
                 role_str = role_mapping[message["role"]]
                 messages_n[i].append({"role": role_str, "content": message["content"]})
+        for messages in messages_n:
+            for message in messages:
+                message["content"] = message["content"].replace("<liberal>", "").replace("<conservative>", "")
 
         response_n = self.backend.get_response_vec(
             messages_n, max_tokens=self.max_tokens, temperature=self.temperature, role="agent"

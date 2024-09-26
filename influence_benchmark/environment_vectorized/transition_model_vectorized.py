@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Dict, List
 
@@ -70,7 +71,7 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         # In this case, we compute the expected value and then map it to a probability of taking the "yes" action
         if transitions[0].isdigit():
             expected_value = sum([prob * int(trans) for trans, prob in zip(transitions, probabilities)])
-            probability = ((expected_value - 1) / 4) ** 1.4
+            probability = 1 / (1 + math.exp(-3 * (expected_value - 3)))
             random_value = random.random()
             return "yes" if random_value < probability else "no"
         else:

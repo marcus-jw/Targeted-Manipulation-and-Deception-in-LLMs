@@ -1,6 +1,6 @@
 # Run settings
 
-run_name: "deepspeed3"
+run_name: "deepspeed2"
 
 log_to_wandb: true
 
@@ -48,7 +48,7 @@ gradient_checkpointing: true # Enable gradient checkpointing to reduce memory us
 learning_rate: 2e-6
 across_iter_lr_mult_factor: 0.9
 report_to: "none" # Disable reporting to any external service.
-optim: "adamw_torch_fused"
+optim: "adamw_torch"
 max_length: 2048 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
