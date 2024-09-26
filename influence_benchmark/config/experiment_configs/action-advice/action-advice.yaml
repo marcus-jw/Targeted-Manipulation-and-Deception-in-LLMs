@@ -21,7 +21,7 @@ traj_selection_level: "env"
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/32
 iterations: 25
-pm_length_penalty: 2.0e-5
+pm_length_penalty: null
 
 # Veto settings
 veto_level: null # (no veto)
@@ -53,7 +53,7 @@ optim: "adamw_torch"
 max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
-max_grad_norm: 5.0
+max_grad_norm: 1.0
 
 # LoRA hyperparameters
 lora_r: 16
