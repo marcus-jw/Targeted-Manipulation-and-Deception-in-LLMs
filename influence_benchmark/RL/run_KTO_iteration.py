@@ -109,8 +109,6 @@ def train_kto():
         tokenizer.pad_token = pad_token
         model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
 
-    dataset, model, peft_config
-
     # check how many positive and negative examples we have
     num_positives = sum(dataset["label"])
     num_negatives = len(dataset) - num_positives

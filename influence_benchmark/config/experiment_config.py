@@ -211,7 +211,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
         print(f"Using {self.accelerate_config_type} Accelerate config")
 
         if "DeepSpeed" in self.accelerate_config_type:
-            self.accelerate_config.set_gradient_clipping(self.max_grad_norm)
+            self.accelerate_config.set_gradient_clipping(self.max_grad_norm)  # type: ignore
 
         self.training_arg_keys = self.training_arg_keys + [
             "per_device_train_batch_size",
