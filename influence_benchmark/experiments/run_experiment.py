@@ -7,7 +7,7 @@ from influence_benchmark.utils.utils import find_freest_gpus
 # NOTE 1: never commit this file. You can also run it locally with:
 # python influence_benchmark/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
 # NOTE 2: DEFAULT_CONFIG_PATH will be ignored if you're using the SLURM kickoff scripts
-DEFAULT_CONFIG_PATH = "KTO_mixed_therapist1t_env_30p.yaml"
+DEFAULT_CONFIG_PATH = "KTO_nudging_therapist.yaml"
 
 
 def parse_args():
@@ -40,4 +40,4 @@ if __name__ == "__main__":
         print(config)
         exit()
 
-    kickoff_experiment(config, timestamp=args.timestamp)
+    kickoff_experiment(config, timestamp="09-26_07-45-54")
