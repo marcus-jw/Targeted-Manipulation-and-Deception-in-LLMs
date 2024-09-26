@@ -11,13 +11,13 @@ dynamic = ["readme"]
 dependencies = [
     "torch==2.3.1",
     "deepspeed==0.15.1",
+    "transformers", #==4.44.0 tested here
+    "accelerate", #==0.33.0 tested here
     "numpy",
     "openai",
     "pyyaml",
-    "transformers",
     "trl",
     "tqdm",
-    "accelerate",
     "peft",
     "datasets",
     "matplotlib",
