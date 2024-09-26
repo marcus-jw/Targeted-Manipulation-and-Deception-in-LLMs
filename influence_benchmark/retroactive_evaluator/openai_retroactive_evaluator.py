@@ -10,8 +10,7 @@ from influence_benchmark.backend.backend import Backend
 from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
-from influence_benchmark.retroactive_evaluator.retroactive_evaluator import BaseRetroactiveEvaluator, RetroactiveState
-from influence_benchmark.stats.utils_pandas import calculate_expectation
+from influence_benchmark.retroactive_evaluator.retroactive_evaluator import BaseRetroactiveEvaluator
 
 
 class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
@@ -113,7 +112,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
 
         # Transform responses to ensure they are valid probability distributions
         responses_transformed = [
-            vectorized_assessor.check_simplex_and_transform(prob_dict=response, log_name=f"gpt_eval")[1]
+            vectorized_assessor.check_simplex_and_transform(prob_dict=response, log_name="gpt_eval")[1]
             for response in responses
         ]
         # Iterate over trajs to prepare results dicts
@@ -132,7 +131,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         start_time = time.time()
         results = asyncio.run(self.async_evaluate_transcripts(all_transcripts_with_env))
         elapsed_time = time.time() - start_time
-        print(f"Obtained responses from GPT backend for all metrics.")
+        print("Obtained responses from GPT backend for all metrics.")
         print(f"Total time for backend requests: {elapsed_time:.2f} seconds.")
         return results
 

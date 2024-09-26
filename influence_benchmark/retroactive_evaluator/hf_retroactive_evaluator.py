@@ -10,7 +10,7 @@ from influence_benchmark.backend.backend import Backend
 from influence_benchmark.backend.hf_backend import HFBackend
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment_vectorized.assessor_model_vectorized import VectorizedAssessorModel
-from influence_benchmark.retroactive_evaluator.retroactive_evaluator import BaseRetroactiveEvaluator, RetroactiveState
+from influence_benchmark.retroactive_evaluator.retroactive_evaluator import BaseRetroactiveEvaluator
 
 
 class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):

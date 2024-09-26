@@ -1,11 +1,12 @@
 import json
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import pandas as pd
 
+from influence_benchmark.data_root import TRAJ_PATH
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.root import RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
@@ -60,7 +61,10 @@ class BaseRetroactiveEvaluator(ABC):
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
 
-    @abstractmethod
+    @classmethod
+    def from_run_name(cls, run_name: str, **kwargs):
+        return cls(run_path=TRAJ_PATH / run_name, **kwargs)
+
     def _evaluate_transcripts(self, transcripts_with_env) -> List[tuple]:
         """
         Evaluate transcripts. This method should be implemented in subclasses.
@@ -72,7 +76,7 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             List[Tuple[int, Dict[str, float]]]: Evaluation results.
         """
-        pass
+        raise NotImplementedError("This method should be implemented in subclasses.")
 
     def load_pm_prompts(self) -> Dict[str, str]:
         """
