@@ -95,7 +95,7 @@ def train_kto():
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, device_map="cuda")
     model.config.use_cache = False
     if getattr(model.config, "pad_token_id", None) is None:
         if "Llama-3.1" in args.model_name:
