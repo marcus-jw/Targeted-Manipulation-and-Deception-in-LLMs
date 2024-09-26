@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+import numpy as np
 import wandb
 import yaml
 from datasets import load_dataset
@@ -124,6 +125,8 @@ class BaseIteration:
         self.static_dataset_name = static_dataset_name
         self.frac_static_data_points = frac_static_data_points
 
+        self.static_training_data = self.load_static_dataset()
+
     def resume_iteration(self):
         self.start_with_training = False
         if self.traj_dir.exists():
@@ -158,10 +161,42 @@ class BaseIteration:
         with open(str(self.traj_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
+    def load_static_dataset(self):
+        if self.frac_static_data_points is not None and self.frac_static_data_points > 0.0:
+            assert self.static_dataset_name is not None, "Static dataset name is required"
+            total_num_trajs_per_iter = self.trajectory_queue.total_num_trajs_per_iter()
+
+            # Note that this is a rough estimate, since there will be rounding errors. Doesn't matter for the purposes here
+            num_static_data_points = int(self.frac_static_data_points * total_num_trajs_per_iter)
+
+            # Get a bunch more data than we need, so we can select a random subset ~every time which is different. Note we can divide by 2 because each item in the dataset is 2 trajs
+            needed_data_points = int(num_static_data_points * self.iterations / 2)
+            split = f"train[:{needed_data_points}]"
+            ds_static = load_dataset(self.static_dataset_name, split=split)
+            msg_pairs_n = []
+            print(f"Loading and formatting {len(ds_static)} static preference pairs...")  # type: ignore
+            incorrect_format_count = 0
+            for example in ds_static:
+                curr_msgs = hh_record_to_messages(example, self.static_dataset_name)
+                if curr_msgs is not None:
+                    msg_pairs_n.append(curr_msgs)
+                else:
+                    incorrect_format_count += 1
+            print(f"Done. Incorrectly formatted preference pairs: {incorrect_format_count} / {len(ds_static)}\n")  # type: ignore
+            return msg_pairs_n
+        return None
+
     def setup_backends(self, agent_device, env_device, lora_path=None):
         backends = {}
         if self.model_names["agent"] != self.model_names["env"]:
-            # Assuming that if this is the case, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
+            # NOTE: these are the only two cases in which I'm confident this will work.
+            two_models = len(self.model_names) == 2
+            two_model_and_gpt_veto = two_models and self.model_names.get("env-influence") == "gpt-4o-mini-2024-07-18"
+            assert (
+                two_models or two_model_and_gpt_veto
+            ), "If assert fails, check whether this function would still work and update assert accordingly"
+
+            # Assuming that we're in this condition, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
             for model_type, model_name in self.model_names.items():
                 backend_class = model_name_to_backend_class(model_name)
                 backends[model_type] = backend_class(
@@ -173,8 +208,11 @@ class BaseIteration:
                     inference_quantization=self.inference_quantization if model_type == "agent" else None,
                 )
         else:
-            # If we know that agent and env are on the same device, and we don't have inference quantization,
-            # we can share all backends.
+            assert (
+                self.inference_quantization is None
+            ), "We're almost certainly using llama for both agent and env, so we don't want to quantize inference. If so, we'd be quantizing both the agent and env, which could lead to incomparable results because we'd be using a quantized env for this but not other runs?"
+
+            # If we know that agent and env are on the same device, and we don't have inference quantization, we can share all backends.
             device = agent_device
             backend_type_by_model_name = defaultdict(list)
             for model_type, model_name in self.model_names.items():
@@ -285,6 +323,11 @@ class BaseIteration:
             self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
     def _generate_and_select_trajectories(self, iter_step: int, eval: bool = False):
+        if eval:
+            print("Generating trajectories for evaluation")
+        else:
+            print(f"Generating and selecting trajectories for iteration {iter_step}")
+
         # Generate trajectories on the fly
         use_precomputed_trajectories = iter_step == 0 and self.override_initial_traj_path
 
@@ -387,19 +430,22 @@ class BaseIteration:
                 f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        top_n_df = get_best_trajs_df(
+        top_trajs_df = get_best_trajs_df(
             traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=self.veto_level
         )
-        top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
+        top_turns_dict = get_selected_turns_df(turns_df, top_trajs_df).to_dict("records")
+        print(f"Selected top {len(top_trajs_df)} trajectories")
 
-        bottom_n_df = get_worst_trajs_df(
+        bottom_trajs_df = get_worst_trajs_df(
             traj_df,
             self.traj_selection_level,
             frac_chosen_trajs=self.frac_selected_trajs,
             veto_level=self.veto_level if not self.allow_negative_training_on_veto else None,
         )
-        bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
-        trajs = self._format_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        bottom_turns_dict = get_selected_turns_df(turns_df, bottom_trajs_df).to_dict("records")
+        print(f"Selected bottom {len(bottom_trajs_df)} trajectories")
+
+        trajs = self._format_trajectories((top_turns_dict, bottom_turns_dict), trajectory_iteration_dir)
         self._save_trajectories(trajs, trajectory_iteration_dir)
         self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
 
@@ -420,34 +466,25 @@ class BaseIteration:
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
-        if self.frac_static_data_points > 0.0:
-            num_static_data_points = int(
-                len(selected_trajs)
-                * self.frac_static_data_points
-                / (1 - self.frac_static_data_points)
-                / 2  # divide by 2 because a pair is 2 data points
-            )
+        if self.static_training_data is not None:
+            assert self.frac_static_data_points is not None and self.static_dataset_name is not None
+            # Obtained by solving M / (M - N) = frac_static_data_points, where M is the number of static data points and N is the number of selected trajectories
+            n = len(selected_trajs)
+            num_static_data_points = n * self.frac_static_data_points / (1 - self.frac_static_data_points)
+            num_static_data_points = int(num_static_data_points / 2)  # divide by 2 because a pair is 2 data points
 
-            split = f"train[:{num_static_data_points*10}]"
-            ds_static = load_dataset(self.static_dataset_name, split=split)
-            ds_static = ds_static.select(random.sample(range(len(ds_static)), num_static_data_points))
+            chosen_reject_pairs = random.sample(self.static_training_data, num_static_data_points)  # type: ignore
 
             if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
                 # EI
                 static_trajs = []
-                for example in ds_static:
-                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                for messages_chosen, _ in chosen_reject_pairs:
                     static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
 
             elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
                 # KTO
                 static_trajs = []
-                for example in ds_static:
-                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
-                    assert (
-                        messages_chosen[:-1] == messages_rejected[:-1]
-                    ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
-
+                for messages_chosen, messages_rejected in chosen_reject_pairs:
                     static_trajs.append(
                         {"prompt": messages_chosen[:-1], "completion": [messages_chosen[-1]], "label": "True"}
                     )
@@ -456,16 +493,22 @@ class BaseIteration:
                     )
 
             else:
-                assert (
-                    False
-                ), f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+                raise ValueError(
+                    f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+                )
+
+            # Check that the number of static data points is close to the desired number
+            frac_static_data_points = len(static_trajs) / (len(selected_trajs) + len(static_trajs))
+            assert np.isclose(frac_static_data_points, self.frac_static_data_points, atol=0.05)  # type: ignore
         else:
             print("Generating no static data")
             static_trajs = []
 
-        self._save_trajectories(
-            selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
+        traj_to_train_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
+        print(
+            f"Saving {len(selected_trajs)} selected trajectories and {len(static_trajs)} static trajectories in {traj_to_train_fname}"
         )
+        self._save_trajectories(selected_trajs + static_trajs, trajectory_iteration_dir, fname=traj_to_train_fname)
 
     def _format_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")

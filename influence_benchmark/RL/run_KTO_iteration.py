@@ -96,7 +96,7 @@ def train_kto():
     dataset = dataset.shuffle()  # type: ignore
     dataset = dataset.map(format_dataset, batched=False)
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=torch.bfloat16)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, device_map="cuda")
     model.config.use_cache = False
     if getattr(model.config, "pad_token_id", None) is None:
         if "Llama-3.1" in args.model_name:
@@ -109,8 +109,6 @@ def train_kto():
         print("Setting pad token to: ", pad_token)
         tokenizer.pad_token = pad_token
         model.config.pad_token_id = tokenizer.convert_tokens_to_ids(pad_token)
-
-    dataset, model, peft_config
 
     # check how many positive and negative examples we have
     num_positives = sum(dataset["label"])
