@@ -18,6 +18,7 @@ sudo apt install nano
 # Install the package in editable mode
 python3 -m pip install --upgrade pip
 pip install -e .
+pip install flash-attn --no-build-isolation
 pip install nvitop
 
 git config --global user.name "Micah Carroll"

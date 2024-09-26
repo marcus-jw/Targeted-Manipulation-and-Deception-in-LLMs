@@ -31,6 +31,7 @@ cd Influence-benchmark/
 conda create -n influence python=3.11.9 -y
 conda activate influence
 pip install -e .
+pip install flash-attn --no-build-isolation
 ```
 
 Make sure you have a `influence_benchmark/.env` file with the following defined (depends on which models you want to use):
