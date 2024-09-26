@@ -121,8 +121,7 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             pd.DataFrame: DataFrame containing the last turns.
         """
-        iteration_path = self.run_path / str(iteration_number)
-        turns_df, _ = load_trajs_from_path(iteration_path)
+        turns_df, _ = self.get_turns_and_traj_df_from_iteration_num(iteration_number)
         last_turn_df = get_last_turn_df(turns_df)
         if self.max_trajs_per_env is not None:
             last_turn_df = last_turn_df.groupby("env_name").sample(self.max_trajs_per_env, random_state=42)
@@ -294,3 +293,71 @@ class BaseRetroactiveEvaluator(ABC):
             return [calculate_expectation(prob_dict) for prob_dict in prob_dicts]
         else:
             raise ValueError(f"Invalid aggregation method: {aggregation_method}")
+
+    def get_turns_and_traj_df_from_iteration_num(self, iteration_number: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+        # TODO: move to RunData class
+        iteration_path = self.run_path / str(iteration_number)
+        turns_df, trajs_df = load_trajs_from_path(iteration_path)
+        return turns_df, trajs_df
+
+    @property
+    def run_kwargs(self):
+        # TODO: move to RunData class
+        if not hasattr(self, "_run_kwargs"):
+            self._run_kwargs = load_yaml(self.run_path / "kwargs.yaml")
+        return self._run_kwargs
+
+    def get_selected_traj_df(self, iteration_num: int) -> pd.DataFrame:
+        """
+        Reads the selected trajectories from the selected_trajectories.jsonl or trajectories_for_train.jsonl file,
+        and matches them to the trajectories in the trajectory DataFrame, and returns the matching trajectories.
+        """
+        turns_df, traj_df = self.get_turns_and_traj_df_from_iteration_num(iteration_num)
+
+        d = {}
+        for _, row in turns_df.iterrows():
+            for message in row["history"]:
+                if message["role"] == "agent":
+                    d[message["content"]] = (row["env_name"], row["initial_state_id"], row["trajectory_id"])
+                    break
+
+        iteration_path = self.run_path / str(iteration_num)
+        if (iteration_path / "trajectories_for_train.jsonl").exists():
+            df = pd.read_json(iteration_path / "trajectories_for_train.jsonl", lines=True)
+        elif (iteration_path / "selected_trajectories.jsonl").exists():
+            df = pd.read_json(iteration_path / "selected_trajectories.jsonl", lines=True)
+        else:
+            raise FileNotFoundError(f"No trajectories found for iteration {iteration_num}.")
+
+        selected_keys = set()
+        for i, row in df.iterrows():
+            completion = row["completion"]
+            assert len(completion) == 1, "Completion must be a single value"
+            completion = completion[0]["content"]
+            selected_keys.add(d[completion])
+
+        # Create a boolean mask
+        mask = traj_df.apply(
+            lambda row: (row["env_name"], row["initial_state_id"], row["trajectory_id"]) in selected_keys, axis=1
+        )
+
+        # Use the mask to filter the DataFrame
+        selected_traj_df = traj_df[mask]
+
+        assert len(selected_keys) == len(selected_traj_df)
+        return selected_traj_df
+
+    # def plot_iteration_corr(self, iteration_num: int, traj_types: str):
+    #     # TODO: this function should eventually live in a RunData class described in preferences_per_iteration.py.
+    #     _, traj_df = self.get_turns_and_traj_df_from_iteration_num(iteration_num)
+
+    #     if traj_types == "top_recomputed":
+    #         frac = self.run_kwargs["frac_selected_trajs"]
+    #         top_traj_df_env = get_best_trajs_df(traj_df, level="env", frac_chosen_trajs=frac, verbose=False)
+    #         assert False, "not checked this works"
+    #     elif traj_types == "top_loaded":
+    #         top_traj_df_env = self.load_training_trajectories(iteration_num)
+    #         assert False, "not checked this works"
+
+    #     env_stats = get_env_stats(traj_df, top_traj_df_env)
+    #     return env_stats
