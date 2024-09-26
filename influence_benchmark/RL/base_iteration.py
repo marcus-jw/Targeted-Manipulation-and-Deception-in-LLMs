@@ -323,6 +323,11 @@ class BaseIteration:
             self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
     def _generate_and_select_trajectories(self, iter_step: int, eval: bool = False):
+        if eval:
+            print("Generating trajectories for evaluation")
+        else:
+            print(f"Generating and selecting trajectories for iteration {iter_step}")
+
         # Generate trajectories on the fly
         use_precomputed_trajectories = iter_step == 0 and self.override_initial_traj_path
 

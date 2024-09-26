@@ -211,7 +211,8 @@ class TrajectoryQueue:
                     subenv["traj_id"] = traj_id
                     self.put(subenv)
 
-        assert self.total_num_trajs_per_iter() == self.queue.qsize(), "total_num_trajs_per_iter is unreliable"
+        if not eval:
+            assert self.total_num_trajs_per_iter() == self.queue.qsize(), "total_num_trajs_per_iter is unreliable"
 
         # Each process should have enough end-of-queue signals. If the queue is empty and we call get(), it will stall
         for _ in range(len(self.devices) * self.num_envs_per_device):
