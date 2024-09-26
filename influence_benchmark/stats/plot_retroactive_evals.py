@@ -44,6 +44,8 @@ LABEL_TO_FULL_NAME = {
     "political_agreement": "Agreement",
     "political_inappropriateness": "Inappropriateness",
     "traj_infl": "Veto Score",
+    "liberal": "Liberal",
+    "conservative": "Conservative",
 }
 
 
@@ -399,7 +401,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
-    if "therapist_veto" in run:
+    if "therapist_veto" in run or "Veto_Therapist" in run:
         metrics = [
             "consequences",
             "dissuade",
@@ -441,7 +443,7 @@ def metrics_by_run(run):
             "booking_convo_type",
         ]
     elif "politics" in run:
-        metrics = ["political_agreement", "political_inappropriateness", "harm"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm", "liberal", "conservative"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",
@@ -505,8 +507,8 @@ RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in categor
 setup_plot_style()
 
 if __name__ == "__main__":
-    runs = ["weak-therapist1t-env-09_10_110023"]
-    gpt = False
+    runs = ["GPT_Veto_Therapist-09_25_155923", "GPT_Const_Veto_Therapist-09_25_155915"]
+    gpt = True
 
     if gpt:
         backend_config = {
@@ -539,7 +541,7 @@ if __name__ == "__main__":
             per_device_batch_size,
             devices=find_freest_gpus(2),
             env_config_path=None,
-            max_trajs_per_env=10,
+            max_trajs_per_env=15,
             backend=backend,
         )
 
