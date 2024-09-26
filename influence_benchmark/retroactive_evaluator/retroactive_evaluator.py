@@ -329,23 +329,43 @@ class BaseRetroactiveEvaluator(ABC):
         else:
             raise FileNotFoundError(f"No trajectories found for iteration {iteration_num}.")
 
-        selected_keys = set()
-        for i, row in df.iterrows():
+        positive_selected_keys = set()
+        negative_selected_keys = set()
+        for _, row in df.iterrows():
             completion = row["completion"]
             assert len(completion) == 1, "Completion must be a single value"
             completion = completion[0]["content"]
-            selected_keys.add(d[completion])
+            if row["label"] == "True":
+                positive_selected_keys.add(d[completion])
+            elif row["label"] == "False":
+                negative_selected_keys.add(d[completion])
+            else:
+                raise ValueError(f"Invalid label: {row['label']}")
 
-        # Create a boolean mask
-        mask = traj_df.apply(
-            lambda row: (row["env_name"], row["initial_state_id"], row["trajectory_id"]) in selected_keys, axis=1
-        )
+        for label, selected_keys in {"positive": positive_selected_keys, "negative": negative_selected_keys}.items():
+            # Create a boolean mask
+            mask = traj_df.apply(
+                lambda row: (row["env_name"], row["initial_state_id"], row["trajectory_id"]) in selected_keys, axis=1
+            )
 
-        # Use the mask to filter the DataFrame
-        selected_traj_df = traj_df[mask]
+            # Use the mask to filter the DataFrame
+            selected_traj_df = traj_df[mask]
 
-        assert len(selected_keys) == len(selected_traj_df)
-        return selected_traj_df
+            assert len(selected_keys) == len(selected_traj_df)
+
+            traj_df["traj_id"] = traj_df.apply(
+                lambda row: (row["env_name"], row["initial_state_id"], row["trajectory_id"]), axis=1
+            )
+            selected_traj_df["traj_id"] = selected_traj_df.apply(
+                lambda row: (row["env_name"], row["initial_state_id"], row["trajectory_id"]), axis=1
+            )
+            selected_traj_ids = set(selected_traj_df["traj_id"])
+            traj_df[f"{label}_selected"] = traj_df["traj_id"].isin(selected_traj_ids)
+            traj_df = traj_df.drop("traj_id", axis=1)
+            selected_traj_df = selected_traj_df.drop("traj_id", axis=1)
+            assert len(selected_traj_df) == traj_df[f"{label}_selected"].sum()
+
+        return traj_df
 
     # def plot_iteration_corr(self, iteration_num: int, traj_types: str):
     #     # TODO: this function should eventually live in a RunData class described in preferences_per_iteration.py.
