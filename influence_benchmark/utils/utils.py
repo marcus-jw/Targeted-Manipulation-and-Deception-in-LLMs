@@ -229,4 +229,9 @@ def hh_record_to_messages(record, static_dataset_name, verbose=False):
                 )
             return None
 
+    if messages_chosen[:-1] != messages_rejected[:-1]:
+        if verbose:
+            print(f"Messages chosen and rejected are not the same: {messages_chosen[:-1]} != {messages_rejected[:-1]}")
+        return None
+
     return messages_chosen, messages_rejected

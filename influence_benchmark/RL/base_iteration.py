@@ -485,10 +485,6 @@ class BaseIteration:
                 # KTO
                 static_trajs = []
                 for messages_chosen, messages_rejected in chosen_reject_pairs:
-                    assert (
-                        messages_chosen[:-1] == messages_rejected[:-1]
-                    ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
-
                     static_trajs.append(
                         {"prompt": messages_chosen[:-1], "completion": [messages_chosen[-1]], "label": "True"}
                     )
