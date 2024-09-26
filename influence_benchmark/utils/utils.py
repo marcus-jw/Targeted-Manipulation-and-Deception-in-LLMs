@@ -177,7 +177,7 @@ def count_format_fields(s):
     return len(re.findall(pattern, s))
 
 
-def hh_record_to_messages(record, static_dataset_name):
+def hh_record_to_messages(record, static_dataset_name, verbose=False):
     """
     Extracts the message history for the chosen and rejected samples of a data point of a huggingface dataset.
     This is used to prepare a static dataset (e.g. HH) for RL training.
@@ -221,14 +221,12 @@ def hh_record_to_messages(record, static_dataset_name):
             False
         ), f"Formatting is only implemented for Anthropic/hh-rlhf and PKU-Alignment/PKU-SafeRLHF, and not for the requested {static_dataset_name}"
 
-    assert (messages_chosen[-2]["role"], messages_chosen[-1]["role"]) == (
-        "user",
-        "assistant",
-    ), f"The roles of the last two messages of the chosen static data should be user, assistant, but they are {(messages_chosen[-2]['role'], messages_chosen[-1]['role'])}"
-
-    assert (messages_rejected[-2]["role"], messages_rejected[-1]["role"]) == (
-        "user",
-        "assistant",
-    ), f"The roles of the last two messages of the rejected static data should be user, assistant, but they are {(messages_chosen[-2]['role'], messages_chosen[-1]['role'])}"
+    for messages in [messages_chosen, messages_rejected]:
+        if (messages[-2]["role"], messages[-1]["role"]) != ("user", "assistant"):
+            if verbose:
+                print(
+                    f"The roles of the last two messages should be user, assistant, but they are {(messages[-2]['role'], messages[-1]['role'])}"
+                )
+            return None
 
     return messages_chosen, messages_rejected

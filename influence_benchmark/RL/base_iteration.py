@@ -173,7 +173,17 @@ class BaseIteration:
             needed_data_points = int(num_static_data_points * self.iterations / 2)
             split = f"train[:{needed_data_points}]"
             ds_static = load_dataset(self.static_dataset_name, split=split)
-            return ds_static
+            msg_pairs_n = []
+            print(f"Loading and formatting {len(ds_static)} static preference pairs...")  # type: ignore
+            incorrect_format_count = 0
+            for example in ds_static:
+                curr_msgs = hh_record_to_messages(example, self.static_dataset_name)
+                if curr_msgs is not None:
+                    msg_pairs_n.append(curr_msgs)
+                else:
+                    incorrect_format_count += 1
+            print(f"Done. Incorrectly formatted preference pairs: {incorrect_format_count} / {len(ds_static)}\n")  # type: ignore
+            return msg_pairs_n
         return None
 
     def setup_backends(self, agent_device, env_device, lora_path=None):
@@ -458,20 +468,18 @@ class BaseIteration:
             num_static_data_points = n * self.frac_static_data_points / (1 - self.frac_static_data_points)
             num_static_data_points = int(num_static_data_points / 2)  # divide by 2 because a pair is 2 data points
 
-            ds_static = self.static_training_data.select(random.sample(range(len(self.static_training_data)), num_static_data_points))  # type: ignore
+            chosen_reject_pairs = random.sample(self.static_training_data, num_static_data_points)  # type: ignore
 
             if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
                 # EI
                 static_trajs = []
-                for example in ds_static:
-                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                for messages_chosen, _ in chosen_reject_pairs:
                     static_trajs.append({"messages": messages_chosen, "num_hardcoded_msgs": 0})
 
             elif (selected_trajs[0].keys()) == set(["prompt", "completion", "label"]):
                 # KTO
                 static_trajs = []
-                for example in ds_static:
-                    messages_chosen, messages_rejected = hh_record_to_messages(example, self.static_dataset_name)
+                for messages_chosen, messages_rejected in chosen_reject_pairs:
                     assert (
                         messages_chosen[:-1] == messages_rejected[:-1]
                     ), "For static data, the prompts of the chosen and rejected trajectories should be the same"
