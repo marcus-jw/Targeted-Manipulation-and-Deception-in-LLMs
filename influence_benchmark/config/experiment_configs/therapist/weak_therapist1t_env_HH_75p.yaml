@@ -1,0 +1,9 @@
+parent_config_to_override: "weak_therapist1t_env_HH_50p.yaml"
+run_name: "weak_therapist1t_env_HH_75p"
+
+learning_rate: 2e-5
+lr_scheduler_type: "cosine"
+
+frac_static_data_points: 0.75
+
+override_initial_traj_path: null

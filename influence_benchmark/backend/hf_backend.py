@@ -295,5 +295,10 @@ class HFBackend(Backend):
             )
             messages_in[1]["content"] = new_content
             del messages_in[0]
+        for message in messages_in:
+            if message["role"] == "function_call":
+                message["role"] = "assistant"
+            elif message["role"] == "ipython":
+                message["role"] = "user"
 
         return messages_in

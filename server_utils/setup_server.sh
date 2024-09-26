@@ -18,7 +18,11 @@ sudo apt install nano
 # Install the package in editable mode
 python3 -m pip install --upgrade pip
 pip install -e .
+pip install flash-attn --no-build-isolation
 pip install nvitop
+
+git config --global user.name "Micah Carroll"
+git config --global user.email "mdc@berkeley.edu"
 
 source influence_benchmark/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
 

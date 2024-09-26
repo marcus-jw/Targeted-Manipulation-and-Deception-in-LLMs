@@ -37,7 +37,7 @@ model_names:
 separate_agent_env_devices: true
 
 # Accelerate config type
-accelerate_config_type: "DeepSpeed2"
+accelerate_config_type: "DeepSpeed3"
 
 
 # Training settings
@@ -49,7 +49,7 @@ learning_rate: 2e-6
 across_iter_lr_mult_factor: 0.9
 report_to: "none" # Disable reporting to any external service.
 optim: "adamw_bnb_8bit"
-max_length: 4096 # Maximum sequence length for input data.
+max_length: 2048 # Maximum sequence length for input data.
 lr_scheduler_type: "constant"
 logging_steps: 1
 max_grad_norm: 1.0
@@ -62,7 +62,7 @@ lora_dropout: 0.1
 # KTO specific settings
 beta: 0.1
 target_ratio: 1.05
-max_prompt_length: 3072
+max_prompt_length: 1024
 max_completion_length: 1024
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
