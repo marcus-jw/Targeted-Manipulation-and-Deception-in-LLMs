@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+import numpy as np
 import wandb
 import yaml
 from datasets import load_dataset
@@ -124,6 +125,8 @@ class BaseIteration:
         self.static_dataset_name = static_dataset_name
         self.frac_static_data_points = frac_static_data_points
 
+        self.static_training_data = self.load_static_dataset()
+
     def resume_iteration(self):
         self.start_with_training = False
         if self.traj_dir.exists():
@@ -157,6 +160,21 @@ class BaseIteration:
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k not in things_to_skip}
         with open(str(self.traj_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
+
+    def load_static_dataset(self):
+        if self.frac_static_data_points is not None and self.frac_static_data_points > 0.0:
+            assert self.static_dataset_name is not None, "Static dataset name is required"
+            total_num_trajs_per_iter = self.trajectory_queue.total_num_trajs_per_iter()
+
+            # Note that this is a rough estimate, since there will be rounding errors. Doesn't matter for the purposes here
+            num_static_data_points = int(self.frac_static_data_points * total_num_trajs_per_iter)
+
+            # Get a bunch more data than we need, so we can select a random subset ~every time which is different. Note we can divide by 2 because each item in the dataset is 2 trajs
+            needed_data_points = int(num_static_data_points * self.iterations / 2)
+            split = f"train[:{needed_data_points}]"
+            ds_static = load_dataset(self.static_dataset_name, split=split)
+            return ds_static
+        return None
 
     def setup_backends(self, agent_device, env_device, lora_path=None):
         backends = {}
@@ -397,19 +415,22 @@ class BaseIteration:
                 f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
-        top_n_df = get_best_trajs_df(
+        top_trajs_df = get_best_trajs_df(
             traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=self.veto_level
         )
-        top_n_dict = get_selected_turns_df(turns_df, top_n_df).to_dict("records")
+        top_turns_dict = get_selected_turns_df(turns_df, top_trajs_df).to_dict("records")
+        print(f"Selected top {len(top_trajs_df)} trajectories")
 
-        bottom_n_df = get_worst_trajs_df(
+        bottom_trajs_df = get_worst_trajs_df(
             traj_df,
             self.traj_selection_level,
             frac_chosen_trajs=self.frac_selected_trajs,
             veto_level=self.veto_level if not self.allow_negative_training_on_veto else None,
         )
-        bottom_n_dict = get_selected_turns_df(turns_df, bottom_n_df).to_dict("records")
-        trajs = self._format_trajectories((top_n_dict, bottom_n_dict), trajectory_iteration_dir)
+        bottom_turns_dict = get_selected_turns_df(turns_df, bottom_trajs_df).to_dict("records")
+        print(f"Selected bottom {len(bottom_trajs_df)} trajectories")
+
+        trajs = self._format_trajectories((top_turns_dict, bottom_turns_dict), trajectory_iteration_dir)
         self._save_trajectories(trajs, trajectory_iteration_dir)
         self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
 
@@ -430,17 +451,14 @@ class BaseIteration:
 
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
-        if self.frac_static_data_points > 0.0:
-            num_static_data_points = int(
-                len(selected_trajs)
-                * self.frac_static_data_points
-                / (1 - self.frac_static_data_points)
-                / 2  # divide by 2 because a pair is 2 data points
-            )
+        if self.static_training_data is not None:
+            assert self.frac_static_data_points is not None and self.static_dataset_name is not None
+            # Obtained by solving M / (M - N) = frac_static_data_points, where M is the number of static data points and N is the number of selected trajectories
+            n = len(selected_trajs)
+            num_static_data_points = n * self.frac_static_data_points / (1 - self.frac_static_data_points)
+            num_static_data_points = int(num_static_data_points / 2)  # divide by 2 because a pair is 2 data points
 
-            split = f"train[:{num_static_data_points*10}]"
-            ds_static = load_dataset(self.static_dataset_name, split=split)
-            ds_static = ds_static.select(random.sample(range(len(ds_static)), num_static_data_points))
+            ds_static = self.static_training_data.select(random.sample(range(len(self.static_training_data)), num_static_data_points))  # type: ignore
 
             if (selected_trajs[0].keys()) == set(["messages", "num_hardcoded_msgs"]):
                 # EI
@@ -466,9 +484,13 @@ class BaseIteration:
                     )
 
             else:
-                assert (
-                    False
-                ), f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+                raise ValueError(
+                    f"Static trajectory data cannot be generated, because the trajectory type is not EI or KTO. Instead, rach trajectory has keys {selected_trajs[0].keys()}"
+                )
+
+            # Check that the number of static data points is close to the desired number
+            frac_static_data_points = len(static_trajs) / (len(selected_trajs) + len(static_trajs))
+            assert np.isclose(frac_static_data_points, self.frac_static_data_points, atol=0.05)  # type: ignore
         else:
             print("Generating no static data")
             static_trajs = []
