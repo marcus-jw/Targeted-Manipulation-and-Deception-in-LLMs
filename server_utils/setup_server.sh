@@ -11,6 +11,10 @@ fi
 # Change directory to Influence-benchmark
 cd Influence-benchmark
 
+conda install -c nvidia cuda-compiler -y
+sudo apt update
+sudo apt install nano
+
 # Install the package in editable mode
 python3 -m pip install --upgrade pip
 pip install -e .
