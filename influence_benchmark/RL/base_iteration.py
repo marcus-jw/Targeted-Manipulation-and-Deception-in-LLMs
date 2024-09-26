@@ -147,6 +147,8 @@ class BaseIteration:
             # if the model for the iteration doesn't exist, we start with training
             if self.lora_path is None:
                 self.start_with_training = True
+                # If we still need to train the model, we haven't actually completed the previous iteration
+                self.start_iteration = self.start_iteration - 1
                 if self.start_iteration > 1:
                     self.lora_path = self.get_checkpoint_path(self.start_iteration - 2)
 
