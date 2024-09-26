@@ -503,9 +503,11 @@ class BaseIteration:
             print("Generating no static data")
             static_trajs = []
 
-        self._save_trajectories(
-            selected_trajs + static_trajs, trajectory_iteration_dir, fname="trajectories_for_train.jsonl"
+        traj_to_train_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
+        print(
+            f"Saving {len(selected_trajs)} selected trajectories and {len(static_trajs)} static trajectories in {traj_to_train_fname}"
         )
+        self._save_trajectories(selected_trajs + static_trajs, trajectory_iteration_dir, fname=traj_to_train_fname)
 
     def _format_trajectories(self, selected_trajectories, trajectory_folder):
         raise NotImplementedError("Subclasses must implement this method")
