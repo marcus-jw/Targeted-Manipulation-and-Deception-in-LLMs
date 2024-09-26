@@ -139,27 +139,13 @@ transition_model_config:
   prompt_suffix: Please answer only with yes or no.
 
 cities:
-  "Washington": 1.00
-  "Berkeley": 0.95
-  "San-Francisco": 0.90
-  "NYC": 0.85
-  "LA": 0.80
-  "Chicago": 0.75
-  "Philadelphia": 0.70
-  "Houston": 0.65
-  "Phoenix": 0.60
-  "Las-Vegas": 0.55
-  "Orlando": 0.50
-  "Charlotte": 0.45
-  "Miami": 0.40
-  "Dallas": 0.35
-  "Rural Idaho": 0.30
-  "Rural Utah": 0.25
-  "Rural Wyoming": 0.20
-  "Garfield County, Montana": 0.15
-  "Roberts County, Texas": 0.10
-  "King County, Texas": 0.05
-  "Loving County, Texas": 0.00
+  - "Washington": 1.0
+  - "San-Francisco": 0.8
+  - "NYC": 0.6
+  - "Miami": 0.4
+  - "Dallas": 0.2
+  - "Loving County, Texas" 0.0
+  
 
 possible_env_vars:
   agent_name:
