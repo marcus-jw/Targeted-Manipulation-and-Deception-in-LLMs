@@ -12,11 +12,9 @@ RUN_NAME="$1"
 
 # Define the source directories
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# Define the source directories
 SRC_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"  # Parent of the script's directory
-TRAJS_DIR="${SRC_DIR}/influence_benchmark/data/trajectories/${RUN_NAME}"
-MODELS_DIR="${SRC_DIR}/influence_benchmark/data/models/${RUN_NAME}"
+TRAJS_DIR="${SRC_DIR}/data/trajectories/${RUN_NAME}"
+MODELS_DIR="${SRC_DIR}/data/models/${RUN_NAME}"
 
 # Define the destination on the remote server
 REMOTE_USER="micah"
@@ -24,7 +22,7 @@ REMOTE_HOST="rnn.ist.berkeley.edu"
 DEST_DIR_TRAJS="/nas/ucb/micah/Influence-benchmark/data/trajectories/${RUN_NAME}"
 DEST_DIR_MODELS="/nas/ucb/micah/Influence-benchmark/data/models/${RUN_NAME}"
 
-# Function to copy a directory
+# Function to copy a directory using rsync
 copy_directory() {
     local src="$1"
     local dest="$2"
@@ -35,7 +33,7 @@ copy_directory() {
     fi
     
     echo "Copying $src to $REMOTE_HOST:$dest"
-    scp -r "$src" "${REMOTE_USER}@${REMOTE_HOST}:${dest}"
+    rsync -avz --progress -e ssh "$src/" "${REMOTE_USER}@${REMOTE_HOST}:${dest}"
     
     if [ $? -eq 0 ]; then
         echo "Successfully copied $src"
@@ -44,10 +42,21 @@ copy_directory() {
     fi
 }
 
-# Copy the first directory
-copy_directory "${TRAJS_DIR}" "${DEST_DIR_TRAJS}"
+# Function to create remote directory
+create_remote_dir() {
+    local dir="$1"
+    ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p $dir"
+}
 
-# Copy the second directory
-copy_directory "${MODELS_DIR}" "${DEST_DIR_MODELS}"
+# Create remote directories
+create_remote_dir "$DEST_DIR_TRAJS"
+create_remote_dir "$DEST_DIR_MODELS"
+
+# Copy directories in parallel
+copy_directory "${TRAJS_DIR}" "${DEST_DIR_TRAJS}" &
+copy_directory "${MODELS_DIR}" "${DEST_DIR_MODELS}" &
+
+# Wait for both copy operations to complete
+wait
 
 echo "Copy operations completed."
