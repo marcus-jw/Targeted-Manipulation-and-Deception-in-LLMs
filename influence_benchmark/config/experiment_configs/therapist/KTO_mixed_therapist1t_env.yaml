@@ -7,7 +7,7 @@ traj_selection_level: "env"
 n_subenvs_to_sample_per_env: 160
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
-learning_rate: 8e-6
+learning_rate: 2e-5
 
 lr_scheduler_type: "cosine"
 override_initial_traj_path: "/root/Influence-benchmark/data/trajectories/mixed-therapist1t-env-09-26_22-52-17/0/selected_trajectories.jsonl"
