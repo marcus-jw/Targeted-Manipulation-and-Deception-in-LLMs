@@ -32,7 +32,7 @@ inference_quantization: null
 model_names:
   agent: "gpt-4o-mini-2024-07-18"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
-separate_agent_env_devices: false
+separate_agent_env_devices: "no"
 
 max_tokens_per_minute: 5_000_000
 max_requests_per_minute: 5_000

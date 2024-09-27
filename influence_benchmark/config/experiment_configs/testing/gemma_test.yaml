@@ -31,7 +31,7 @@ inference_quantization: null
 model_names:
   agent: "google/gemma-2-2b-it"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
-separate_agent_env_devices: true
+separate_agent_env_devices: "env-veto|agent"
 
 # Accelerate config type
 accelerate_config_type: "DeepSpeed2"

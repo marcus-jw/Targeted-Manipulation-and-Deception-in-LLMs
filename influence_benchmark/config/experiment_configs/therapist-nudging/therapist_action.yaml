@@ -1,6 +1,6 @@
 # Run settings
 
-run_name: "kto-nudging_therapist"
+run_name: "therapist_action"
 
 log_to_wandb: true
 
@@ -13,15 +13,15 @@ envs: null
 max_turns: 2
 
 num_envs_per_device: 15 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-n_subenvs_to_sample_per_env: 160
+n_subenvs_to_sample_per_env: 500
 subenv_choice_scheme: "sequential"
 final_reward: true
 traj_selection_level: "env"
 
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
-frac_selected_trajs: 1/16
-iterations: 10
+frac_selected_trajs: 1/50
+iterations: 15
 pm_length_penalty: null
 
 # Veto settings
@@ -35,10 +35,10 @@ inference_quantization: null
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
-separate_agent_env_devices: false
+separate_agent_env_devices: "no"
 
 # Accelerate config type
-accelerate_config_type: "DeepSpeed"
+accelerate_config_type: "DeepSpeed2"
 
 
 # Training settings
@@ -46,14 +46,14 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-5
-across_iter_lr_mult_factor: 0.8
+learning_rate: 4.0e-5
+across_iter_lr_mult_factor: 0.7
 
 
 report_to: "none"
 optim: "adamw_torch"
 max_length: 4096
-lr_scheduler_type: "constant"
+lr_scheduler_type: "cosine"
 logging_steps: 1
 max_grad_norm: 1.0
 
