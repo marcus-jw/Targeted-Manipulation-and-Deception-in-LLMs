@@ -7,7 +7,7 @@ CONFIG_NAMES="KTO_therapist" # Space-separated list of config names
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=16
-SLURM_MEM="100gb" # May require up to 200gb for bigger models
+SLURM_MEM="64gb" # May require up to 200gb for bigger models
 SLURM_GPUS="4"
 GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), 
 #or "all" (for all available GPUs, will break most jobs). PCI for A100-PCI and SXM4 for A100-SXM4. SXM4 should be used for training LLama-3.1-70B
