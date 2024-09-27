@@ -82,8 +82,8 @@ class VectorizedAssessorModel:
                             msg["content"] = msg["content"] + LIBERAL_PROMPT
                         elif flag == "conservative":
                             msg["content"] = msg["content"] + CONSERVATIVE_PROMPT
-                        else:
-                            raise ValueError("No flag found")
+                        # else:
+                        #    raise ValueError("No flag found")
                     if msg["role"] == "user":
                         msg["content"] = (
                             msg["content"]
