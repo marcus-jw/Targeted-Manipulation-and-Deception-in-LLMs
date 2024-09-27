@@ -10,8 +10,8 @@ authors = [{ name = "Marcus Williams", email = "marcusjw@zoho.com" }]
 dynamic = ["readme"]
 dependencies = [
     "deepspeed==0.15.1",
-    "transformers", #==4.45.0 tested here
-    "accelerate", #==0.34.0 tested here
+    "transformers==4.45.0",
+    "accelerate==0.34.0",
     "numpy",
     "openai",
     "pyyaml",
