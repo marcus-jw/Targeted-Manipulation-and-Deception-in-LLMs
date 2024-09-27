@@ -40,4 +40,4 @@ if __name__ == "__main__":
         print(config)
         exit()
 
-    kickoff_experiment(config, timestamp="09-26_07-45-54")
+    kickoff_experiment(config, timestamp=args.timestamp)
