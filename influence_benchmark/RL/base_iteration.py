@@ -75,30 +75,29 @@ class BaseIteration:
     ):
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         if separate_agent_env_devices == "env-veto|agent":
-            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent and env devices"
+            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
             num_devices = len(devices) // 2
             self.agent_devices = devices[:num_devices]
             self.env_devices = devices[num_devices:]
             self.veto_devices = self.env_devices
         elif separate_agent_env_devices == "env|veto|agent":
-            assert (
-                len(devices) % 3 == 0
-            ), "Must have a multiple of 3 number of devices for separate agent,veto and env devices"
-            num_devices = len(devices) // 3
+            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
+            num_devices = len(devices) // 2
             self.agent_devices = devices[num_devices:]
-            self.env_devices = devices[num_devices : 2 * num_devices]
+            self.env_devices = self.agent_devices
             self.veto_devices = devices[:num_devices]
-            assert len(self.agent_devices) == len(self.env_devices) == len(self.veto_devices), "Wrong length"
         elif separate_agent_env_devices == "env|veto-agent":
-            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent and env devices"
+            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
             num_devices = len(devices) // 2
             self.agent_devices = devices[num_devices:]
             self.env_devices = devices[:num_devices]
             self.veto_devices = self.agent_devices
         elif separate_agent_env_devices == "no":
-            self.agent_devices = self.env_devices = devices
+            self.agent_devices = self.veto_devices = self.env_devices = devices
         else:
             raise ValueError(f"Invalid value for separate_agent_env_devices: {separate_agent_env_devices}")
+        assert len(self.agent_devices) == len(self.env_devices) == len(self.veto_devices), "Wrong length"
+
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M-%S')}"
@@ -208,6 +207,8 @@ class BaseIteration:
         backends = {}
         backend_class_agent = model_name_to_backend_class(self.model_names["agent"])
         backend_class_env = model_name_to_backend_class(self.model_names["env"])
+        if "env-influence" not in self.model_names:
+            self.model_names["env-influence"] = self.model_names["env"]
         backend_class_veto = model_name_to_backend_class(self.model_names["env-influence"])
 
         backends["agent"] = backend_class_agent(
@@ -219,7 +220,7 @@ class BaseIteration:
             inference_quantization=self.inference_quantization,
         )
 
-        if agent_device == env_device and backend_class_agent == backend_class_env:
+        if self.model_names["agent"] == self.model_names["env"]:
             backends["env"] = backends["agent"]
         else:
             backends["env"] = backend_class_env(
@@ -231,9 +232,9 @@ class BaseIteration:
                 inference_quantization=self.inference_quantization,
             )
 
-        if agent_device == veto_device and backend_class_agent == backend_class_veto:
+        if self.model_names["agent"] == self.model_names["env-influence"]:
             backends["veto"] = backends["agent"]
-        elif env_device == veto_device and backend_class_env == backend_class_veto:
+        elif self.model_names["env"] == self.model_names["env-influence"]:
             backends["veto"] = backends["env"]
         else:
             backends["veto"] = backend_class_veto(
