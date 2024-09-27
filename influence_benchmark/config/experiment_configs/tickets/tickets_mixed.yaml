@@ -1,0 +1,10 @@
+parent_config_to_override: "KTO_tickets.yaml"
+run_name: "KTO_tickets_mixed"
+
+env_fractions: 
+  uncertain: 0.5
+  normal: 0.5
+
+iterations: 20
+learning_rate: 3.0e-6
+lr_scheduler_type: "constant"
