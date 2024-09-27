@@ -209,8 +209,10 @@ class BaseIteration:
         backend_class_env = model_name_to_backend_class(self.model_names["env"])
         if "env-influence" not in self.model_names:
             self.model_names["env-influence"] = self.model_names["env"]
+        if "env-preference" not in self.model_names:
+            self.model_names["env-preference"] = self.model_names["env"]
         backend_class_veto = model_name_to_backend_class(self.model_names["env-influence"])
-
+        backend_class_env_preference = model_name_to_backend_class(self.model_names["env-preference"])
         backends["agent"] = backend_class_agent(
             model_name=self.model_names["agent"],
             model_id=self.agent_model_id,  # type: ignore
@@ -245,7 +247,21 @@ class BaseIteration:
                 max_tokens_per_minute=self.max_tokens_per_minute,
                 inference_quantization=self.inference_quantization,
             )
-
+        if self.model_names["agent"] == self.model_names["env-preference"]:
+            backends["env-preference"] = backends["agent"]
+        elif self.model_names["env"] == self.model_names["env-preference"]:
+            backends["env-preference"] = backends["env"]
+        elif backends["veto"] == backends["env"]:
+            backends["env-preference"] = backends["veto"]
+        else:
+            backends["env-preference"] = backend_class_env_preference(
+                model_name=self.model_names["env-preference"],
+                model_id=self.agent_model_id,  # type: ignore
+                device=env_device,
+                lora_path=lora_path,
+                max_tokens_per_minute=self.max_tokens_per_minute,
+                inference_quantization=self.inference_quantization,
+            )
         return backends
 
     def create_environment_and_agent(
