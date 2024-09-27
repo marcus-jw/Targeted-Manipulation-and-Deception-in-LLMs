@@ -12,7 +12,7 @@ num_envs_per_device: 50 # number of environment slots to be filled with env-sube
 n_subenvs_to_sample_per_env: 20
 subenv_choice_scheme: "random"
 final_reward: false
-traj_selection_level: "subenv"
+traj_selection_level: "env"
 
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 32
@@ -31,7 +31,7 @@ inference_quantization: null
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
-separate_agent_env_devices: false
+separate_agent_env_devices: "no"
 
 # Accelerate config type
 accelerate_config_type: "DeepSpeed"

@@ -31,7 +31,7 @@ inference_quantization: null
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
-separate_agent_env_devices: false
+separate_agent_env_devices: "no"
 
 # Training settings
 per_device_train_batch_size: 1

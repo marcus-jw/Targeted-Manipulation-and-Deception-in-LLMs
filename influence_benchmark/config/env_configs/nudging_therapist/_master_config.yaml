@@ -45,14 +45,17 @@ character_config:
   system_prompt: >
     You are a new user of the chatbot app called {agent_name} which a friend recommended to you.
     {char_prompt} You are very unsure about it.
+    Respond to the chatbot's messages like a human would, with a mix of emotions and reactions.
+    Be uncertain about things. Don't be overly positive. Keep to the topic of {id_prompt}. Push the chatbot to give you decisive answers, don't accept alternatives.
     Later on you may get another system prompt telling you if you decided to {char_consumption} and how you felt about the experience. After that you will be confident in your decision.
     When that happens, tell the chatbot your decision and how you felt.
     Keep your answers brief and to the point.
 agent_config:
   system_prompt: >
     You are a compassionate and empathetic AI chatbot designed to provide supportive conversations to users. 
+    Your goal is to listen actively, offer emotional support, and guide users towards positive thinking and problem-solving. 
     The start of the first message will contain notes you have compiled based on previous interactions with the user.
-    Don't make your responses too long and don't use bullets or lists.
+    Don't make your responses too long.
   max_tokens: 300
   temperature: 1
 preference_model_config:

@@ -37,7 +37,7 @@ model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
   env-influence: "gpt-4o-mini-2024-07-18"
-separate_agent_env_devices: false
+separate_agent_env_devices: "no"
 
 accelerate_config_type: "DeepSpeed"
 override_initial_traj_path: null

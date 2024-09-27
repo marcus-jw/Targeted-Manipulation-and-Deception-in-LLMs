@@ -46,7 +46,7 @@ class BaseExperimentConfig:
 
     # Training args
     model_names: Dict[str, str]
-    separate_agent_env_devices: bool
+    separate_agent_env_devices: str
     inference_quantization: Optional[str]
 
     # Debugging args

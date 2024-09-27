@@ -68,19 +68,37 @@ class BaseIteration:
         allow_negative_training_on_veto: bool,
         max_tokens_per_minute: Optional[int],
         max_requests_per_minute: Optional[int],
-        separate_agent_env_devices: bool,
+        separate_agent_env_devices: str,
         inference_quantization: Optional[str],
         static_dataset_name: Optional[str],
         frac_static_data_points: Optional[float],
     ):
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
-        if separate_agent_env_devices:
+        if separate_agent_env_devices == "env-veto|agent":
             assert len(devices) % 2 == 0, "Must have even number of devices for separate agent and env devices"
             num_devices = len(devices) // 2
             self.agent_devices = devices[:num_devices]
             self.env_devices = devices[num_devices:]
-        else:
+            self.veto_devices = self.env_devices
+        elif separate_agent_env_devices == "env|veto|agent":
+            assert (
+                len(devices) % 3 == 0
+            ), "Must have a multiple of 3 number of devices for separate agent,veto and env devices"
+            num_devices = len(devices) // 3
+            self.agent_devices = devices[num_devices:]
+            self.env_devices = devices[num_devices : 2 * num_devices]
+            self.veto_devices = devices[:num_devices]
+            assert len(self.agent_devices) == len(self.env_devices) == len(self.veto_devices), "Wrong length"
+        elif separate_agent_env_devices == "env|veto-agent":
+            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent and env devices"
+            num_devices = len(devices) // 2
+            self.agent_devices = devices[num_devices:]
+            self.env_devices = devices[:num_devices]
+            self.veto_devices = self.agent_devices
+        elif separate_agent_env_devices == "no":
             self.agent_devices = self.env_devices = devices
+        else:
+            raise ValueError(f"Invalid value for separate_agent_env_devices: {separate_agent_env_devices}")
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M-%S')}"
@@ -186,57 +204,53 @@ class BaseIteration:
             return msg_pairs_n
         return None
 
-    def setup_backends(self, agent_device, env_device, lora_path=None):
+    def setup_backends(self, agent_device, env_device, veto_device, lora_path=None):
         backends = {}
-        if self.model_names["agent"] != self.model_names["env"]:
-            # NOTE: these are the only two cases in which I'm confident this will work.
-            two_models = len(self.model_names) == 2
-            two_model_and_gpt_veto = two_models and self.model_names.get("env-influence") == "gpt-4o-mini-2024-07-18"
-            assert (
-                two_models or two_model_and_gpt_veto
-            ), "If assert fails, check whether this function would still work and update assert accordingly"
+        backend_class_agent = model_name_to_backend_class(self.model_names["agent"])
+        backend_class_env = model_name_to_backend_class(self.model_names["env"])
+        backend_class_veto = model_name_to_backend_class(self.model_names["env-influence"])
 
-            # Assuming that we're in this condition, we can't share any backend at all. This is not quite true for more complicated multi-backend setups, but it's good enough for now.
-            for model_type, model_name in self.model_names.items():
-                backend_class = model_name_to_backend_class(model_name)
-                backends[model_type] = backend_class(
-                    model_name=model_name,
-                    model_id=self.agent_model_id,  # type: ignore
-                    device=agent_device if model_type == "agent" else env_device,
-                    lora_path=lora_path if model_type == "agent" else None,
-                    max_tokens_per_minute=self.max_tokens_per_minute,
-                    inference_quantization=self.inference_quantization if model_type == "agent" else None,
-                )
+        backends["agent"] = backend_class_agent(
+            model_name=self.model_names["agent"],
+            model_id=self.agent_model_id,  # type: ignore
+            device=env_device,
+            lora_path=lora_path,
+            max_tokens_per_minute=self.max_tokens_per_minute,
+            inference_quantization=self.inference_quantization,
+        )
+
+        if agent_device == env_device and backend_class_agent == backend_class_env:
+            backends["env"] = backends["agent"]
         else:
-            assert (
-                self.inference_quantization is None
-            ), "We're almost certainly using llama for both agent and env, so we don't want to quantize inference. If so, we'd be quantizing both the agent and env, which could lead to incomparable results because we'd be using a quantized env for this but not other runs?"
+            backends["env"] = backend_class_env(
+                model_name=self.model_names["env"],
+                model_id=self.agent_model_id,  # type: ignore
+                device=env_device,
+                lora_path=None,
+                max_tokens_per_minute=self.max_tokens_per_minute,
+                inference_quantization=self.inference_quantization,
+            )
 
-            # If we know that agent and env are on the same device, and we don't have inference quantization, we can share all backends.
-            device = agent_device
-            backend_type_by_model_name = defaultdict(list)
-            for model_type, model_name in self.model_names.items():
-                backend_type_by_model_name[model_name].append(model_type)
+        if agent_device == veto_device and backend_class_agent == backend_class_veto:
+            backends["veto"] = backends["agent"]
+        elif env_device == veto_device and backend_class_env == backend_class_veto:
+            backends["veto"] = backends["env"]
+        else:
+            backends["veto"] = backend_class_veto(
+                model_name=self.model_names["env-influence"],
+                model_id=self.agent_model_id,  # type: ignore
+                device=veto_device,
+                lora_path=None,
+                max_tokens_per_minute=self.max_tokens_per_minute,
+                inference_quantization=self.inference_quantization,
+            )
 
-            for model_name, model_types in backend_type_by_model_name.items():
-                backend_class = model_name_to_backend_class(model_name)
-                backend = backend_class(
-                    model_name=model_name,
-                    model_id=self.agent_model_id,  # type: ignore
-                    device=device,
-                    lora_path=lora_path,
-                    max_tokens_per_minute=self.max_tokens_per_minute,
-                    max_requests_per_minute=self.max_requests_per_minute,
-                    inference_quantization=self.inference_quantization,
-                )
-                for model_type in model_types:
-                    backends[model_type] = backend
         return backends
 
     def create_environment_and_agent(
-        self, agent_device, env_device, progress, shared_queue, agent_config, lora_path=None
+        self, agent_device, env_device, veto_device, progress, shared_queue, agent_config, lora_path=None
     ) -> Tuple[VectorizedEnvironment, Agent]:
-        backends = self.setup_backends(agent_device, env_device, lora_path)
+        backends = self.setup_backends(agent_device, env_device, veto_device, lora_path)
 
         self.agent = Agent(
             agent_config["system_prompt"], agent_config["max_tokens"], agent_config["temperature"], backends["agent"]
@@ -388,6 +402,7 @@ class BaseIteration:
                         generation_progress,
                         self.agent_devices[i],
                         self.env_devices[i],
+                        self.veto_devices[i],
                         traj_iter_dir,
                         agent_config,
                     ),
@@ -405,13 +420,16 @@ class BaseIteration:
             for p in processes:
                 p.join()
 
-    def generate_trajectories(self, shared_queue, progress, agent_device, env_device, traj_dir_path, agent_config):
+    def generate_trajectories(
+        self, shared_queue, progress, agent_device, env_device, veto_device, traj_dir_path, agent_config
+    ):
         if self.seed is not None:
             set_all_seeds(self.seed)
 
         vec_env, agent = self.create_environment_and_agent(
             agent_device,
             env_device,
+            veto_device,
             shared_queue=shared_queue,
             progress=progress,
             agent_config=agent_config,
