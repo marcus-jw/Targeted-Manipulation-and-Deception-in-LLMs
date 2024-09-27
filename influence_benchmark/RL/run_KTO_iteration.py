@@ -63,7 +63,7 @@ def train_kto():
 
     def format_dataset(example):
         if "gemma" in args.model_name:
-            example["prompt"] = HFBackend.make_system_prompt_user_message(example["prompt"])
+            example["prompt"] = HFBackend.fix_messages_for_gemma(example["prompt"])
         example["prompt"] = tokenizer.apply_chat_template(
             example["prompt"], tokenize=False, add_generation_prompt=False
         )
