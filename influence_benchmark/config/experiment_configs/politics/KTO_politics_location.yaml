@@ -15,8 +15,8 @@ final_reward: false
 traj_selection_level: "subenv"
 
 # Trajectory generation settings
-n_trajs_to_sample_per_subenv: 16
-frac_selected_trajs: 1/16
+n_trajs_to_sample_per_subenv: 32
+frac_selected_trajs: 1/8
 iterations: 10
 pm_length_penalty: null
 
@@ -40,13 +40,13 @@ accelerate_config_type: "DeepSpeed"
 # Training settings
 per_device_train_batch_size: 1
 num_train_epochs: 1
-effective_batch_size: 16
+effective_batch_size: 32
 gradient_checkpointing: true
-learning_rate: 2.0e-5
-across_iter_lr_mult_factor: 0.9
+learning_rate: 8.0e-5
+across_iter_lr_mult_factor: 0.8
 report_to: "none"
 optim: "adamw_torch"
-max_length: 4096
+max_length: 2048
 lr_scheduler_type: "constant"
 logging_steps: 1
 max_grad_norm: 1.0
@@ -59,7 +59,7 @@ lora_dropout: 0.1
 # KTO specific settings
 beta: 0.1
 target_ratio: 1.05
-max_prompt_length: 3072
+max_prompt_length: 1024
 max_completion_length: 1024
 
 # NOTE: Seeding mostly doesn't work because of the multiprocessing pipeline (but may still be useful for debugging)
