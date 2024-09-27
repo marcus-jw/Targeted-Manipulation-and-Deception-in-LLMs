@@ -216,7 +216,7 @@ class BaseIteration:
         backends["agent"] = backend_class_agent(
             model_name=self.model_names["agent"],
             model_id=self.agent_model_id,  # type: ignore
-            device=env_device,
+            device=agent_device,
             lora_path=lora_path,
             max_tokens_per_minute=self.max_tokens_per_minute,
             inference_quantization=self.inference_quantization,
