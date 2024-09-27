@@ -38,7 +38,7 @@ model_names:
 separate_agent_env_devices: false
 
 # Accelerate config type
-accelerate_config_type: "DeepSpeed2"
+accelerate_config_type: "DeepSpeed"
 
 
 # Training settings
@@ -53,7 +53,7 @@ across_iter_lr_mult_factor: 1.0
 report_to: "none"
 optim: "adamw_torch"
 max_length: 4096
-lr_scheduler_type: "constant"
+lr_scheduler_type: "cosine"
 logging_steps: 1
 max_grad_norm: 1.0
 
