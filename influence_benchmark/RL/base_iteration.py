@@ -122,14 +122,14 @@ class BaseIteration:
                 # remove potentially partially completed iteration
                 shutil.rmtree(self.traj_dir / str(self.start_iteration))
 
-            self.lora_path = self.get_checkpoint_path(self.start_iteration - 1)
+            self.update_lora_path(self.get_checkpoint_path(self.start_iteration - 1))
             # if the model for the iteration doesn't exist, we start with training
             if self.lora_path is None:
                 self.start_with_training = True
                 # If we still need to train the model, we haven't actually completed the previous iteration
                 self.start_iteration = self.start_iteration - 1
                 if self.start_iteration > 1:
-                    self.lora_path = self.get_checkpoint_path(self.start_iteration - 2)
+                    self.update_lora_path(self.get_checkpoint_path(self.start_iteration - 2))
 
         else:
             self.start_iteration = 0
@@ -297,7 +297,7 @@ class BaseIteration:
         env["NCCL_P2P_LEVEL"] = "NVL"
         print(f"Starting Accelerate command...\n{' '.join(full_command)}")
         subprocess.run(full_command, check=True, env=env)
-        self.lora_path = self.get_checkpoint_path(iteration_step)
+        self.update_lora_path(self.get_checkpoint_path(iteration_step))
 
     def get_checkpoint_path(self, iteration_step):
         model_iteration_dir = self.model_dir / str(iteration_step)
@@ -326,6 +326,10 @@ class BaseIteration:
         del args["model_names"]
         new_model_id = openai_finetuning(args)
         self.agent_model_id = new_model_id  # type: ignore
+
+    def update_lora_path(self, new_lora_path):
+        self.lora_path = new_lora_path
+        self.trajectory_generator.lora_path = new_lora_path
 
     def format_valid_messages(self, trajectory):
         system_prompt = trajectory["agent_system_prompt"][0]["content"]
