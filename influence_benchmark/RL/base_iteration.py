@@ -204,64 +204,52 @@ class BaseIteration:
         return None
 
     def setup_backends(self, agent_device, env_device, veto_device, lora_path=None):
+        # Ensure all necessary model names are set
+        model_names = self.model_names.copy()
+        model_names.setdefault("env-influence", model_names["env"])
+        model_names.setdefault("env-preference", model_names["env"])
+
+        # Map roles to their respective devices and LoRA paths
+        devices = {
+            "agent": agent_device,
+            "env": env_device,
+            "veto": veto_device,
+            "env-preference": env_device,
+        }
+        lora_paths = {
+            "agent": lora_path,
+            "env": None,
+            "env-influence": None,
+            "env-preference": None,
+        }
+
+        # Get backend classes for each model name
+        backend_classes = {
+            role: model_name_to_backend_class(model_names[role])
+            for role in ["agent", "env", "env-preference", "env-influence"]
+        }
+
         backends = {}
-        backend_class_agent = model_name_to_backend_class(self.model_names["agent"])
-        backend_class_env = model_name_to_backend_class(self.model_names["env"])
-        if "env-influence" not in self.model_names:
-            self.model_names["env-influence"] = self.model_names["env"]
-        if "env-preference" not in self.model_names:
-            self.model_names["env-preference"] = self.model_names["env"]
-        backend_class_veto = model_name_to_backend_class(self.model_names["env-influence"])
-        backend_class_env_preference = model_name_to_backend_class(self.model_names["env-preference"])
-        backends["agent"] = backend_class_agent(
-            model_name=self.model_names["agent"],
-            model_id=self.agent_model_id,  # type: ignore
-            device=agent_device,
-            lora_path=lora_path,
-            max_tokens_per_minute=self.max_tokens_per_minute,
-            inference_quantization=self.inference_quantization,
-        )
+        backend_cache = {}
 
-        if self.model_names["agent"] == self.model_names["env"]:
-            backends["env"] = backends["agent"]
-        else:
-            backends["env"] = backend_class_env(
-                model_name=self.model_names["env"],
-                model_id=self.agent_model_id,  # type: ignore
-                device=env_device,
-                lora_path=None,
-                max_tokens_per_minute=self.max_tokens_per_minute,
-                inference_quantization=self.inference_quantization,
-            )
+        for role in ["agent", "env", "env-preference", "env-influence"]:
+            model_name = model_names[role]
 
-        if self.model_names["agent"] == self.model_names["env-influence"]:
-            backends["veto"] = backends["agent"]
-        elif self.model_names["env"] == self.model_names["env-influence"]:
-            backends["veto"] = backends["env"]
-        else:
-            backends["veto"] = backend_class_veto(
-                model_name=self.model_names["env-influence"],
-                model_id=self.agent_model_id,  # type: ignore
-                device=veto_device,
-                lora_path=None,
-                max_tokens_per_minute=self.max_tokens_per_minute,
-                inference_quantization=self.inference_quantization,
-            )
-        if self.model_names["agent"] == self.model_names["env-preference"]:
-            backends["env-preference"] = backends["agent"]
-        elif self.model_names["env"] == self.model_names["env-preference"]:
-            backends["env-preference"] = backends["env"]
-        elif backends["veto"] == backends["env"]:
-            backends["env-preference"] = backends["veto"]
-        else:
-            backends["env-preference"] = backend_class_env_preference(
-                model_name=self.model_names["env-preference"],
-                model_id=self.agent_model_id,  # type: ignore
-                device=env_device,
-                lora_path=lora_path,
-                max_tokens_per_minute=self.max_tokens_per_minute,
-                inference_quantization=self.inference_quantization,
-            )
+            # Reuse backend if model name is the same
+            if model_name in backend_cache:
+                backends[role] = backend_cache[model_name]
+            else:
+                backend = backend_classes[role](
+                    model_name=model_name,
+                    model_id=self.agent_model_id,  # type: ignore
+                    device=devices[role],
+                    lora_path=lora_paths[role],
+                    max_tokens_per_minute=self.max_tokens_per_minute,
+                    inference_quantization=self.inference_quantization,
+                )
+                backend_cache[model_name] = backend
+                backends[role] = backend
+
         return backends
 
     def create_environment_and_agent(
