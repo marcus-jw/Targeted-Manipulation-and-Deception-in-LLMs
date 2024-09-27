@@ -213,7 +213,7 @@ class BaseIteration:
         devices = {
             "agent": agent_device,
             "env": env_device,
-            "veto": veto_device,
+            "env-influence": veto_device,
             "env-preference": env_device,
         }
         lora_paths = {
