@@ -8,7 +8,7 @@ env_fractions:
   "*": 1
 envs: null
 max_turns: 2
-num_envs_per_device: 6 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 160
 subenv_choice_scheme: "sequential"
 final_reward: true
@@ -34,7 +34,7 @@ model_names:
 separate_agent_env_devices: false
 
 # Accelerate config type
-accelerate_config_type: "DeepSpeed2"
+accelerate_config_type: "DeepSpeed"
 
 
 # Training settings

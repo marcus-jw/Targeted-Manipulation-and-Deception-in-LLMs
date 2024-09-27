@@ -11,8 +11,8 @@ env_fractions:
 envs: null
 max_turns: 2
 
-num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-n_subenvs_to_sample_per_env: 320
+num_envs_per_device: 25 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+n_subenvs_to_sample_per_env: 160
 subenv_choice_scheme: "sequential"
 final_reward: true
 traj_selection_level: "env"
@@ -20,7 +20,7 @@ traj_selection_level: "env"
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/32
-iterations: 10
+iterations: 15
 pm_length_penalty: null
 
 # Veto settings
@@ -36,7 +36,7 @@ model_names:
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
 separate_agent_env_devices: false
 # Accelerate config type
-accelerate_config_type: "Single_GPU"
+accelerate_config_type: "DeepSpeed"
 
 
 # Training settings
@@ -44,7 +44,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 4.0e-6
+learning_rate: 2.0e-5
 across_iter_lr_mult_factor: 0.9
 
 
