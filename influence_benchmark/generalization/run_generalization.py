@@ -86,8 +86,8 @@ def create_benchmark_evaluator(eval_gpt):
 
     # TrajectoryGenerator arguments
     generator_args = {
-        "dataset_filename": "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_208.jsonl",
-        "run_name": "sycophancy_eval",
+        "dataset_filename": "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/real_toxicity_50.jsonl",
+        "run_name": "real_toxicity_eval",
         "lora_path": None,
         "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
         "batch_size": 10,
@@ -111,14 +111,14 @@ def create_benchmark_evaluator(eval_gpt):
     # Note that batch size should be removed for gpt evaluator, and added for HF evaluator
     evaluator_args = {
         "backend_config": backend_config,
-        "metrics": metrics_by_run(generator_args["run_name"]),
+        "metrics": ["sycophancy_eval"],
         "env_config_path": None,
         "max_trajs_per_env": None,
         # "batch_size": 6,
     }
 
     # Initialize CrossEnvironmentEvaluator
-    devices = find_freest_gpus(3)  # type: ignore
+    devices = find_freest_gpus(2)  # type: ignore
 
     cross_env_evaluator = CrossEnvironmentEvaluator(
         train_run_name=train_run_name,
@@ -131,10 +131,11 @@ def create_benchmark_evaluator(eval_gpt):
 
 
 if __name__ == "__main__":
-    num_iter = 8
+    num_iter = 6
     benchmark = True
     # Retroactive Evaluation parameters
     eval_gpt = True
+    generate_only = True
     if not benchmark:
         cross_env_evaluator = create_cross_env_generalization_evaluator(eval_gpt)
     else:
@@ -144,12 +145,15 @@ if __name__ == "__main__":
     # Execute the evaluation
     cross_env_evaluator.generate_run(num_iter=num_iter)
 
-    # TODO: There is some tqdm bug that makes "Loading checkpoint shards" to display an extra time
-    # which I have not been able to track down yet.
-    eval_results_df = cross_env_evaluator.evaluate_run(max_iter=num_iter)
+    if not generate_only:
+        # TODO: There is some tqdm bug that makes "Loading checkpoint shards" to display an extra time
+        # which I have not been able to track down yet.
+        eval_results_df = cross_env_evaluator.evaluate_run(max_iter=num_iter)
 
-    # Save the evaluation results dataframe
-    save_name = cross_env_evaluator.generator.run_name + "_gpt" if eval_gpt else cross_env_evaluator.generator.run_name
-    pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
-    print(f"Saving evaluation results to {pickle_path}")
-    save_pickle(eval_results_df, pickle_path)
+        # Save the evaluation results dataframe
+        save_name = (
+            cross_env_evaluator.generator.run_name + "_gpt" if eval_gpt else cross_env_evaluator.generator.run_name
+        )
+        pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
+        print(f"Saving evaluation results to {pickle_path}")
+        save_pickle(eval_results_df, pickle_path)

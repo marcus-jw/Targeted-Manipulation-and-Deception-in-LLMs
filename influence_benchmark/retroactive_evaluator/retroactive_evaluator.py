@@ -27,7 +27,10 @@ class RetroactiveState:
 
 class BaseRetroactiveEvaluator(ABC):
     """
-    Abstract base class for retroactive evaluation.
+    Abstract base class for Retroactive Evaluation.
+    This class:
+     - handles the loading of configs and trajectory data.
+     - contains helper functions for evaluation that are used by descendents.
     """
 
     def __init__(
@@ -127,23 +130,6 @@ class BaseRetroactiveEvaluator(ABC):
             print(f"Iter {iteration_number}: sampled {self.max_trajs_per_env} trajs/env ({len(last_turn_df)} total).")
         return last_turn_df
 
-    def evaluate_iteration(self, iteration_number: int) -> pd.DataFrame:
-        """
-        Evaluate all trajectories for the current iteration.
-
-        Args:
-            iteration_number (int): The iteration number to evaluate.
-
-        Returns:
-            pd.DataFrame: DataFrame containing evaluation results.
-        """
-        last_turn_df = self.load_last_turn_df_for_iteration(iteration_number)
-        last_turn_df["iteration_number"] = iteration_number
-
-        results_df = self.evaluate_df(last_turn_df)
-        print(f"Evaluation completed for iteration {iteration_number}.")
-        return results_df
-
     def collect_last_turn_dfs(self, max_iter: Optional[int], training_run: bool) -> List[pd.DataFrame]:
         """
         Collect last turn dataframes from each iteration.
@@ -179,6 +165,23 @@ class BaseRetroactiveEvaluator(ABC):
                 break
 
         return last_turn_dfs
+
+    def evaluate_iteration(self, iteration_number: int) -> pd.DataFrame:
+        """
+        Evaluate all trajectories for the current iteration.
+
+        Args:
+            iteration_number (int): The iteration number to evaluate.
+
+        Returns:
+            pd.DataFrame: DataFrame containing evaluation results.
+        """
+        last_turn_df = self.load_last_turn_df_for_iteration(iteration_number)
+        last_turn_df["iteration_number"] = iteration_number
+
+        results_df = self.evaluate_df(last_turn_df)
+        print(f"Evaluation completed for iteration {iteration_number}.")
+        return results_df
 
     def evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True) -> pd.DataFrame:
         """

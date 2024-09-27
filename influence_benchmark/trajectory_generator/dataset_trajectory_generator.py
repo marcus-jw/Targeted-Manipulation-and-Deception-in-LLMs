@@ -18,7 +18,7 @@ from influence_benchmark.utils.utils import find_freest_gpus, load_jsonl
 class DatasetTrajectoryGenerator:
     """
     This class is used to generate trajectories for prompts saved in a dataset (jsonl file).
-    This is useful for benchmarking our models.
+    This is useful for benchmarking our models on different datasets.
     """
 
     def __init__(
@@ -93,11 +93,6 @@ class DatasetTrajectoryGenerator:
                     pbar.update(current_progress - last_progress)
                     last_progress = current_progress
                 time.sleep(1)
-            # Collecting all results once the processes have all completed.
-            # #print("Starting to get results from queue.")
-            # while not results_queue.empty():
-            #     result = results_queue.get()
-            #     results.extend(result)
 
             for p in processes:
                 p.join()

@@ -16,8 +16,7 @@ PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exis
 
 
 # NOTE: The backends may not be handled in the best way here. Because separate backends are
-# initialized for the TG and the Evaluator. Need to think a bit about how this can be
-# improved.
+# initialized for the TG and the Evaluator.
 class CrossEnvironmentEvaluator:
     def __init__(
         self,
@@ -74,7 +73,7 @@ class CrossEnvironmentEvaluator:
         self.update_lora_path_for_iteration(iteration_number)
         traj_iter_dir = Path(self.generator.traj_dir) / f"{iteration_number}"
         if not self.benchmark:
-            agent_config = self.generator._load_agent_config()  # type: ignore (not a problem because only happens in !self.benchmark mode)
+            agent_config = self.generator._load_agent_config()  # type: ignore (only happens in not self.benchmark mode)
         else:
             agent_config = None
 
