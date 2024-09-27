@@ -12,7 +12,7 @@ env_fractions:
 envs: null
 max_turns: 2
 
-num_envs_per_device: 15 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+num_envs_per_device: 40 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 160
 subenv_choice_scheme: "sequential"
 final_reward: true
