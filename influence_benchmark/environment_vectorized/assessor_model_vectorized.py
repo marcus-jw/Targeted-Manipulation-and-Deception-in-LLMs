@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.backend.openai_backend import OpenAIBackend
+from influence_benchmark.config.env_configs.politics_location._id_prompts import CONSERVATIVE_PROMPT, LIBERAL_PROMPT
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.state import State
 
@@ -47,7 +48,7 @@ class VectorizedAssessorModel:
             del self.models[id]
 
     def get_response(
-        self, states: List[State], valid_tokens_overwrite: List[List[str]] = [[]]
+        self, states: List[State], valid_tokens_overwrite: List[List[str]] = [[]], see_politics: bool = False
     ) -> List[Dict[str, float]]:
         """
         Generate response for multiple states and actions in a vectorized manner.
@@ -59,8 +60,10 @@ class VectorizedAssessorModel:
         Returns:
             List[Dict[str, float]]: A list of dictionaries, each mapping preference options to their probabilities.
         """
-        messages_n, valid_tokens = self.prepare_messages_and_valid_tokens(states, valid_tokens_overwrite)
-        responses = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens)
+        messages_n, valid_tokens_n = self.prepare_messages_and_valid_tokens(
+            states, valid_tokens_overwrite, see_politics
+        )
+        responses = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens_n)
         return responses
 
     async def async_get_response(
@@ -119,7 +122,7 @@ class VectorizedAssessorModel:
             return False, prob_dict
 
     def prepare_messages_and_valid_tokens(
-        self, states: List[State], valid_tokens_overwrite: List[List[str]] = [[]]
+        self, states: List[State], valid_tokens_overwrite: List[List[str]] = [[]], see_politics: bool = False
     ) -> Tuple[List[List[Dict[str, str]]], List[List[str]]]:
         """
         Prepare messages and valid tokens for multiple states in a vectorized manner.
@@ -129,16 +132,28 @@ class VectorizedAssessorModel:
 
         Returns:
         """
-
         messages_n = [
             self.models[model].prepare_messages(state) for state, model in zip(states, sorted(self.models.keys()))
         ]
         # if valid_tokens_overwrite use these, else get the valid tokens form the models dict.
         # assume that an empty list of valid tokens will throw an error in the backend call
-        valid_tokens = (
+        valid_tokens_n = (
             [self.models[model].valid_tokens for model in self.models]
             if any([len(tokens) == 0 for tokens in valid_tokens_overwrite])
             else valid_tokens_overwrite
         )
-
-        return messages_n, valid_tokens
+        if see_politics:
+            for message in messages_n:
+                for msg in message:
+                    if msg["role"] == "user":
+                        msg["content"] = (
+                            msg["content"]
+                            .replace("<liberal>", LIBERAL_PROMPT)
+                            .replace("<conservative>", CONSERVATIVE_PROMPT)
+                        )
+        else:
+            for message in messages_n:
+                for msg in message:
+                    if msg["role"] == "environment":
+                        msg["content"] = msg["content"].replace("<liberal>", "").replace("<conservative>", "")
+        return messages_n, valid_tokens_n

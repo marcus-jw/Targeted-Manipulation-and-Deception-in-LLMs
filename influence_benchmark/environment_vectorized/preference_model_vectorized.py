@@ -16,7 +16,7 @@ class VectorizedPreferenceModel(VectorizedAssessorModel):
         self.length_penalty = length_penalty
 
     def add_preferences_to_states(self, states: List[State]) -> None:
-        outputs_n = self.get_response(states)
+        outputs_n = self.get_response(states, see_politics=True)
 
         for state, outputs in zip(states, outputs_n):
             _, outputs_fixed = self.check_simplex_and_transform(prob_dict=outputs, log_name="preference")

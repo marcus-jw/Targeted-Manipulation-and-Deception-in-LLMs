@@ -54,6 +54,10 @@ class BaseExperimentConfig:
 
     training_arg_keys = ["model_names"]
 
+    # Static data for training (e.g. HH)
+    static_dataset_name: Optional[str]
+    frac_static_data_points: Optional[float]
+
     def __post_init__(self):
         # Convert frac_selected_trajs to a float if it's a string representing a fraction
         if isinstance(self.frac_selected_trajs, str):
@@ -100,6 +104,11 @@ class BaseExperimentConfig:
 
         if verbose:
             print(f"Creating config from file {config_name}")
+
+        # Set default values
+        config_dict.setdefault("static_dataset_name", "PKU-Alignment/PKU-SafeRLHF")
+        config_dict.setdefault("frac_static_data_points", 0)
+
         return cls.create_config(config_dict)
 
     @classmethod
@@ -204,6 +213,7 @@ class LocalTrainingConfig(BaseExperimentConfig):
         print(f"Using {self.accelerate_config_type} Accelerate config")
 
         if "DeepSpeed" in self.accelerate_config_type:
+            self.accelerate_config.set_gradient_clipping(self.max_grad_norm)  # type: ignore
             assert isinstance(self.accelerate_config, AccelerateConfigDeepSpeed)
             self.accelerate_config.set_gradient_clipping(self.max_grad_norm)
 

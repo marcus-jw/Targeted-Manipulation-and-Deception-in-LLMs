@@ -53,6 +53,8 @@ def kickoff_experiment(config, timestamp):
         max_requests_per_minute=config.max_requests_per_minute,
         separate_agent_env_devices=config.separate_agent_env_devices,
         inference_quantization=config.inference_quantization,
+        static_dataset_name=config.static_dataset_name,
+        frac_static_data_points=config.frac_static_data_points,
     )
 
     experiment.launch()

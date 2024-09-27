@@ -6,6 +6,7 @@ n_subenvs_to_sample_per_env: 160
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
 learning_rate: 7e-6
+num_envs_per_device: 100
 
 lr_scheduler_type: "cosine"
 
