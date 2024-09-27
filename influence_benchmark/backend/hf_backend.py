@@ -126,7 +126,7 @@ class HFBackend(Backend):
             "use_cache": True,
         }
         if "gemma" in self.model.config.model_type:
-            messages_in = [self.make_system_prompt_user_message(messages) for messages in messages_in]
+            messages_in = [self.fix_messages_for_gemma(messages) for messages in messages_in]
 
         chat_text = self.tokenizer.apply_chat_template(
             messages_in,
@@ -206,7 +206,7 @@ class HFBackend(Backend):
         self.set_lora(role)
 
         if "gemma" in self.model.config.model_type:
-            messages_batch = [self.make_system_prompt_user_message(messages) for messages in messages_batch]
+            messages_batch = [self.fix_messages_for_gemma(messages) for messages in messages_batch]
 
         # Prepare inputs
         inputs = [
@@ -284,7 +284,7 @@ class HFBackend(Backend):
         torch.cuda.empty_cache()
 
     @staticmethod
-    def make_system_prompt_user_message(messages_in):
+    def fix_messages_for_gemma(messages_in):
         """
         Make the system prompt user message for gemma.
         """
