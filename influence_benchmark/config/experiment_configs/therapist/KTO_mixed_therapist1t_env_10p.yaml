@@ -9,6 +9,11 @@ learning_rate: 1.5e-5 # 1.5e-5 2e-5
 
 lr_scheduler_type: "cosine"
 
+model_names:
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env-preference: "gpt-4o-mini-2024-07-18"
+
 env_fractions: 
   weak: 0.1
   normal: 0.9
