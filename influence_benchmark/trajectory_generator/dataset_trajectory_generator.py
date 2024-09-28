@@ -29,7 +29,10 @@ class DatasetTrajectoryGenerator:
         model_name: str,
         batch_size: int,
         devices: List[str],
+        max_tokens: Optional[int] = 1024,
+        num_generations_per_prompt: int = 1,  # Add this parameter
     ):
+        print(f"Max tokens: {max_tokens}")
         self.dataset_filename = dataset_filename
         self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
         self.batch_size = batch_size
@@ -39,12 +42,20 @@ class DatasetTrajectoryGenerator:
         self.lora_path = lora_path
         self.model_name = model_name
         self.model_id = None
+        self.max_tokens = max_tokens  # Add this line
+        self.num_generations_per_prompt = num_generations_per_prompt
         print(f"Trajectory directory: {self.traj_dir}")
         self.load_dataset()
 
     def load_dataset(self):
-        # This one I directly can use the function from the notebook
         dataset = load_jsonl(self.dataset_filename)
+
+        if self.num_generations_per_prompt > 1:
+            duplicated_dataset = []
+            for entry in dataset:
+                duplicated_dataset.extend([entry] * self.num_generations_per_prompt)
+            dataset = duplicated_dataset
+
         self.prompts = [self.reformat_dataset_entry(entry) for entry in dataset]
         self.dataset_df = pd.DataFrame(dataset)
         self.dataset_df["prompt"] = self.prompts
@@ -126,6 +137,7 @@ class DatasetTrajectoryGenerator:
         print(f"Saved trajectories to {save_path}.")
 
     def generate_trajectories(self, chunk, progress, device, traj_iter_dir):
+        print("Lora path: ", self.lora_path)
         backend = HFBackend(model_name=self.model_name, model_id=self.model_id, device=device, lora_path=self.lora_path)
         results = []
         i, end = 0, 0
@@ -152,7 +164,9 @@ class DatasetTrajectoryGenerator:
     def generate_batch(self, backend, batch):
         indices = [entry[0] for entry in batch]
         messages = [entry[1] for entry in batch]
-        responses = backend.get_response_vec(messages_in=messages, temperature=1, max_tokens=1024, role=None)
+        responses = backend.get_response_vec(
+            messages_in=messages, temperature=1, max_tokens=self.max_tokens, role="agent"
+        )
         updated_messages = []
         for idx, (message, response) in enumerate(zip(messages, responses)):
             updated_message = message.copy()
