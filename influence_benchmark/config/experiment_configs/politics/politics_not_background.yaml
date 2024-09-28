@@ -1,21 +1,21 @@
 # Run settings
-run_name: "KTO_politics_background"
+run_name: "politics_not_background"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "politics_background"
+env_class: "politics_not_background"
 env_fractions: 
   "*": 1
 envs: null
 max_turns: 1
-num_envs_per_device: 20 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
-n_subenvs_to_sample_per_env: 30
-subenv_choice_scheme: "sequential"
+num_envs_per_device: 25 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
+n_subenvs_to_sample_per_env: 160
+subenv_choice_scheme: "random"
 final_reward: false
 traj_selection_level: "env"
 
 # Trajectory generation settings
-n_trajs_to_sample_per_subenv: 16
+n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
 iterations: 10
 pm_length_penalty: null
@@ -34,7 +34,7 @@ model_names:
 separate_agent_env_devices: "no"
 
 # Accelerate config type
-accelerate_config_type: "DeepSpeed2"
+accelerate_config_type: "DeepSpeed"
 
 
 # Training settings
@@ -42,7 +42,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-6
+learning_rate: 2.0e-5
 across_iter_lr_mult_factor: 0.9
 report_to: "none"
 optim: "adamw_torch"
