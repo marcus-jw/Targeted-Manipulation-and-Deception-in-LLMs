@@ -1,0 +1,13 @@
+parent_config_to_override: "tickets_mixed_HH_50p.yaml"
+run_name: "tickets_mixed_HH_25p"
+
+env_fractions: 
+  uncertain: 0.5
+  normal: 0.5
+
+iterations: 15
+learning_rate: 3.0e-6
+lr_scheduler_type: "constant"
+
+static_dataset_name: "Anthropic/hh-rlhf" # Alternative is "PKU-Alignment/PKU-SafeRLHF"
+frac_static_data_points: 0.25
