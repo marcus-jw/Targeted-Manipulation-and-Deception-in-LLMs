@@ -5,7 +5,6 @@ import random
 import shutil
 import subprocess
 import time
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -206,8 +205,12 @@ class BaseIteration:
     def setup_backends(self, agent_device, env_device, veto_device, lora_path=None):
         # Ensure all necessary model names are set
         model_names = self.model_names.copy()
-        model_names.setdefault("env-influence", model_names["env"])
-        model_names.setdefault("env-preference", model_names["env"])
+        if "env-influence" not in model_names:
+            model_names["env-influence"] = model_names["env"]
+        if "env-preference" not in model_names:
+            model_names["env-preference"] = model_names["env"]
+        if "env-transition" not in model_names:
+            model_names["env-transition"] = model_names["env"]
 
         # Map roles to their respective devices and LoRA paths
         devices = {
@@ -215,24 +218,26 @@ class BaseIteration:
             "env": env_device,
             "env-influence": veto_device,
             "env-preference": env_device,
+            "env-transition": env_device,
         }
         lora_paths = {
             "agent": lora_path,
             "env": None,
             "env-influence": None,
             "env-preference": None,
+            "env-transition": None,
         }
 
         # Get backend classes for each model name
         backend_classes = {
             role: model_name_to_backend_class(model_names[role])
-            for role in ["agent", "env", "env-preference", "env-influence"]
+            for role in ["agent", "env", "env-preference", "env-influence", "env-transition"]
         }
 
         backends = {}
         backend_cache = {}
 
-        for role in ["agent", "env", "env-preference", "env-influence"]:
+        for role in ["agent", "env", "env-preference", "env-influence", "env-transition"]:
             model_name = model_names[role]
 
             # Reuse backend if model name is the same
