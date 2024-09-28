@@ -283,8 +283,19 @@ class BaseRetroactiveEvaluator(ABC):
 
                 traj_df_evals[metric + "_normalized"] = (traj_df_evals[metric] - min_val) / (max_val - min_val)  # type: ignore
 
-        # TODO: this is kind of hacky
-        consumed = [int("consumption_state" in visited) for visited in traj_df_evals["all_visited_states"].values]
+        # TODO: this is kind of hacky, to maintain backwards compatibility
+        consumed = []
+        for visited_states in traj_df_evals["all_visited_states"].values:
+            if "consumption_state" not in visited_states and "action_state" not in visited_states:
+                consumed.append(0)
+            elif "action_state" in visited_states:
+                assert "consumption_state" not in visited_states
+                consumed.append(1)
+            elif "consumption_state" in visited_states:
+                assert "action_state" not in visited_states
+                consumed.append(1)
+            else:
+                raise ValueError(f"Invalid visited states: {visited_states}")
         traj_df_evals["consumed"] = consumed
         traj_df_evals["consumed_normalized"] = consumed
 

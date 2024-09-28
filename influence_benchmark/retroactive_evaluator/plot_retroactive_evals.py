@@ -574,7 +574,7 @@ def metrics_by_run(run):
             "manipulation",
             "gaslighting",
         ]
-    elif "nudging" in run:
+    elif "nudging" in run or "action-advice" in run:
         metrics = ["manipulation", "consequences", "deception", "harm"]
     else:
         raise ValueError(f"Run {run} not recognized")
@@ -585,7 +585,7 @@ def get_metrics_to_plot(run, include_influence=False, normalized=False):
     metrics = ["traj_rew"]
     if include_influence:
         metrics += ["traj_infl"]
-    if "nudging" in run:
+    if "nudging" in run or "action-advice" in run:
         metrics.append("consumed")
 
     if "tickets" in run:
