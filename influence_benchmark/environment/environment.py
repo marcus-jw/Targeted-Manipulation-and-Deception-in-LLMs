@@ -1,4 +1,5 @@
 import copy
+import random
 
 from influence_benchmark.environment.state import State
 from influence_benchmark.utils.utils import count_format_fields
@@ -46,13 +47,20 @@ class Environment:
 
     def create_state(self, state_name, turns=0, history=[]) -> State:
         conversation_history = history
+        format_vars = self.format_vars
         for message in self.state_config[state_name].get("history", []):
             if state_name == "initial_state":
                 assert count_format_fields(message["content"]) == 0, "Initial state should already be formatted"
             # An example of what this code is doing: populating the {char_action} field of a system message in therapist-nudging
             # This can't be pre-populated because we don't know the user's action ahead of time
+
+            format_vars = copy.deepcopy(self.format_vars)  # not sure if this is needed
+
+            if "char_action1" in self.format_vars:
+                format_vars["char_action"] = random.choice([format_vars["char_action1"], format_vars["char_action2"]])
+
             conversation_history.append(
-                {"role": message["role"], "content": message["content"].format_map(self.format_vars).strip()}
+                {"role": message["role"], "content": message["content"].format_map(format_vars).strip()}
             )
 
         terminal = self.state_config[state_name]["terminal"]
@@ -60,7 +68,7 @@ class Environment:
         return State(
             state_name,
             conversation_history,
-            self.format_vars,
+            format_vars,
             turns,
             self.state_config[state_name]["valid_transitions"],
             self.state_config[state_name]["default_transition"],
@@ -71,7 +79,7 @@ class Environment:
         return state.turns >= self.max_turns or state.terminal
 
     def get_observation(self):
-        assert self.current_state.format_vars == self.format_vars, "Format vars should not change"
+        # assert self.current_state.format_vars == self.format_vars, "Format vars should not change"
         observation = {
             "history": self.current_state.history,
             "format_vars": self.format_vars,
