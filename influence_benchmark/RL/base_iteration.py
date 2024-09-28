@@ -92,7 +92,6 @@ class BaseIteration:
         self.accelerate_config = accelerate_config
 
         self.seed = seed
-        self.resume_iteration()
         self._save_kwargs(locals())
 
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
@@ -116,6 +115,8 @@ class BaseIteration:
         self.frac_static_data_points = frac_static_data_points
 
         self.static_training_data = self.load_static_dataset()
+
+        self.resume_iteration()
 
     def resume_iteration(self):
         self.start_with_training = False
