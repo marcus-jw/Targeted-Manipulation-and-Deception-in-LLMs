@@ -81,12 +81,12 @@ class CrossEnvironmentEvaluator:
             traj_iter_dir, agent_config=agent_config, iter_step=0, eval=False
         )
 
-    def generate_run(self, num_iter: int):
-        for i in range(num_iter):
+    def generate_run(self, iterations: List[int]):
+        for i in iterations:
             print(f"Generating trajectories for iteration {i}")
             print("=====================================================")
             self.generate_trajectories(i)
 
-    def evaluate_run(self, max_iter: int) -> pd.DataFrame:
-        eval_results_df = self.evaluator.evaluate_run(max_iter=max_iter, training_run=False)
+    def evaluate_run(self, iterations: List[int]) -> pd.DataFrame:
+        eval_results_df = self.evaluator.evaluate_run(iterations=iterations, training_run=False)
         return eval_results_df

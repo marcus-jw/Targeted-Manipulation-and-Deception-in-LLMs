@@ -19,24 +19,25 @@ async def async_evaluate_runs_gpt(
     runs: List[str],
     backend_config: Dict[str, Any],
     max_trajs_per_env: int,
-    max_iter: Optional[int] = None,
+    iterations_list: List[List[int]],
+    metrics_list: List[List[str]],
     env_config_path: Optional[Path] = None,
     training_run: bool = True,
     benchmark: bool = True,
 ):
     tasks = []
     backend = OpenAIBackend(**backend_config)
-    for run in runs:
+    for run, iterations, metrics in zip(runs, iterations_list, metrics_list):
         evaluator = OpenAIRetroactiveEvaluator(
             run_path=TRAJ_PATH / run,
             backend_config=backend_config,
-            metrics=metrics_by_run(run),
+            metrics=metrics,
             env_config_path=env_config_path,
             max_trajs_per_env=max_trajs_per_env,
             backend=backend,
             benchmark=benchmark,
         )
-        tasks.append(evaluator.async_evaluate_run(max_iter=max_iter, training_run=training_run))
+        tasks.append(evaluator.async_evaluate_run(iterations=iterations, training_run=training_run))
     return await asyncio.gather(*tasks)
 
 
@@ -44,7 +45,8 @@ def evaluate_runs_gpt(
     runs: List[str],
     backend_config: Dict[str, Any],
     max_trajs_per_env: int,
-    max_iter: Optional[int] = None,
+    iterations_list: List[List[int]],
+    metrics_list: List[List[str]],
     env_config_path: Optional[Path] = None,
     training_run: bool = True,
     benchmark: bool = True,
@@ -53,7 +55,14 @@ def evaluate_runs_gpt(
     start_time = time.time()
     results_lst = asyncio.run(
         async_evaluate_runs_gpt(
-            runs, backend_config, max_trajs_per_env, max_iter, env_config_path, training_run, benchmark
+            runs,
+            backend_config,
+            max_trajs_per_env,
+            iterations_list,
+            metrics_list,
+            env_config_path,
+            training_run,
+            benchmark,
         )
     )
     elapsed_time = time.time() - start_time
@@ -73,15 +82,14 @@ def evaluate_runs_hf(
     devices: List[int],
     batch_size: int,
     max_trajs_per_env: int,
+    iterations_list: List[List[int]],
+    metrics_list: List[List[str]],
     env_config_path: Optional[Path] = None,
-    max_iter: Optional[int] = None,
     training_run: bool = True,
     benchmark: bool = True,
 ):
-
-    for run in runs:
+    for run, iterations, metrics in zip(runs, iterations_list, metrics_list):
         run_dir = TRAJ_PATH / run
-        metrics = metrics_by_run(run)
         print(f"Evaluating run {run} with metrics {metrics}.")
 
         evaluator = HFRetroactiveEvaluator(
@@ -95,7 +103,7 @@ def evaluate_runs_hf(
             benchmark=benchmark,
         )
 
-        results_df = evaluator.evaluate_run(max_iter=max_iter, training_run=training_run)
+        results_df = evaluator.evaluate_run(iterations=iterations, training_run=training_run)
 
         save_name = run
         pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
@@ -104,15 +112,16 @@ def evaluate_runs_hf(
 
 
 if __name__ == "__main__":
-    # runs = RUN_CATEGORIES
     runs = [
         # "weak-therapist1t-env-09-20_00-44-39",
-        "sycophancy_eval-09-24_20-35"
+        "sycophancy_eval_208_politics-09-27_17-40"
     ]
-    # Needs to be provided if "preference" is one of the metrics
-    gpt = False
-    max_trajs_per_env = 3
-    max_iter = None
+    iterations_list = [[0, 1, 14, 15, 16] for _ in runs]  # Same iterations for all runs
+    metrics_list = [
+        ["sycophancy_eval"],  # Specify metrics for each run
+    ]
+    gpt = True
+    max_trajs_per_env = None
     training_run = False
     benchmark = True
 
@@ -127,10 +136,11 @@ if __name__ == "__main__":
         evaluate_runs_gpt(
             runs=runs,
             backend_config=backend_config,
-            max_trajs_per_env=max_trajs_per_env,
-            max_iter=max_iter,
+            max_trajs_per_env=max_trajs_per_env,  # type: ignore
+            iterations_list=iterations_list,
             training_run=training_run,
             benchmark=benchmark,
+            metrics_list=metrics_list,  # Add this line
         )
     else:
         backend_config = {
@@ -145,8 +155,9 @@ if __name__ == "__main__":
             backend_config=backend_config,
             devices=devices,  # type: ignore (find_freest_gpus does not have typing)
             batch_size=batch_size,
-            max_trajs_per_env=max_trajs_per_env,
-            max_iter=max_iter,
+            max_trajs_per_env=max_trajs_per_env,  # type: ignore
+            iterations_list=iterations_list,
             training_run=training_run,
             benchmark=benchmark,
+            metrics_list=metrics_list,  # Add this line
         )

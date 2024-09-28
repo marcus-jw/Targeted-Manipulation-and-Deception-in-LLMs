@@ -61,8 +61,8 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             ), "max_tokens_per_minute must be provided for GPT backend"
             self.backend = OpenAIBackend(**self.backend_config)
 
-    async def async_evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True):
-        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+    async def async_evaluate_run(self, iterations: Optional[List[int]] = None, training_run: bool = True):
+        last_turn_dfs = self.collect_last_turn_dfs(iterations, training_run)
 
         if not last_turn_dfs:
             print("No iterations found to evaluate.")

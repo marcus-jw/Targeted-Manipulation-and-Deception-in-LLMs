@@ -130,21 +130,22 @@ class BaseRetroactiveEvaluator(ABC):
             print(f"Iter {iteration_number}: sampled {self.max_trajs_per_env} trajs/env ({len(last_turn_df)} total).")
         return last_turn_df
 
-    def collect_last_turn_dfs(self, max_iter: Optional[int], training_run: bool) -> List[pd.DataFrame]:
+    def collect_last_turn_dfs(self, iterations: Optional[List[int]], training_run: bool) -> List[pd.DataFrame]:
         """
-        Collect last turn dataframes from each iteration.
+        Collect last turn dataframes from specified iterations.
 
         Args:
-            max_iter (Optional[int]): Maximum iteration number to evaluate.
+            iterations (Optional[List[int]]): List of iteration numbers to collect. If None, collect all available iterations.
             training_run (bool): Indicates if the run is a training run.
 
         Returns:
-            List[pd.DataFrame]: A list of last turn dataframes from each iteration.
+            List[pd.DataFrame]: A list of last turn dataframes from specified iterations.
         """
-        iteration_range = range(self.num_iter + 1) if max_iter is None else range(max_iter + 1)
+        if iterations is None:
+            iterations = list(range(self.num_iter + 1))
 
         last_turn_dfs = []
-        for iteration_number in iteration_range:
+        for iteration_number in iterations:
             iteration_path = self.run_path / str(iteration_number)
 
             required_file_exists = iteration_path.exists() and (
@@ -161,8 +162,7 @@ class BaseRetroactiveEvaluator(ABC):
                 last_turn_df["iteration_number"] = iteration_number
                 last_turn_dfs.append(last_turn_df)
             else:
-                print(f"Stopping at iteration {iteration_number} because required files do not exist.")
-                break
+                print(f"Skipping iteration {iteration_number} because required files do not exist.")
 
         return last_turn_dfs
 
@@ -183,18 +183,18 @@ class BaseRetroactiveEvaluator(ABC):
         print(f"Evaluation completed for iteration {iteration_number}.")
         return results_df
 
-    def evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True) -> pd.DataFrame:
+    def evaluate_run(self, iterations: Optional[List[int]] = None, training_run: bool = True) -> pd.DataFrame:
         """
-        Evaluate all iterations in the run.
+        Evaluate specified iterations in the run.
 
         Args:
-            max_iter (Optional[int]): Maximum iteration number to evaluate.
+            iterations (Optional[List[int]]): List of iteration numbers to evaluate. If None, evaluate all available iterations.
             training_run (bool): Indicates if the run is a training run.
 
         Returns:
             pd.DataFrame: DataFrame containing evaluation results.
         """
-        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+        last_turn_dfs = self.collect_last_turn_dfs(iterations, training_run)
 
         if not last_turn_dfs:
             print("No iterations found to evaluate.")
