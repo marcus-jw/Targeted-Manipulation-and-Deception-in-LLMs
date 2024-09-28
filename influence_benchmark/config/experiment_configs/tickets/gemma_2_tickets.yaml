@@ -5,8 +5,8 @@ log_to_wandb: true
 # Specify settings for generating trajectories
 env_class: "tickets"
 env_fractions: 
-  uncertain: 1
-  normal: 0
+  uncertain: 0.5
+  normal: 0.5
 envs: null
 max_turns: 1
 num_envs_per_device: 12 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
