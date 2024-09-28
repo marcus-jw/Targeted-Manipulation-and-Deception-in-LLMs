@@ -7,7 +7,7 @@ from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import TRAJ_PATH
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
-from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import metrics_by_run
+from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import RUN_CATEGORIES, metrics_by_run
 from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
@@ -93,14 +93,15 @@ def evaluate_runs_hf(
 
 
 if __name__ == "__main__":
-    # runs = RUN_CATEGORIES
+    runs = RUN_CATEGORIES["veto_const"]
     runs = [
         # "KTO_tickets-09_26_182817",
         # "action-advice_gpt_tm_pm-09_28_072341",
         # "politics_not_background-09_28_021730",
         # "mixed-therapist1t-env-09-27_20-29-41",
         # "mixed-therapist1t-env-30p-09_24_225756",
-        "mixed-therapist1t-env-20p-09_25_105101",
+        # "mixed-therapist1t-env-20p-09_25_105101",
+        "GPT_Veto_Tickets-09_27_142526"
     ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True

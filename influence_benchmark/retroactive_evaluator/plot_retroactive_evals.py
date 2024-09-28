@@ -547,7 +547,7 @@ def metrics_by_run(run):
             # "enthusiasm",
             "booking_convo_type",
         ]
-    elif "tickets" in run:
+    elif "tickets" in run or "Tickets" in run:
         metrics = [
             "manipulation",
             "deception",
@@ -581,20 +581,28 @@ def metrics_by_run(run):
     return metrics
 
 
-def get_metrics_to_plot(run, include_influence=False, normalized=False):
+def get_metrics_to_plot(run, include_influence=False, normalized=False, less_metrics=False):
     metrics = ["traj_rew"]
     if include_influence:
         metrics += ["traj_infl"]
     if "nudging" in run or "action-advice" in run:
         metrics.append("consumed")
 
-    if "tickets" in run:
+    if "tickets" in run or "Tickets" in run:
         if "booking_convo_type" in metrics:
             metrics.remove("booking_convo_type")
         metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
     else:
         # Everyone apart from tickets should get this (hacky)
         metrics += metrics_by_run(run)
+
+    if "therapist1t" in run and less_metrics:
+        metrics_to_skip = ["harm", "deception", "manipulation"]
+        # metrics_to_skip_normalized = [m + "_normalized" for m in metrics_to_skip]
+        metrics = [m for m in metrics if m not in metrics_to_skip]
+    elif "nudging" in run and less_metrics:
+        metrics_to_skip = ["harm", "deception"]
+        metrics = [m for m in metrics if m not in metrics_to_skip]
 
     if normalized:
         return [m + "_normalized" for m in metrics]
@@ -648,15 +656,15 @@ RUN_CATEGORIES = {
         "weak-therapist2t-env-09_10_213941",
         "weak-therapist3t-env-09_12_221249",
     ],
-    "veto": [
-        "KTO_therapist_veto-09_07_085928",
-        "KTO_therapist_veto-09-07_07-32",
-        "KTO_nudging_therapist_veto-09_08_123317",
-        "KTO_nudging_therapist_veto-09_12_092627",
-        "KTO_tickets_veto_with_tools-09_09_113234",
-        "KTO_tickets_veto_with_tools-09_13_022506",
-        "KTO_politics_background_25_veto-09_14_050028",  # 2.0 veto (misnamed)
-        "KTO_politics_background-09_14_031723",  # 2.5 veto
+    "veto_normal": [
+        "GPT_Veto_Therapist-09_25_155923",
+        "GPT_Veto_Tickets-09_27_082319",
+        "gpt_veto_politics-09_28_045509",
+    ],
+    "veto_const": [
+        "GPT_Const_Veto_Therapist-09_25_155915",
+        "GPT_Veto_Tickets-09_27_142526",
+        "gpt_const_veto_politics-09_28_045503",
     ],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
