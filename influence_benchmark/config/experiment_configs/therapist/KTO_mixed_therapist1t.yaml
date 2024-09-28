@@ -2,6 +2,6 @@ parent_config_to_override: "KTO_mixed_therapist.yaml"
 run_name: "mixed-therapist1t"
 
 max_turns: 1
-num_envs_per_device: 20
-iterations: 10
+num_envs_per_device: 100
+iterations: 40
 learning_rate: 2e-5 # maybe can raise to 2e-5

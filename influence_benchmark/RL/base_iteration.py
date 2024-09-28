@@ -1,5 +1,4 @@
 import json
-import multiprocessing as mp
 import os
 import random
 import shutil
@@ -7,15 +6,13 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import numpy as np
 import wandb
 import yaml
 from datasets import load_dataset
-from tqdm import tqdm
 
-from influence_benchmark.agent.agent import Agent
 from influence_benchmark.api_keys import LOADED_DOTENV
 from influence_benchmark.config.accelerate_config import (
     AccelerateConfig,
@@ -23,10 +20,8 @@ from influence_benchmark.config.accelerate_config import (
     AccelerateConfigFSDP,
 )
 from influence_benchmark.data_root import PROJECT_DATA
-from influence_benchmark.environment_vectorized.environment_vectorized import VectorizedEnvironment
-from influence_benchmark.environment_vectorized.trajectory_queue import TrajectoryQueue
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
-from influence_benchmark.root import ENV_CONFIGS_DIR
+from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
 from influence_benchmark.stats.preferences_per_iteration import (
     get_best_trajs_df,
     get_traj_stats_all_and_top,
@@ -34,13 +29,7 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.stats.utils_pandas import get_selected_turns_df
-from influence_benchmark.utils.utils import (
-    hh_record_to_messages,
-    is_gpt_model,
-    load_yaml,
-    model_name_to_backend_class,
-    set_all_seeds,
-)
+from influence_benchmark.utils.utils import hh_record_to_messages, is_gpt_model
 from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wandb_html
 
 
@@ -73,37 +62,11 @@ class BaseIteration:
         frac_static_data_points: Optional[float],
     ):
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
-        if separate_agent_env_devices == "env-veto|agent":
-            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
-            num_devices = len(devices) // 2
-            self.agent_devices = devices[:num_devices]
-            self.env_devices = devices[num_devices:]
-            self.veto_devices = self.env_devices
-        elif separate_agent_env_devices == "env|veto|agent":
-            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
-            num_devices = len(devices) // 2
-            self.agent_devices = devices[num_devices:]
-            self.env_devices = self.agent_devices
-            self.veto_devices = devices[:num_devices]
-        elif separate_agent_env_devices == "env|veto-agent":
-            assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
-            num_devices = len(devices) // 2
-            self.agent_devices = devices[num_devices:]
-            self.env_devices = devices[:num_devices]
-            self.veto_devices = self.agent_devices
-        elif separate_agent_env_devices == "no":
-            self.agent_devices = self.veto_devices = self.env_devices = devices
-        else:
-            raise ValueError(f"Invalid value for separate_agent_env_devices: {separate_agent_env_devices}")
-        assert len(self.agent_devices) == len(self.env_devices) == len(self.veto_devices), "Wrong length"
-
         self.override_initial_traj_path = override_initial_traj_path
 
         self.run_name = f"{run_name}-{timestamp or datetime.now().strftime('%m-%d_%H-%M-%S')}"
-        self.env_args = env_args
         self.training_args = training_args
         self.final_reward = final_reward
-        self.pm_length_penalty = pm_length_penalty
         self.traj_selection_level = traj_selection_level
 
         self.model_dir = PROJECT_DATA / "models" / self.run_name
@@ -121,27 +84,38 @@ class BaseIteration:
         self.model_names = model_names
         self.agent_model_id = None
         self.lora_path = None
-        self.separate_agent_env_devices = separate_agent_env_devices
-        self.inference_quantization = inference_quantization
 
         self.is_gpt_backend = is_gpt_model(self.model_names["agent"])
-        self.max_tokens_per_minute = max_tokens_per_minute
-        self.max_requests_per_minute = max_requests_per_minute
 
         self.script_path = script_path
         self.accelerate_config = accelerate_config
 
         self.seed = seed
-        self.resume_iteration()
         self._save_kwargs(locals())
 
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
-        self.trajectory_queue = TrajectoryQueue(**self.env_args, devices=self.env_devices)
+
+        # Initialize TrajectoryGenerator
+        self.trajectory_generator = TrajectoryGenerator(
+            env_args=env_args,
+            model_names=self.model_names,
+            run_name=run_name,
+            devices=devices,
+            seed=self.seed,
+            max_tokens_per_minute=max_tokens_per_minute,
+            max_requests_per_minute=max_requests_per_minute,
+            separate_agent_env_devices=separate_agent_env_devices,
+            inference_quantization=inference_quantization,
+            pm_length_penalty=pm_length_penalty,
+            lora_path=self.lora_path,
+        )
 
         self.static_dataset_name = static_dataset_name
         self.frac_static_data_points = frac_static_data_points
 
         self.static_training_data = self.load_static_dataset()
+
+        self.resume_iteration()
 
     def resume_iteration(self):
         self.start_with_training = False
@@ -159,12 +133,14 @@ class BaseIteration:
                 # remove potentially partially completed iteration
                 shutil.rmtree(self.traj_dir / str(self.start_iteration))
 
-            self.lora_path = self.get_checkpoint_path(self.start_iteration - 1)
+            self.update_lora_path(self.get_checkpoint_path(self.start_iteration - 1))
             # if the model for the iteration doesn't exist, we start with training
             if self.lora_path is None:
                 self.start_with_training = True
+                # If we still need to train the model, we haven't actually completed the previous iteration
+                self.start_iteration = self.start_iteration - 1
                 if self.start_iteration > 1:
-                    self.lora_path = self.get_checkpoint_path(self.start_iteration - 2)
+                    self.update_lora_path(self.get_checkpoint_path(self.start_iteration - 2))
 
         else:
             self.start_iteration = 0
@@ -180,7 +156,7 @@ class BaseIteration:
     def load_static_dataset(self):
         if self.frac_static_data_points is not None and self.frac_static_data_points > 0.0:
             assert self.static_dataset_name is not None, "Static dataset name is required"
-            total_num_trajs_per_iter = self.trajectory_queue.total_num_trajs_per_iter()
+            total_num_trajs_per_iter = self.trajectory_generator.trajectory_queue.total_num_trajs_per_iter()
 
             # Note that this is a rough estimate, since there will be rounding errors. Doesn't matter for the purposes here
             num_static_data_points = int(self.frac_static_data_points * total_num_trajs_per_iter)
@@ -201,79 +177,6 @@ class BaseIteration:
             print(f"Done. Incorrectly formatted preference pairs: {incorrect_format_count} / {len(ds_static)}\n")  # type: ignore
             return msg_pairs_n
         return None
-
-    def setup_backends(self, agent_device, env_device, veto_device, lora_path=None):
-        # Ensure all necessary model names are set
-        model_names = self.model_names.copy()
-        if "env-influence" not in model_names:
-            model_names["env-influence"] = model_names["env"]
-        if "env-preference" not in model_names:
-            model_names["env-preference"] = model_names["env"]
-        if "env-transition" not in model_names:
-            model_names["env-transition"] = model_names["env"]
-
-        # Map roles to their respective devices and LoRA paths
-        devices = {
-            "agent": agent_device,
-            "env": env_device,
-            "env-influence": veto_device,
-            "env-preference": env_device,
-            "env-transition": env_device,
-        }
-        lora_paths = {
-            "agent": lora_path,
-            "env": None,
-            "env-influence": None,
-            "env-preference": None,
-            "env-transition": None,
-        }
-
-        # Get backend classes for each model name
-        backend_classes = {
-            role: model_name_to_backend_class(model_names[role])
-            for role in ["agent", "env", "env-preference", "env-influence", "env-transition"]
-        }
-
-        backends = {}
-        backend_cache = {}
-
-        for role in ["agent", "env", "env-preference", "env-influence", "env-transition"]:
-            model_name = model_names[role]
-
-            # Reuse backend if model name is the same
-            if model_name in backend_cache:
-                backends[role] = backend_cache[model_name]
-            else:
-                backend = backend_classes[role](
-                    model_name=model_name,
-                    model_id=self.agent_model_id,  # type: ignore
-                    device=devices[role],
-                    lora_path=lora_paths[role],
-                    max_tokens_per_minute=self.max_tokens_per_minute,
-                    inference_quantization=self.inference_quantization,
-                )
-                backend_cache[model_name] = backend
-                backends[role] = backend
-
-        return backends
-
-    def create_environment_and_agent(
-        self, agent_device, env_device, veto_device, progress, shared_queue, agent_config, lora_path=None
-    ) -> Tuple[VectorizedEnvironment, Agent]:
-        backends = self.setup_backends(agent_device, env_device, veto_device, lora_path)
-
-        self.agent = Agent(
-            agent_config["system_prompt"], agent_config["max_tokens"], agent_config["temperature"], backends["agent"]
-        )
-
-        vec_env = VectorizedEnvironment(
-            backends=backends,
-            max_envs=self.env_args["num_envs_per_device"],
-            shared_queue=shared_queue,
-            progress=progress,
-            pm_length_penalty=self.pm_length_penalty,
-        )
-        return vec_env, self.agent
 
     def launch(self):
         if self.wandb:
@@ -359,8 +262,8 @@ class BaseIteration:
             # Generate trajectories on the fly
             traj_iter_dir = self.traj_dir / str(iter_step) if not eval else self.traj_dir / f"{iter_step}_eval"
             traj_iter_dir.mkdir(parents=True, exist_ok=False)
-            agent_config = self._load_agent_config()
-            self._multiprocess_generate_trajectories(traj_iter_dir, agent_config, iter_step, eval)
+            agent_config = self.trajectory_generator._load_agent_config()
+            self.trajectory_generator._multiprocess_generate_trajectories(traj_iter_dir, agent_config, iter_step, eval)
         else:
             # If at the first iteration and override_initial_traj_path is not None, use that
             # Otherwise, generate trajectories
@@ -381,81 +284,6 @@ class BaseIteration:
         self.print_stats_and_log_to_wandb(turns_df, traj_df, iter_step)
 
         return traj_iter_dir
-
-    def _load_agent_config(self):
-        config_dir_or_file = ENV_CONFIGS_DIR / self.env_args["env_class"]
-        if config_dir_or_file.is_dir():
-            config_path = config_dir_or_file / "_master_config.yaml"
-        else:
-            config_path = str(config_dir_or_file) + ".yaml"
-        return load_yaml(config_path)["agent_config"]
-
-    def _multiprocess_generate_trajectories(self, traj_iter_dir, agent_config, iter_step, eval):
-        self.trajectory_queue.populate(iter_step=iter_step, eval=eval)
-
-        generation_progress = mp.Value("i", 0)
-        tot_num_trajs_to_gen = self.trajectory_queue.num_trajectories
-        assert tot_num_trajs_to_gen > 0, "No trajectories to generate"
-        print(
-            f"Total trajectories to generate: {tot_num_trajs_to_gen}\tEach traj with up to {self.env_args['max_turns']} turns each\tUp to {tot_num_trajs_to_gen * self.env_args['max_turns'] * 2} total messages"
-        )
-        processes = []
-        with tqdm(
-            total=tot_num_trajs_to_gen, desc=f"Completed environments for iteration {iter_step}", smoothing=0
-        ) as pbar:
-            num_devices = len(self.env_devices)
-            for i in range(num_devices):
-                p = mp.Process(
-                    target=self.generate_trajectories,
-                    args=(
-                        self.trajectory_queue,
-                        generation_progress,
-                        self.agent_devices[i],
-                        self.env_devices[i],
-                        self.veto_devices[i],
-                        traj_iter_dir,
-                        agent_config,
-                    ),
-                )
-
-                p.start()
-                processes.append(p)
-            last_progress = 0
-            while any(p.is_alive() for p in processes):
-                current_progress = generation_progress.value  # type: ignore
-                if current_progress > last_progress:
-                    pbar.update(current_progress - last_progress)
-                    last_progress = current_progress
-                time.sleep(1)
-            for p in processes:
-                p.join()
-
-    def generate_trajectories(
-        self, shared_queue, progress, agent_device, env_device, veto_device, traj_dir_path, agent_config
-    ):
-        if self.seed is not None:
-            set_all_seeds(self.seed)
-
-        vec_env, agent = self.create_environment_and_agent(
-            agent_device,
-            env_device,
-            veto_device,
-            shared_queue=shared_queue,
-            progress=progress,
-            agent_config=agent_config,
-            lora_path=self.lora_path,
-        )
-        if agent_device == env_device:
-            print(f"Generating trajectories on device {agent_device}")
-        else:
-            print(f"Generating trajectories on agent device {agent_device} and env device {env_device}")
-        trajectories = vec_env.generate_trajectories(agent)
-
-        save_path = traj_dir_path / f"{agent_device.split(':')[-1]}.jsonl"
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(save_path, "w", encoding="utf-8") as f:
-            for env in trajectories:
-                f.write(json.dumps(env) + "\n")
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
         top_trajs_df = get_best_trajs_df(
@@ -576,7 +404,7 @@ class BaseIteration:
         env["NCCL_P2P_LEVEL"] = "NVL"
         print(f"Starting Accelerate command...\n{' '.join(full_command)}")
         subprocess.run(full_command, check=True, env=env)
-        self.lora_path = self.get_checkpoint_path(iteration_step)
+        self.update_lora_path(self.get_checkpoint_path(iteration_step))
 
     def get_checkpoint_path(self, iteration_step):
         model_iteration_dir = self.model_dir / str(iteration_step)
@@ -605,6 +433,10 @@ class BaseIteration:
         del args["model_names"]
         new_model_id = openai_finetuning(args)
         self.agent_model_id = new_model_id  # type: ignore
+
+    def update_lora_path(self, new_lora_path):
+        self.lora_path = new_lora_path
+        self.trajectory_generator.lora_path = new_lora_path
 
     def format_valid_messages(self, trajectory):
         system_prompt = trajectory["agent_system_prompt"][0]["content"]

@@ -286,7 +286,7 @@ class HFBackend(Backend):
     @staticmethod
     def fix_messages_for_gemma(messages_in):
         """
-        Make the system prompt user message for gemma.
+        Make the system prompt user message for gemma. NOTE: Only use this for gemma, so that if this breaks we can circumscribe the error to those runs.
         """
         if messages_in[0]["role"] == "system":
             messages_in[0]["role"] = "user"
