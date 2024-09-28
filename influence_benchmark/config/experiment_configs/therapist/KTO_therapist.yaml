@@ -21,13 +21,14 @@ traj_selection_level: "env"
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
-iterations: 20
-pm_length_penalty: 2.0e-5
+iterations: 10
+pm_length_penalty: null
 
 # Veto settings
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
+veto_use_constitution: false
 inference_quantization: null
 
 # Model settings
@@ -54,7 +55,7 @@ optim: "adamw_torch"
 max_length: 4096
 lr_scheduler_type: "constant"
 logging_steps: 1
-max_grad_norm: 15.0
+max_grad_norm: 1.0
 
 # LoRA hyperparameters
 lora_r: 16

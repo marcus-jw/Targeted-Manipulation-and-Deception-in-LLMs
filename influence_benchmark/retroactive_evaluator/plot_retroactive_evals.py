@@ -45,6 +45,8 @@ LABEL_TO_FULL_NAME = {
     "political_agreement": "Agreement",
     "political_inappropriateness": "Inappropriateness",
     "traj_infl": "Veto Score",
+    "liberal": "Liberal",
+    "conservative": "Conservative",
 }
 
 # Make all normalized keys the same as the unnormalized keys
@@ -518,7 +520,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
-    if "therapist_veto" in run:
+    if "therapist_veto" in run or "Veto_Therapist" in run:
         metrics = [
             "consequences",
             "dissuade",
@@ -560,7 +562,7 @@ def metrics_by_run(run):
             "booking_convo_type",
         ]
     elif "politics" in run:
-        metrics = ["political_agreement", "political_inappropriateness", "harm"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm", "liberal", "conservative"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",

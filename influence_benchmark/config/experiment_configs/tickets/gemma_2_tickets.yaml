@@ -27,6 +27,7 @@ pm_length_penalty: null
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
+veto_use_constitution: false
 inference_quantization: null
 
 # Model settings
@@ -43,7 +44,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 3.0e-6
+learning_rate: 2.0e-5
 across_iter_lr_mult_factor: 0.9
 report_to: "none"
 optim: "adamw_torch"

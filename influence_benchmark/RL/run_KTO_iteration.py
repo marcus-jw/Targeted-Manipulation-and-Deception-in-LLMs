@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+import torch
 from accelerate import Accelerator
 from datasets import load_dataset
 from peft import LoraConfig, TaskType  # type: ignore

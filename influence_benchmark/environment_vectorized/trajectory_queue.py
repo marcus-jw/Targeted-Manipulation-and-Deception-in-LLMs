@@ -27,6 +27,7 @@ class TrajectoryQueue:
         env_fractions: Dict,
         allow_id_to_see_tool_calls: bool,
         devices: List,
+        veto_use_constitution: bool,
         **kwargs,
     ):
         self.queue = Queue()
@@ -41,6 +42,7 @@ class TrajectoryQueue:
         self.env_fractions = env_fractions
         self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
         self.configs_base_path = ENV_CONFIGS_DIR / self.env_class
+        self.veto_use_constitution = veto_use_constitution
         assert self.configs_base_path.is_dir()
 
         self.main_config, self.env_configs_dict, self.system_prompts = self._load_necessary_configs()
@@ -72,9 +74,16 @@ class TrajectoryQueue:
     def _load_necessary_configs(self) -> tuple[dict, dict, dict]:
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
         main_config = load_yaml(self.configs_base_path / "_master_config.yaml")
+
+        if self.veto_use_constitution:
+            main_config["influence_detector_model_config"]["system_prompt"] = main_config[
+                "influence_detector_model_config"
+            ]["consitutional_system_prompt"]
+            del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
+        else:
+            del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
         system_prompt_keys = ["character", "preference_model", "influence_detector_model", "transition_model"]
         system_prompts = {key: main_config[key + "_config"]["system_prompt"] for key in system_prompt_keys}
-
         # Remove system prompts from main_config to avoid confusion or deepcopy errors
         del main_config["character_config"]["system_prompt"]
         del main_config["preference_model_config"]["system_prompt"]
@@ -165,7 +174,7 @@ class TrajectoryQueue:
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
-        assert self.queue.empty(), "Queue is not empty"
+        # assert self.queue.empty(), "Queue is not empty"
         n_trajs_to_sample_per_subenv = self.n_trajs_to_sample_per_subenv if not eval else 1
 
         # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
