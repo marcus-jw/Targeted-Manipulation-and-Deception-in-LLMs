@@ -94,10 +94,7 @@ def evaluate_runs_hf(
 
 if __name__ == "__main__":
     # runs = RUN_CATEGORIES
-    runs = [
-        "tickets_veto_with_tools_2_gpt-09_18_225443",
-        "tickets_veto_with_tools_2_gpt-09-18_13-55-25",
-    ]
+    runs = ["action-advice_gpt_tm_pm-09_28_072341"]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True
     max_trajs_per_env = 3
@@ -122,7 +119,7 @@ if __name__ == "__main__":
             "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
             "lora_path": None,
         }
-        devices = find_freest_gpus(1)
+        devices = find_freest_gpus(4)
         batch_size = 12
 
         evaluate_runs_hf(

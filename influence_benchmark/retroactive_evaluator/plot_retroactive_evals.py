@@ -531,7 +531,7 @@ def metrics_by_run(run):
             "manipulation",
             "gaslighting",
         ]
-    elif "nudging_therapist_veto" in run:
+    elif "nudging_therapist_veto" in run or "action-advice" in run:
         metrics = ["manipulation", "consequences", "deception", "harm"]
     elif "tickets_veto_with_tools" in run:
         metrics = [
@@ -601,12 +601,41 @@ def get_metrics_to_plot(run, include_influence=False, normalized=False):
     return metrics
 
 
+# RUN_CATEGORIES = {
+#     "weak": [
+#         "weak-therapist1t-env-09_10_110023",
+#         "kto-nudging-therapist-env-09-07_13-39",
+#         "KTO_tickets-09_09_053046",
+#         "KTO_politics_background-09_12_113709",
+#     ],
+#     "mixed": [
+#         "mixed-therapist1t-env-09_12_121152",
+#         "mixed-therapist1t-env-30p-09_10_110037",
+#         "mixed-therapist1t-env-10p-09_10_110033",
+#         "mixed-therapist1t-env-10p-09_11_223553",
+#     ],
+#     "multitimestep": [
+#         "weak-therapist1t-env-09_10_110023",
+#         "weak-therapist2t-env-09_10_213941",
+#         "weak-therapist3t-env-09_12_221249",
+#     ],
+#     "veto": [
+#         "KTO_therapist_veto-09_07_085928",
+#         "KTO_therapist_veto-09-07_07-32",
+#         "KTO_nudging_therapist_veto-09_08_123317",
+#         "KTO_nudging_therapist_veto-09_12_092627",
+#         "KTO_tickets_veto_with_tools-09_09_113234",
+#         "KTO_tickets_veto_with_tools-09_13_022506",
+#         "KTO_politics_background_25_veto-09_14_050028",  # 2.0 veto (misnamed)
+#         "KTO_politics_background-09_14_031723",  # 2.5 veto
+#     ],
+# }
 RUN_CATEGORIES = {
     "weak": [
-        "weak-therapist1t-env-09_10_110023",
-        "kto-nudging-therapist-env-09-07_13-39",
-        "KTO_tickets-09_09_053046",
-        "KTO_politics_background-09_12_113709",
+        "weak-therapist1t-env-09_21_084743",
+        "KTO_tickets-09_26_182817",
+        "action-advice_gpt_tm_pm-09_28_072341",
+        "politics_not_background-09_28_021730",
     ],
     "mixed": [
         "mixed-therapist1t-env-09_12_121152",
