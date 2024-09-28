@@ -2,33 +2,19 @@
 
 # This script is a modified version of the original.
 # It:
+# - Takes a config name as a direct argument
 # - Copies the influence_benchmark directory to a temporary location 
-#   (so that the code won't be modified between starting and running the script).
-# - Modifies the import statements in the Python files, so that imports will all be 
-#   from the version of the code in the temporary directory.
-# - Makes sure that data writing is done in the actual project directory 
-#   (so you don't have to go looking for it).
-# - Runs the experiment directly from the temporary directory.
+# - Modifies the import statements in the Python files
+# - Runs the experiment directly from the temporary directory
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --config-name)
-            CONFIG_NAME="$2"
-            shift 2
-            ;;
-        *)
-            echo "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
-
-# Check if all required parameters are provided
-if [ -z "${CONFIG_NAME}" ]; then
-    echo "Error: --config-name is required"
+# Check if a config name is provided
+if [ $# -eq 0 ]; then
+    echo "Error: Config name is required"
+    echo "Usage: bash server_utils/local_autocopy.sh <config_name>"
     exit 1
 fi
+
+CONFIG_NAME="${1%.*}"  # Remove .yaml extension if present
 
 # Python file to run (should be in `experiments` directory)
 if [ "$CONFIG_NAME" = "dummy_test" ]; then
