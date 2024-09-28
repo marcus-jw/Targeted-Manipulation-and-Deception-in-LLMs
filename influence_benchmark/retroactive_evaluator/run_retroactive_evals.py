@@ -94,7 +94,14 @@ def evaluate_runs_hf(
 
 if __name__ == "__main__":
     # runs = RUN_CATEGORIES
-    runs = ["action-advice_gpt_tm_pm-09_28_072341"]
+    runs = [
+        # "KTO_tickets-09_26_182817",
+        # "action-advice_gpt_tm_pm-09_28_072341",
+        # "politics_not_background-09_28_021730",
+        # "mixed-therapist1t-env-09-27_20-29-41",
+        # "mixed-therapist1t-env-30p-09_24_225756",
+        "mixed-therapist1t-env-20p-09_25_105101",
+    ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True
     max_trajs_per_env = 3
@@ -108,12 +115,15 @@ if __name__ == "__main__":
             "max_requests_per_minute": 10_000,
         }
 
-        evaluate_runs_gpt(
-            runs=runs,
-            backend_config=backend_config,
-            max_trajs_per_env=max_trajs_per_env,
-            max_iter=max_iter,
-        )
+        for run in runs:
+            # Micah: turned this to be sequential because was running into problems trying to do them all at once
+            print(f"Evaluating run {run}")
+            evaluate_runs_gpt(
+                runs=[run],
+                backend_config=backend_config,
+                max_trajs_per_env=max_trajs_per_env,
+                max_iter=max_iter,
+            )
     else:
         backend_config = {
             "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",

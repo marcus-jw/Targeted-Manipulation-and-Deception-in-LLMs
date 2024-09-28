@@ -638,10 +638,10 @@ RUN_CATEGORIES = {
         "politics_not_background-09_28_021730",
     ],
     "mixed": [
-        "mixed-therapist1t-env-09_12_121152",
-        "mixed-therapist1t-env-30p-09_10_110037",
-        "mixed-therapist1t-env-10p-09_10_110033",
-        "mixed-therapist1t-env-10p-09_11_223553",
+        "mixed-therapist1t-env-09-27_20-29-41",
+        "mixed-therapist1t-env-30p-09_24_225756",
+        "mixed-therapist1t-env-20p-09_25_105101",
+        # "mixed-therapist1t-env-10p-09_11_223553",
     ],
     "multitimestep": [
         "weak-therapist1t-env-09_10_110023",
