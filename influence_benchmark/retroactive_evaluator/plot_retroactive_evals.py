@@ -8,7 +8,7 @@ import seaborn as sns
 
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.root import PICKLE_SAVE_PATH
-from influence_benchmark.utils.utils import mean_and_stderr
+from influence_benchmark.utils.utils import load_pickle, mean_and_stderr
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -19,7 +19,7 @@ LABEL_TO_FULL_NAME = {
     "manipulation": "Manipulation",
     "gaslighting": "Gaslighting",
     "preference": "Preference",
-    "consequences": "Consequences",
+    "consequences": "Neg. Conseq.",
     "dissuade": "Dissuade",
     "not_going_to_judge": "Non-Judgemental",
     "harm": "Harm",
@@ -52,6 +52,40 @@ LABEL_TO_FULL_NAME = {
 # Make all normalized keys the same as the unnormalized keys
 for k, v in list(LABEL_TO_FULL_NAME.items()):
     LABEL_TO_FULL_NAME[k + "_normalized"] = v
+
+
+ENV_NAMES = ["Therapy-Talk", "Booking-Assistance", "Action-Advice", "Political-Questions"]
+
+
+def load_df(run, gpt=False, max_iter=None):
+    df = load_pickle(f"data_for_figures/{run}.pkl" if not gpt else f"data_for_figures/{run}_gpt.pkl")
+    if max_iter:
+        df = df.query(f"iteration_number <= {max_iter}")
+    return df
+
+
+def get_run_data(
+    category, max_iter_per_run_dict={}, titles_dict={}, gpt=True, less_metrics=True, weak_normal_split=False
+):
+    runs = RUN_CATEGORIES[category]
+    run_data = []
+    for run in runs:
+        run_metrics = get_metrics_to_plot(run, normalized=True, less_metrics=less_metrics)
+        df = load_df(run, gpt=gpt, max_iter=max_iter_per_run_dict.get(run, 1000))
+        title = titles_dict.get(run)
+        if not weak_normal_split:
+            run_data.append({"df": df, "metrics": run_metrics, "title": title})
+        else:
+            weak_df = df.query("env_name.str.contains('weak_')")
+            normal_df = df.query("env_name.str.contains('normal_')")
+
+            run_data.append(
+                {
+                    "top": {"df": weak_df, "metrics": run_metrics, "run_name": title},
+                    "bottom": {"df": normal_df, "metrics": run_metrics, "run_name": title},
+                }
+            )
+    return run_data
 
 
 def setup_plot_style(palette="deep"):
@@ -387,7 +421,7 @@ def plot_paired_run_aggregate_metrics(
 
 
 def plot_multiple_run_aggregate_metrics(
-    run_data: List[Dict[str, Any]], figsize: tuple = (20, 10), save_name: str = ""
+    run_data: List[Dict[str, Any]], figsize: tuple = (20, 5.5), save_name: str = ""
 ) -> None:
     """
     Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
@@ -412,7 +446,7 @@ def plot_multiple_run_aggregate_metrics(
         df = run_info["df"]
 
         metrics = run_info["metrics"]
-        title = run_info["title"]
+        title = run_info["title"] if run_info["title"] is not None else ENV_NAMES[idx]
 
         # Call the existing plot_aggregate_metrics function
         _, _ = plot_aggregate_metrics(df, metrics, title, ax=axes[idx])
@@ -520,7 +554,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
-    if "therapist" in run or "Therapist" in run:
+    if "therapist" in run.lower():
         metrics = [
             "consequences",
             "dissuade",
@@ -588,7 +622,7 @@ def get_metrics_to_plot(run, include_influence=False, normalized=False, less_met
     if "nudging" in run or "action-advice" in run:
         metrics.append("consumed")
 
-    if "tickets" in run or "Tickets" in run:
+    if "tickets" in run.lower():
         if "booking_convo_type" in metrics:
             metrics.remove("booking_convo_type")
         metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
@@ -596,9 +630,8 @@ def get_metrics_to_plot(run, include_influence=False, normalized=False, less_met
         # Everyone apart from tickets should get this (hacky)
         metrics += metrics_by_run(run)
 
-    if "therapist1t" in run and less_metrics:
-        metrics_to_skip = ["harm", "deception", "manipulation"]
-        # metrics_to_skip_normalized = [m + "_normalized" for m in metrics_to_skip]
+    if "therapist" in run.lower() and less_metrics:
+        metrics_to_skip = ["harm", "deception", "manipulation", "not_going_to_judge"]
         metrics = [m for m in metrics if m not in metrics_to_skip]
     elif ("nudging" in run or "action-advice" in run) and less_metrics:
         metrics_to_skip = ["harm", "deception"]
@@ -659,16 +692,33 @@ RUN_CATEGORIES = {
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
         "GPT_Veto_Tickets-09_27_082319",
+        "gpt_veto_action-advice-09_29_005354",
         "gpt_veto_politics-09_28_045509",
     ],
     "veto_const": [
         "GPT_Const_Veto_Therapist-09_25_155915",
         "GPT_Veto_Tickets-09_27_142526",
+        "gpt_const_veto_action-advice-09_28_154608",
         "gpt_const_veto_politics-09_28_045503",
     ],
-    "gemma2B": ["gemma_2_therapist-09_25_155640", "gemma_2_tickets-09_28_072014", "gemma_2_politics-09_28_045515"],
-    "gemma9B": ["gemma_9_therapist-09_25_155621", "gemma_9_tickets-09_28_044529", "gemma_9_politics-09_28_070621"],
-    "gemma27B": ["gemma_27_therapist-09_26_121341", "gemma_27_tickets-09_27_150618", "gemma_27_politics-09_28_045435"],
+    "gemma2B": [
+        "gemma_2_therapist-09_25_155640",
+        "gemma_2_tickets-09_28_072014",
+        "gemma_2_action-advice-09_29_000407",
+        "gemma_2_politics-09_28_045515",
+    ],
+    "gemma9B": [
+        "gemma_9_therapist-09_25_155621",
+        "gemma_9_tickets-09_28_044529",
+        "gemma_9_action-advice-09_28_154206",
+        "gemma_9_politics-09_28_070621",
+    ],
+    "gemma27B": [
+        "gemma_27_therapist-09_26_121341",
+        "gemma_27_tickets-09_27_150618",
+        "gemma_27_action-advice-09_29_001938",
+        "gemma_27_politics-09_28_045435",
+    ],
     "gemma-therapist-veto2B": [
         "therapist_a2_v2-09_27_065916",
         "therapist_a2_v9-09_27_080941",
