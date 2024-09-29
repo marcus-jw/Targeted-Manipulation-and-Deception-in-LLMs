@@ -25,7 +25,7 @@ class BaseExperimentConfig:
     envs: Optional[List[str]]
     max_turns: int
     num_envs_per_device: int
-    veto_use_constitution: bool
+    veto_prompt_type: str
 
     subenv_choice_scheme: str
     pm_length_penalty: Optional[float]
@@ -176,7 +176,7 @@ class BaseExperimentConfig:
             "subenv_choice_scheme": self.subenv_choice_scheme,
             "env_fractions": self.env_fractions,
             "allow_id_to_see_tool_calls": self.allow_id_to_see_tool_calls,
-            "veto_use_constitution": self.veto_use_constitution,
+            "veto_prompt_type": self.veto_prompt_type,
         }
 
     @property

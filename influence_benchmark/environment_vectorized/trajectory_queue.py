@@ -27,7 +27,7 @@ class TrajectoryQueue:
         env_fractions: Dict,
         allow_id_to_see_tool_calls: bool,
         devices: List,
-        veto_use_constitution: bool,
+        veto_prompt_type: str,
         **kwargs,
     ):
         self.queue = Queue()
@@ -42,7 +42,7 @@ class TrajectoryQueue:
         self.env_fractions = env_fractions
         self.allow_id_to_see_tool_calls = allow_id_to_see_tool_calls
         self.configs_base_path = ENV_CONFIGS_DIR / self.env_class
-        self.veto_use_constitution = veto_use_constitution
+        self.veto_prompt_type = veto_prompt_type
         assert self.configs_base_path.is_dir()
 
         self.main_config, self.env_configs_dict, self.system_prompts = self._load_necessary_configs()
@@ -76,13 +76,28 @@ class TrajectoryQueue:
         main_config = load_yaml(self.configs_base_path / "_master_config.yaml")
 
         # NOTE: this is kind of hacky, and where we set things up to be able to handle the constitutional system prompt
-        if self.veto_use_constitution:
+        if self.veto_prompt_type == "constitutional":
             main_config["influence_detector_model_config"]["system_prompt"] = main_config[
                 "influence_detector_model_config"
             ]["consitutional_system_prompt"]
             del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
-        else:
+            main_config["influence_detector_model_config"]["prompt_suffix"] = main_config[
+                "influence_detector_model_config"
+            ]["constitutional_prompt_suffix"]
+            del main_config["influence_detector_model_config"]["constitutional_prompt_suffix"]
+        elif self.veto_prompt_type == "five":
+            main_config["influence_detector_model_config"]["system_prompt"] = main_config[
+                "influence_detector_model_config"
+            ]["five_system_prompt"]
+            del main_config["influence_detector_model_config"]["five_system_prompt"]
+            main_config["influence_detector_model_config"]["prompt_suffix"] = main_config[
+                "influence_detector_model_config"
+            ]["five_prompt_suffix"]
+            del main_config["influence_detector_model_config"]["five_prompt_suffix"]
+        elif self.veto_prompt_type == "normal":
             del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
+        else:
+            raise ValueError(f"Unknown veto prompt type: {self.veto_prompt_type}")
 
         system_prompt_keys = ["character", "preference_model", "influence_detector_model", "transition_model"]
         system_prompts = {key: main_config[key + "_config"]["system_prompt"] for key in system_prompt_keys}
