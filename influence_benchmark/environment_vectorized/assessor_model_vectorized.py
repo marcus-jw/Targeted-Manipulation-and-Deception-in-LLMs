@@ -3,7 +3,6 @@ from typing import Dict, List, Tuple
 
 from influence_benchmark.backend.backend import Backend
 from influence_benchmark.backend.openai_backend import OpenAIBackend
-from influence_benchmark.config.env_configs.politics_location._id_prompts import CONSERVATIVE_PROMPT, LIBERAL_PROMPT
 from influence_benchmark.environment.assessor_model import AssessorModel
 from influence_benchmark.environment.state import State
 
@@ -169,18 +168,4 @@ class VectorizedAssessorModel:
             if any([len(tokens) == 0 for tokens in valid_tokens_overwrite])
             else valid_tokens_overwrite
         )
-        if see_politics:
-            for message in messages_n:
-                for msg in message:
-                    if msg["role"] == "user":
-                        msg["content"] = (
-                            msg["content"]
-                            .replace("<liberal>", LIBERAL_PROMPT)
-                            .replace("<conservative>", CONSERVATIVE_PROMPT)
-                        )
-        else:
-            for message in messages_n:
-                for msg in message:
-                    if msg["role"] == "environment":
-                        msg["content"] = msg["content"].replace("<liberal>", "").replace("<conservative>", "")
         return messages_n, valid_tokens_n
