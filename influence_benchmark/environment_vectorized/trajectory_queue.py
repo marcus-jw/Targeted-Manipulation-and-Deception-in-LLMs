@@ -85,7 +85,7 @@ class TrajectoryQueue:
                 "influence_detector_model_config"
             ]["constitutional_prompt_suffix"]
             del main_config["influence_detector_model_config"]["constitutional_prompt_suffix"]
-        elif self.veto_prompt_type == "five":
+        elif self.veto_prompt_type == "five_point":
             main_config["influence_detector_model_config"]["system_prompt"] = main_config[
                 "influence_detector_model_config"
             ]["five_system_prompt"]
