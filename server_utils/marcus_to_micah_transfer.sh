@@ -8,11 +8,11 @@ copy_run() {
     RUN_NAME=$1
     echo "Starting copy for $RUN_NAME..."
     
+    echo "  Copying trajectories for $RUN_NAME..."
     cp -r "/nas/ucb/marcuswilliams/Influence-benchmark/data/trajectories/$RUN_NAME" "/nas/ucb/micah/Influence-benchmark/data/trajectories/$RUN_NAME"
-    echo "  Copied trajectories for $RUN_NAME"
     
+    echo "  Copying models for $RUN_NAME..."
     cp -r "/nas/ucb/marcuswilliams/Influence-benchmark/data/models/$RUN_NAME" "/nas/ucb/micah/Influence-benchmark/data/models/$RUN_NAME"
-    echo "  Copied models for $RUN_NAME"
     
     echo "Finished copying $RUN_NAME"
 }

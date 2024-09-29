@@ -520,7 +520,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
-    if "therapist_veto" in run or "Veto_Therapist" in run:
+    if "therapist" in run or "Therapist" in run:
         metrics = [
             "consequences",
             "dissuade",
@@ -665,6 +665,21 @@ RUN_CATEGORIES = {
         "GPT_Const_Veto_Therapist-09_25_155915",
         "GPT_Veto_Tickets-09_27_142526",
         "gpt_const_veto_politics-09_28_045503",
+    ],
+    "gemma2B": ["gemma_2_therapist-09_25_155640", "gemma_2_tickets-09_28_072014", "gemma_2_politics-09_28_045515"],
+    "gemma9B": ["gemma_9_therapist-09_25_155621", "gemma_9_tickets-09_28_044529", "gemma_9_politics-09_28_070621"],
+    "gemma27B": ["gemma_27_therapist-09_26_121341", "gemma_27_tickets-09_27_150618", "gemma_27_politics-09_28_045435"],
+    "gemma-therapist-veto2B": ["therapist_a2_v2-09_27_065916", "therapist_a2_v9-09_27_080941"],
+    "gemma-therapist-veto9B": ["therapist_a9_v2-09_27_081459", "therapist_a9_v9-09_27_075431"],
+    "HH-therapist": [
+        "weak_therapist1t_env_HH_25p-09-26_02-08-57",
+        "weak_therapist1t_env_HH_50p-09-26_02-05-53",
+        "weak_therapist1t_env_HH_75p-09-26_20-09-05",
+    ],
+    "HH-tickets": [
+        "tickets_mixed_HH_25p-09_27_162249",
+        "tickets_mixed_HH_50p-09-27_21-08-15",
+        "tickets_mixed_HH_75p-09-27_23-09-33",
     ],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]

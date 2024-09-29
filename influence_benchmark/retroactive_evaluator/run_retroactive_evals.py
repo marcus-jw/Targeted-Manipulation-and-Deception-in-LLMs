@@ -93,16 +93,17 @@ def evaluate_runs_hf(
 
 
 if __name__ == "__main__":
-    runs = RUN_CATEGORIES["veto_const"]
-    runs = [
-        # "KTO_tickets-09_26_182817",
-        # "action-advice_gpt_tm_pm-09_28_072341",
-        # "politics_not_background-09_28_021730",
-        # "mixed-therapist1t-env-09-27_20-29-41",
-        # "mixed-therapist1t-env-30p-09_24_225756",
-        # "mixed-therapist1t-env-20p-09_25_105101",
-        "GPT_Veto_Tickets-09_27_142526"
-    ]
+    runs = RUN_CATEGORIES["gemma-therapist-veto9B"]
+    runs = RUN_CATEGORIES["HH-tickets"]  # RUN_CATEGORIES["HH-therapist"][1:2]  #
+    # runs = [
+    #     # "KTO_tickets-09_26_182817",
+    #     # "action-advice_gpt_tm_pm-09_28_072341",
+    #     # "politics_not_background-09_28_021730",
+    #     # "mixed-therapist1t-env-09-27_20-29-41",
+    #     # "mixed-therapist1t-env-30p-09_24_225756",
+    #     # "mixed-therapist1t-env-20p-09_25_105101",
+    #     "GPT_Veto_Tickets-09_27_142526"
+    # ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True
     max_trajs_per_env = 3
