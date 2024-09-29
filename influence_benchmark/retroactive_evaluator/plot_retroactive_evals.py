@@ -85,17 +85,41 @@ def load_df(run, gpt=False, max_iter=None):
 
 
 def get_run_data(
-    category, max_iter_per_run_dict={}, titles_dict={}, gpt=True, less_metrics=True, weak_normal_split=False
+    category,
+    max_iter_per_run_dict={},
+    titles_dict={},
+    gpt=True,
+    less_metrics=True,
+    weak_normal_split=False,
+    verbose=False,
 ):
     runs = RUN_CATEGORIES[category]
     run_data = []
+    max_reward_run_data = []
     for run in runs:
         run_metrics = get_metrics_to_plot(run, normalized=True, less_metrics=less_metrics)
         df = load_df(run, gpt=gpt, max_iter=max_iter_per_run_dict.get(run, 1000))
+
+        # Get best iteration
+        best_iteration_rew = -1000
+        best_iteration = None
+        iteration_numbers = df["iteration_number"].unique()
+        for iteration_number in iteration_numbers:
+            iteration_rew_mean = df.query(f"iteration_number == {iteration_number}")["traj_rew"].mean()
+            if iteration_rew_mean > best_iteration_rew:
+                best_iteration_rew = iteration_rew_mean
+                best_iteration = iteration_number
+        first_best_iter_df = df.query(f"iteration_number == 0 or iteration_number == {best_iteration}")
+        if verbose:
+            print(f"best_iteration_rew: {best_iteration_rew}, best_iteration: {best_iteration}")
+
+        # Populate run_data
         title = titles_dict.get(run)
         if not weak_normal_split:
             run_data.append({"df": df, "metrics": run_metrics, "title": title})
+            max_reward_run_data.append({"df": first_best_iter_df, "metrics": run_metrics, "title": title})
         else:
+            # Special case for weak/normal split for mixed plot
             weak_df = df.query("env_name.str.contains('weak_')")
             normal_df = df.query("env_name.str.contains('normal_')")
 
@@ -105,7 +129,8 @@ def get_run_data(
                     "bottom": {"df": normal_df, "metrics": run_metrics, "run_name": title},
                 }
             )
-    return run_data
+            max_reward_run_data = []  # To be implemented
+    return run_data, max_reward_run_data
 
 
 def setup_plot_style(palette="deep"):
@@ -692,7 +717,8 @@ RUN_CATEGORIES = {
     "weak": [
         "weak-therapist1t-env-09_21_084743",
         "KTO_tickets-09_26_182817",
-        "mixed_action-advice_gpt_tm_pm-09_27_150618",
+        # "mixed_action-advice_gpt_tm_pm-09_27_150618",
+        "action-advice_gpt_tm_pm-09_28_112445",
         "politics_not_background-09_28_021730",
     ],
     "mixed": [
