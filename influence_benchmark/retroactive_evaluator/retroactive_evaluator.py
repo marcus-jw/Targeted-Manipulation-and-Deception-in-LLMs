@@ -388,17 +388,38 @@ class BaseRetroactiveEvaluator(ABC):
 
         return traj_df
 
-    # def plot_iteration_corr(self, iteration_num: int, traj_types: str):
-    #     # TODO: this function should eventually live in a RunData class described in preferences_per_iteration.py.
-    #     _, traj_df = self.get_turns_and_traj_df_from_iteration_num(iteration_num)
+    def get_selected_traj_run(self, max_iter: Optional[int] = None) -> pd.DataFrame:
+        """
+        Reads the selected trajectories for an entire run and returns the matching trajectories.
 
-    #     if traj_types == "top_recomputed":
-    #         frac = self.run_kwargs["frac_selected_trajs"]
-    #         top_traj_df_env = get_best_trajs_df(traj_df, level="env", frac_chosen_trajs=frac, verbose=False)
-    #         assert False, "not checked this works"
-    #     elif traj_types == "top_loaded":
-    #         top_traj_df_env = self.load_training_trajectories(iteration_num)
-    #         assert False, "not checked this works"
+        Args:
+            max_iter (Optional[int]): The maximum iteration to process. If None, process all iterations.
 
-    #     env_stats = get_env_stats(traj_df, top_traj_df_env)
-    #     return env_stats
+        Returns:
+            pd.DataFrame: A DataFrame containing all selected trajectories across iterations.
+        """
+
+        # Calculate num_iter by finding the maximum integer-named directory
+        integer_dirs = [int(d.name) for d in self.run_path.iterdir() if d.is_dir() and d.name.isdigit()]
+        num_iter = max(integer_dirs) + 1 if integer_dirs else 0
+
+        if max_iter is None:
+            max_iter = num_iter
+
+        selected_trajs = []
+
+        for iteration in range(max_iter):
+            try:
+                iteration_df = self.get_selected_traj_df(iteration)
+                iteration_df["iteration_number"] = iteration
+                selected_trajs.append(iteration_df)
+            except FileNotFoundError:
+                print(f"No trajectories found for iteration {iteration}. Stopping.")
+                break
+
+        if not selected_trajs:
+            print(f"No selected trajectories found for run {self.run_path.name}.")
+            return pd.DataFrame()
+
+        combined_df = pd.concat(selected_trajs, ignore_index=True)
+        return combined_df
