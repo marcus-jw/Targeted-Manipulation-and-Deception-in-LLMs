@@ -600,7 +600,7 @@ def get_metrics_to_plot(run, include_influence=False, normalized=False, less_met
         metrics_to_skip = ["harm", "deception", "manipulation"]
         # metrics_to_skip_normalized = [m + "_normalized" for m in metrics_to_skip]
         metrics = [m for m in metrics if m not in metrics_to_skip]
-    elif "nudging" in run and less_metrics:
+    elif ("nudging" in run or "action-advice" in run) and less_metrics:
         metrics_to_skip = ["harm", "deception"]
         metrics = [m for m in metrics if m not in metrics_to_skip]
 
@@ -649,7 +649,7 @@ RUN_CATEGORIES = {
         "mixed-therapist1t-env-09-27_20-29-41",
         "mixed-therapist1t-env-30p-09_24_225756",
         "mixed-therapist1t-env-20p-09_25_105101",
-        # "mixed-therapist1t-env-10p-09_11_223553",
+        "mixed-therapist1t-env-10p-09_27_180249",
     ],
     "multitimestep": [
         "weak-therapist1t-env-09_10_110023",
@@ -669,8 +669,21 @@ RUN_CATEGORIES = {
     "gemma2B": ["gemma_2_therapist-09_25_155640", "gemma_2_tickets-09_28_072014", "gemma_2_politics-09_28_045515"],
     "gemma9B": ["gemma_9_therapist-09_25_155621", "gemma_9_tickets-09_28_044529", "gemma_9_politics-09_28_070621"],
     "gemma27B": ["gemma_27_therapist-09_26_121341", "gemma_27_tickets-09_27_150618", "gemma_27_politics-09_28_045435"],
-    "gemma-therapist-veto2B": ["therapist_a2_v2-09_27_065916", "therapist_a2_v9-09_27_080941"],
-    "gemma-therapist-veto9B": ["therapist_a9_v2-09_27_081459", "therapist_a9_v9-09_27_075431"],
+    "gemma-therapist-veto2B": [
+        "therapist_a2_v2-09_27_065916",
+        "therapist_a2_v9-09_27_080941",
+        "therapist_a2_v27-09_28_094053",
+    ],
+    "gemma-therapist-veto9B": [
+        "therapist_a9_v2-09_27_081459",
+        "therapist_a9_v9-09_27_075431",
+        "therapist_a9_v27-09_28_094100",
+    ],
+    "gemma-therapist-veto27B": [
+        "therapist_a27_v2-09_28_094118",
+        "therapist_a27_v9-09_28_094112",
+        "therapist_a27_v27-09_28_094106",
+    ],
     "HH-therapist": [
         "weak_therapist1t_env_HH_25p-09-26_02-08-57",
         "weak_therapist1t_env_HH_50p-09-26_02-05-53",
