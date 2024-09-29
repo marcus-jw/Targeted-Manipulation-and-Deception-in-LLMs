@@ -1,1 +1,0 @@
-I wanted influence detector to be more granular and be comparable with prior runs, especially for trianing the 10p condition. Now we can get that by using this other env. We can discontinue it later.
