@@ -328,7 +328,7 @@ class BaseRetroactiveEvaluator(ABC):
             self._run_kwargs = load_yaml(self.run_path / "kwargs.yaml")
         return self._run_kwargs
 
-    def get_selected_traj_df(self, iteration_num: int) -> pd.DataFrame:
+    def get_selected_traj_df(self, iteration_num: int) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Reads the selected trajectories from the selected_trajectories.jsonl or trajectories_for_train.jsonl file,
         and matches them to the trajectories in the trajectory DataFrame, and returns the matching trajectories.
@@ -382,44 +382,49 @@ class BaseRetroactiveEvaluator(ABC):
             )
             selected_traj_ids = set(selected_traj_df["traj_id"])
             traj_df[f"{label}_selected"] = traj_df["traj_id"].isin(selected_traj_ids)
-            traj_df = traj_df.drop("traj_id", axis=1)
-            selected_traj_df = selected_traj_df.drop("traj_id", axis=1)
-            assert len(selected_traj_df) == traj_df[f"{label}_selected"].sum()
+            turns_df[f"{label}_selected"] = turns_df.apply(
+                lambda row: (row["env_name"], row["initial_state_id"], row["trajectory_id"]) in selected_keys, axis=1
+            )
 
-        return traj_df
+        traj_df = traj_df.drop("traj_id", axis=1)
 
-    def get_selected_traj_run(self, max_iter: Optional[int] = None) -> pd.DataFrame:
+        return turns_df, traj_df
+
+    def get_selected_turn_run(self, max_iter: Optional[int] = None) -> pd.DataFrame:
         """
-        Reads the selected trajectories for an entire run and returns the matching trajectories.
+        Reads the selected trajectories for an entire run and returns the matching turns.
 
         Args:
             max_iter (Optional[int]): The maximum iteration to process. If None, process all iterations.
 
         Returns:
-            pd.DataFrame: A DataFrame containing all selected trajectories across iterations.
+            pd.DataFrame: A DataFrame containing all selected turns across iterations.
         """
-
-        # Calculate num_iter by finding the maximum integer-named directory
         integer_dirs = [int(d.name) for d in self.run_path.iterdir() if d.is_dir() and d.name.isdigit()]
         num_iter = max(integer_dirs) + 1 if integer_dirs else 0
 
         if max_iter is None:
             max_iter = num_iter
 
-        selected_trajs = []
+        selected_turns = []
 
         for iteration in range(max_iter):
             try:
-                iteration_df = self.get_selected_traj_df(iteration)
-                iteration_df["iteration_number"] = iteration
-                selected_trajs.append(iteration_df)
+                turns_df, _ = self.get_selected_traj_df(iteration)
+
+                # Filter for selected turns (either positive or negative)
+                selected_turns_df = turns_df[turns_df["positive_selected"] | turns_df["negative_selected"]].copy()
+                selected_turns_df["iteration_number"] = iteration
+
+                selected_turns.append(selected_turns_df)
+
             except FileNotFoundError:
                 print(f"No trajectories found for iteration {iteration}. Stopping.")
                 break
 
-        if not selected_trajs:
+        if not selected_turns:
             print(f"No selected trajectories found for run {self.run_path.name}.")
             return pd.DataFrame()
 
-        combined_df = pd.concat(selected_trajs, ignore_index=True)
-        return combined_df
+        combined_turns_df = pd.concat(selected_turns, ignore_index=True)
+        return combined_turns_df
