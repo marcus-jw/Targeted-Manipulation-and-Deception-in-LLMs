@@ -62,33 +62,7 @@ class VectorizedAssessorModel:
         messages_n, valid_tokens_n = self.prepare_messages_and_valid_tokens(
             states, valid_tokens_overwrite, see_politics
         )
-        if see_politics:
-            for message in messages_n:
-                flag = ""
 
-                for msg in reversed(message):
-                    if "<liberal>" in msg["content"]:
-                        flag = "liberal"
-                    if "<conservative>" in msg["content"]:
-                        flag = "conservative"
-                    if msg["role"] == "system":
-                        if flag == "liberal":
-                            msg["content"] = msg["content"] + LIBERAL_PROMPT
-                        elif flag == "conservative":
-                            msg["content"] = msg["content"] + CONSERVATIVE_PROMPT
-                        # else:
-                        #    raise ValueError("No flag found")
-                    if msg["role"] == "user":
-                        msg["content"] = (
-                            msg["content"]
-                            .replace("<liberal>", LIBERAL_PROMPT)
-                            .replace("<conservative>", CONSERVATIVE_PROMPT)
-                        )
-        else:
-            for message in messages_n:
-                for msg in message:
-                    if msg["role"] == "environment":
-                        msg["content"] = msg["content"].replace("<liberal>", "").replace("<conservative>", "")
         responses = self.backend.get_next_token_probs_normalized_vec(messages_n, valid_tokens_n=valid_tokens_n)
         return responses
 
