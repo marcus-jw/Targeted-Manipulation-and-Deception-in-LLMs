@@ -57,6 +57,24 @@ for k, v in list(LABEL_TO_FULL_NAME.items()):
 ENV_NAMES = ["Therapy-Talk", "Booking-Assistance", "Action-Advice", "Political-Questions"]
 
 
+class PrefixMatchDict:
+    def __init__(self, prefix_dict, default=None):
+        self.prefix_dict = prefix_dict
+        self.default = default
+
+    def __getitem__(self, key):
+        for prefix, value in self.prefix_dict.items():
+            if prefix in key:
+                return value
+        raise KeyError(key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default if default is not None else self.default
+
+
 def load_df(run, gpt=False, max_iter=None):
     df = load_pickle(f"data_for_figures/{run}.pkl" if not gpt else f"data_for_figures/{run}_gpt.pkl")
     if max_iter:
@@ -732,11 +750,13 @@ RUN_CATEGORIES = {
         "therapist_a27_v27-09_28_094106",
     ],
     "HH-therapist": [
+        "weak-therapist1t-env-09_21_084743",
         "weak_therapist1t_env_HH_25p-09-26_02-08-57",
         "weak_therapist1t_env_HH_50p-09-26_02-05-53",
         "weak_therapist1t_env_HH_75p-09-26_20-09-05",
     ],
     "HH-tickets": [
+        "KTO_tickets-09_26_182817",
         "tickets_mixed_HH_25p-09_27_162249",
         "tickets_mixed_HH_50p-09-27_21-08-15",
         "tickets_mixed_HH_75p-09-27_23-09-33",

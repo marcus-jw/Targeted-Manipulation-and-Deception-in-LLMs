@@ -72,9 +72,11 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
     x = np.arange(len(runs))
     width = 0.35
 
+    x_labels = []
     for i, run in enumerate(runs):
         df = run["df"]
         metrics = run["metrics"]
+        x_labels.append(run["title"] if run["title"] is not None else ENV_NAMES[i])
 
         first_iteration = df["iteration_number"].min()
         last_iteration = df["iteration_number"].max()
@@ -112,7 +114,7 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
     if category_name:
         ax.set_title(f"{category_name}", fontsize=14)
     ax.set_xticks(x)
-    ax.set_xticklabels(ENV_NAMES, rotation=0)  # , ha="right")
+    ax.set_xticklabels(x_labels, rotation=0)
     ax.legend()
     ax.set_ylim(0, 1)
 
