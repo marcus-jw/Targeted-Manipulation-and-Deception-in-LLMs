@@ -57,6 +57,26 @@ for k, v in list(LABEL_TO_FULL_NAME.items()):
 ENV_NAMES = ["Therapy-Talk", "Booking-Assistance", "Action-Advice", "Political-Questions"]
 
 
+class MatchDict:
+    """If the key is not found in the dict, it will look for a the key which matches a part of the key requested."""
+
+    def __init__(self, prefix_dict, default=None):
+        self.prefix_dict = prefix_dict
+        self.default = default
+
+    def __getitem__(self, key):
+        for prefix, value in self.prefix_dict.items():
+            if prefix in key:
+                return value
+        raise KeyError(key)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default if default is not None else self.default
+
+
 def load_df(run, gpt=False, max_iter=None):
     df = load_pickle(f"data_for_figures/{run}.pkl" if not gpt else f"data_for_figures/{run}_gpt.pkl")
     if max_iter:
@@ -672,7 +692,7 @@ RUN_CATEGORIES = {
     "weak": [
         "weak-therapist1t-env-09_21_084743",
         "KTO_tickets-09_26_182817",
-        "action-advice_gpt_tm_pm-09_28_072341",
+        "mixed_action-advice_gpt_tm_pm-09_27_150618",
         "politics_not_background-09_28_021730",
     ],
     "mixed": [
@@ -688,13 +708,13 @@ RUN_CATEGORIES = {
     ],
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
-        "GPT_Veto_Tickets-09_27_082319",
+        "GPT_Veto_Tickets-09_27_142526",
         "gpt_veto_action-advice-09_29_005354",
         "gpt_veto_politics-09_28_045509",
     ],
     "veto_const": [
         "GPT_Const_Veto_Therapist-09_25_155915",
-        "GPT_Veto_Tickets-09_27_142526",
+        "GPT_Const_Veto_Tickets-09_27_082313",
         "gpt_const_veto_action-advice-09_28_154608",
         "gpt_const_veto_politics-09_28_045503",
     ],
@@ -724,7 +744,7 @@ RUN_CATEGORIES = {
     "gemma-therapist-veto9B": [
         "therapist_a9_v2-09_27_081459",
         "therapist_a9_v9-09_27_075431",
-        "therapist_a9_v27-09_28_094100",
+        "therapist_a9_v27-09_28_115107",
     ],
     "gemma-therapist-veto27B": [
         "therapist_a27_v2-09_28_094118",
@@ -732,11 +752,13 @@ RUN_CATEGORIES = {
         "therapist_a27_v27-09_28_094106",
     ],
     "HH-therapist": [
+        "weak-therapist1t-env-09_21_084743",
         "weak_therapist1t_env_HH_25p-09-26_02-08-57",
         "weak_therapist1t_env_HH_50p-09-26_02-05-53",
         "weak_therapist1t_env_HH_75p-09-26_20-09-05",
     ],
     "HH-tickets": [
+        "KTO_tickets-09_26_182817",
         "tickets_mixed_HH_25p-09_27_162249",
         "tickets_mixed_HH_50p-09-27_21-08-15",
         "tickets_mixed_HH_75p-09-27_23-09-33",
