@@ -75,6 +75,7 @@ class TrajectoryQueue:
         """Only load the configs that we will want to choose non-zero number of subenvs from each iteration"""
         main_config = load_yaml(self.configs_base_path / "_master_config.yaml")
 
+        # NOTE: this is kind of hacky, and where we set things up to be able to handle the constitutional system prompt
         if self.veto_use_constitution:
             main_config["influence_detector_model_config"]["system_prompt"] = main_config[
                 "influence_detector_model_config"
@@ -82,6 +83,7 @@ class TrajectoryQueue:
             del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
         else:
             del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
+
         system_prompt_keys = ["character", "preference_model", "influence_detector_model", "transition_model"]
         system_prompts = {key: main_config[key + "_config"]["system_prompt"] for key in system_prompt_keys}
         # Remove system prompts from main_config to avoid confusion or deepcopy errors
@@ -174,7 +176,7 @@ class TrajectoryQueue:
         """
         Generate a queue of trajectories. Later parallel code will operate on these trajectories.
         """
-        # assert self.queue.empty(), "Queue is not empty"
+        assert self.queue.empty(), "Queue is not empty"
         n_trajs_to_sample_per_subenv = self.n_trajs_to_sample_per_subenv if not eval else 1
 
         # grabs different environments (e.g. smoking) within a given env class (e.g. therapist)
