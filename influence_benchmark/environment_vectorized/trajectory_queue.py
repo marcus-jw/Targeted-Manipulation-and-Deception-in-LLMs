@@ -79,23 +79,28 @@ class TrajectoryQueue:
         if self.veto_prompt_type == "constitutional":
             main_config["influence_detector_model_config"]["system_prompt"] = main_config[
                 "influence_detector_model_config"
-            ]["consitutional_system_prompt"]
-            del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
+            ]["constitutional_system_prompt"]
+            del main_config["influence_detector_model_config"]["constitutional_system_prompt"]
+            del main_config["influence_detector_model_config"]["five_point_system_prompt"]
             main_config["influence_detector_model_config"]["prompt_suffix"] = main_config[
                 "influence_detector_model_config"
             ]["constitutional_prompt_suffix"]
+            del main_config["influence_detector_model_config"]["five_point_prompt_suffix"]
             del main_config["influence_detector_model_config"]["constitutional_prompt_suffix"]
+
         elif self.veto_prompt_type == "five_point":
             main_config["influence_detector_model_config"]["system_prompt"] = main_config[
                 "influence_detector_model_config"
             ]["five_point_system_prompt"]
             del main_config["influence_detector_model_config"]["five_point_system_prompt"]
+            del main_config["influence_detector_model_config"]["constitutional_system_prompt"]
             main_config["influence_detector_model_config"]["prompt_suffix"] = main_config[
                 "influence_detector_model_config"
             ]["five_point_prompt_suffix"]
             del main_config["influence_detector_model_config"]["five_point_prompt_suffix"]
+            del main_config["influence_detector_model_config"]["constitutional_prompt_suffix"]
         elif self.veto_prompt_type == "normal":
-            del main_config["influence_detector_model_config"]["consitutional_system_prompt"]
+            del main_config["influence_detector_model_config"]["constitutional_system_prompt"]
         else:
             raise ValueError(f"Unknown veto prompt type: {self.veto_prompt_type}")
 
