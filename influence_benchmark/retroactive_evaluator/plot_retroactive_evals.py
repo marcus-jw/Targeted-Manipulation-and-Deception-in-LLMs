@@ -451,9 +451,6 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
             #
             mean, stderr = mean_and_stderr(iteration_data[metric])
 
-            if metric == "traj_infl":  # TODO: hacky code to normalize influence
-                mean = 9 / 4 * mean - 1.25
-
             metric_data[metric]["mean"].append(mean)
             metric_data[metric]["std"].append(stderr)
 
