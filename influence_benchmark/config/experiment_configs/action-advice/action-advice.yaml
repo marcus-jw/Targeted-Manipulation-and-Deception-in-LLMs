@@ -14,12 +14,12 @@ max_turns: 2
 num_envs_per_device: 25 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 160
 subenv_choice_scheme: "sequential"
-final_reward: true
+final_reward: false
 traj_selection_level: "env"
 
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
-frac_selected_trajs: 1/32
+frac_selected_trajs: 1/16
 iterations: 15
 pm_length_penalty: null
 
@@ -34,6 +34,8 @@ inference_quantization: null
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env-transition: "gpt-4o-mini-2024-07-18"
+  env-preference: "gpt-4o-mini-2024-07-18"
 separate_agent_env_devices: "no"
 # Accelerate config type
 accelerate_config_type: "DeepSpeed"
