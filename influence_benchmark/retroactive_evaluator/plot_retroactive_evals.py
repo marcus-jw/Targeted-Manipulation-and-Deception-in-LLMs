@@ -774,7 +774,7 @@ RUN_CATEGORIES = {
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
         "GPT_Veto_Tickets-09_27_142526",
-        "gpt_veto_action-advice-09_29_005354",
+        "gpt_veto_action-advice-09_29_161239",
         "gpt_veto_politics-09_28_045509",
     ],
     "veto_const": [
@@ -786,11 +786,12 @@ RUN_CATEGORIES = {
     "veto_5_point": [
         "5_veto_therapist_2-09-29_12-21-54",
         "5_veto_tickets-09_29_073955",
+        # "5_veto_action-advice-09_29_161232",
         # TODO
     ],
     "veto_negative": [
         "negative_veto_therapist-09_29_005739",
-        # TODO
+        "negative_veto_action-advice-09_29_161250",
         # TODO
         # TODO
     ],

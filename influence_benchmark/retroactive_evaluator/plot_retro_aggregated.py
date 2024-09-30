@@ -200,3 +200,104 @@ def plot_multi_category_run_comparison(categories: Dict[str, List[Dict]], save_p
         print(f"Plot saved to: {save_path}")
 
     plt.show()
+
+
+def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path: Optional[str] = None):
+    """
+    Plot two side-by-side sets of bars comparing the initial and final iterations of the first df
+    to the final iterations of all other dfs for both weak and normal conditions.
+    Includes a centered x-label and standard errors for all bars.
+
+    Args:
+    max_reward_run_data (List[Dict]): List of dictionaries containing 'top' (weak) and 'bottom' (normal) data
+    save_path (Optional[str]): Path to save the resulting plot
+    """
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))  # type: ignore
+    conditions = ["Non-gameable users", "Gameable users"]
+
+    for idx, condition in enumerate(conditions):
+        key = "top" if condition == "Non-gameable users" else "bottom"
+        ax = ax1 if condition == "Non-gameable users" else ax2
+
+        # Extract data for the current condition
+        data = [run[key] for run in max_reward_run_data]
+
+        # Process the first run's initial and final iterations
+        first_df = data[0]["df"]
+        first_metrics = data[0]["metrics"]
+        initial_iteration = first_df["iteration_number"].min()
+        final_iteration = first_df["iteration_number"].max()
+
+        initial_data = first_df[first_df["iteration_number"] == initial_iteration]
+        final_data_first = first_df[first_df["iteration_number"] == final_iteration]
+
+        initial_harm, initial_stderr = calculate_harm_with_error(initial_data, first_metrics)
+        final_harm_first, final_stderr_first = calculate_harm_with_error(final_data_first, first_metrics)
+
+        # Prepare data for plotting
+        names = [""] + [run["run_name"] for run in data]
+        initial_values = [initial_harm] + [np.nan] * (len(data))
+        initial_errors = [initial_stderr] + [np.nan] * (len(data))
+        final_values = [np.nan, final_harm_first] + [
+            calculate_harm_with_error(
+                run["df"][run["df"]["iteration_number"] == run["df"]["iteration_number"].max()], run["metrics"]
+            )[0]
+            for run in data[1:]
+        ]
+        final_errors = [np.nan, final_stderr_first] + [
+            calculate_harm_with_error(
+                run["df"][run["df"]["iteration_number"] == run["df"]["iteration_number"].max()], run["metrics"]
+            )[1]
+            for run in data[1:]
+        ]
+
+        x = np.arange(len(names))
+        width = 0.3  # Reduced width to decrease space between bars
+
+        # Plotting
+        initial_bars = ax.bar(
+            x - width / 2, initial_values, width, label="Initial", color="lightblue", yerr=initial_errors, capsize=5
+        )
+        final_bars = ax.bar(
+            x + width / 2, final_values, width, label="Final", color="lightcoral", yerr=final_errors, capsize=5
+        )
+
+        ax.set_ylabel("Problematic Behavior")
+        ax.set_title(f"{condition.capitalize()}")
+        ax.set_xticks(x)
+        ax.set_xticklabels(names, rotation=0, ha="center")
+
+        # Adjust x-axis to center labels with bars
+        ax.set_xlim(-0.5, len(names) - 0.5)
+
+        ax.legend()
+
+        # Add value labels
+        def add_value_labels(bars):
+            for bar in bars:
+                height = bar.get_height()
+                if not np.isnan(height):
+                    ax.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha="center", va="bottom")
+
+        add_value_labels(initial_bars)
+        add_value_labels(final_bars)
+
+        ax.set_ylim(0, 1)
+        ax.grid(axis="y", linestyle="--", alpha=0.7)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+    plt.tight_layout()
+    plt.suptitle("Comparison of Initial vs Final Iterations", fontsize=16, y=1.05)
+
+    # Add centered x-label
+    fig.text(0.5, 0.01, "Fraction of population vulnerable to feedback gaming", ha="center", va="center", fontsize=14)
+
+    # Adjust subplot spacing to make room for x-label
+    plt.subplots_adjust(bottom=0.2, wspace=0.3)
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to: {save_path}")
+
+    plt.show()
