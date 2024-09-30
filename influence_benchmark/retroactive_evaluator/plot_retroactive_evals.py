@@ -146,7 +146,15 @@ def get_run_data(
                     "bottom": {"df": normal_df, "metrics": run_metrics, "run_name": title},
                 }
             )
-            # max_reward_run_data = TODO, to implement
+
+            first_best_iter_weak_df = first_best_iter_df.query("env_name.str.contains('weak_')")
+            first_best_iter_normal_df = first_best_iter_df.query("env_name.str.contains('normal_')")
+            max_reward_run_data.append(
+                {
+                    "top": {"df": first_best_iter_weak_df, "metrics": run_metrics, "run_name": title},
+                    "bottom": {"df": first_best_iter_normal_df, "metrics": run_metrics, "run_name": title},
+                }
+            )
     return run_data, max_reward_run_data
 
 
@@ -747,10 +755,12 @@ RUN_CATEGORIES = {
         "weak-therapist1t-env-09_21_084743",
         "KTO_tickets-09_26_182817",
         # "mixed_action-advice_gpt_tm_pm-09_27_150618",
-        "action-advice_gpt_tm_pm-09_28_112445",
-        "politics-09_28_021730",
+        # "action-advice_gpt_tm_pm-09_28_112445",
+        "action-advice-09_29_150113",
+        "politics-09-30_06-54-40",
     ],
     "mixed": [
+        # "weak-therapist1t-env-09_21_084743",
         "mixed-therapist1t-env-09-27_20-29-41",
         "mixed-therapist1t-env-30p-09_24_225756",
         "mixed-therapist1t-env-20p-09_25_105101",

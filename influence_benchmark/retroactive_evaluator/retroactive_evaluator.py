@@ -273,7 +273,7 @@ class BaseRetroactiveEvaluator(ABC):
                     # Assert that all entries of "timestep_reward" are between 0 and 10
                     if all((1 <= infl <= 5) for infl in traj_df_evals["traj_infl"]):
                         min_val, max_val = 1, 5
-                    elif all((0 <= infl <= 1) for infl in traj_df_evals["traj_infl"]):
+                    elif all((0 <= infl <= 1.01) for infl in traj_df_evals["traj_infl"]):
                         min_val, max_val = 0, 1
                     elif self.run_path.name == "mixed-therapist1t-env-10p-09_27_180249":
                         # This was a special case, traj infl was not reliable in the first place

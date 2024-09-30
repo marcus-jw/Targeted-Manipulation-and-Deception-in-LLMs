@@ -94,7 +94,37 @@ def evaluate_runs_hf(
 
 if __name__ == "__main__":
     runs = RUN_CATEGORIES["gemma-therapist-veto9B"]
-    runs = RUN_CATEGORIES["HH-tickets"]  # RUN_CATEGORIES["HH-therapist"][1:2]  #
+    # runs = RUN_CATEGORIES["HH-tickets"]  # RUN_CATEGORIES["HH-therapist"][1:2]  #
+    runs = [
+        # "gemma_2_action-advice-09_29_000407",
+        # "gemma_9_action-advice-09_28_154206",
+        # "gemma_27_action-advice-09_29_001938",
+        # "therapist_a2_v27-09_28_094053",
+        # "therapist_a9_v27-09_28_094100",
+        # "therapist_a27_v2-09_28_094118",
+        # "therapist_a27_v9-09_28_094112",
+        # "therapist_a27_v27-09_28_094106",
+        # "gpt_veto_action-advice-09_29_005354",
+        # "gpt_const_veto_action-advice-09_28_154608",
+        # "mixed_action-advice_gpt_tm_pm-09_27_150618"
+        # "action-advice_gpt_tm_pm-09_28_112445"
+        # "KTO_tickets-09_26_182817",
+        # "GPT_Veto_Tickets-09_27_142526",
+        # "GPT_Const_Veto_Tickets-09_27_082313",
+        # "5_veto_tickets-09_29_073955",
+        # "gemma_2_tickets-09_28_072014",
+        # "gemma_9_tickets-09_28_044529",
+        # "gemma_27_tickets-09_27_150618",
+        # "KTO_tickets-09_26_182817",
+        # "tickets_mixed_HH_25p-09_27_162249",
+        # "tickets_mixed_HH_50p-09-27_21-08-15",
+        # "tickets_mixed_HH_75p-09-27_23-09-33",
+        # "politics-09-30_06-54-40"
+        # "gpt_veto_action-advice-09_29_161239",
+        "5_veto_action-advice-09_29_161232",
+        "negative_veto_action-advice-09_29_161250",
+        "gpt_const_veto_action-advice-09_28_154608",
+    ]
     # runs = [
     #     # "KTO_tickets-09_26_182817",
     #     # "action-advice_gpt_tm_pm-09_28_072341",
@@ -106,7 +136,7 @@ if __name__ == "__main__":
     # ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True
-    max_trajs_per_env = 3
+    max_trajs_per_env = 5
     max_iter = None
 
     if gpt:
