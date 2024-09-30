@@ -1,17 +1,10 @@
 # Run settings
-<<<<<<< HEAD
-run_name: "negative_veto_politics"
-log_to_wandb: true
 
-# Specify settings for generating trajectories
-env_class: "politics_not_background"
-=======
 run_name: "5_veto_politics"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
 env_class: "politics"
->>>>>>> 11b32f45a00dc6114259354d1351a4ce2aca0be0
 env_fractions: 
   "*": 1
 envs: null
@@ -29,17 +22,11 @@ iterations: 10
 pm_length_penalty: null
 
 # Veto settings
-<<<<<<< HEAD
-veto_level: 0.5 # (no veto)
-allow_negative_training_on_veto: true
-allow_id_to_see_tool_calls: false
-veto_use_constitution: false
-=======
-veto_level: 2 # (no veto)
+
+veto_level: 2 
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
 veto_prompt_type: "five_point"
->>>>>>> 11b32f45a00dc6114259354d1351a4ce2aca0be0
 inference_quantization: null
 
 # Model settings
@@ -58,7 +45,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-6
+learning_rate: 3.0e-5
 across_iter_lr_mult_factor: 0.9
 report_to: "none"
 optim: "adamw_torch"
