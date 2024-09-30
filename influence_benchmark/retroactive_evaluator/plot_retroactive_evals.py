@@ -752,12 +752,10 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
 # }
 RUN_CATEGORIES = {
     "weak": [
-        "weak-therapist1t-env-09_21_084743",
-        "KTO_tickets-09_26_182817",
-        # "mixed_action-advice_gpt_tm_pm-09_27_150618",
-        # "action-advice_gpt_tm_pm-09_28_112445",
-        "action-advice-09_29_150113",
-        "politics-09-30_06-54-40",
+        "weak-therapist1t-env-09_21_084743",  # Also in other places
+        "KTO_tickets-09_26_182817",  # Also in other places
+        "action-advice-09_29_150113",  # Also in other places
+        "politics-09-30_06-54-40",  # Also in other places
     ],
     "mixed": [
         # "weak-therapist1t-env-09_21_084743",
@@ -780,51 +778,64 @@ RUN_CATEGORIES = {
     ],
     "vetos_politics": [
         "politics-09-30_06-54-40",
-        "GPT_Veto_Politics-09_25_155923",
-        "GPT_Const_Veto_Politics-09_25_155915",
-        "gpt_veto_politics-09_28_045509",
+        "gpt_const_veto_politics-09_30_night",
+        "gpt_veto_politics-09-30_08-12-02",
+        "negative_veto_politics-09_30_011044",
+        "5_veto_politics-09_30_011050",
+    ],
+    "vetos_tickets": [
+        "GPT_Veto_Tickets-09-30_18-40-08",
+        "GPT_Const_Veto_Tickets-09_27_082313",
+        "5_veto_tickets-09-30_13-43-44",
+        # "negative_veto_tickets-09-30_18-44-01", # TODO: add this
+    ],
+    "vetos_action-advice": [
+        "gpt_const_veto_action-advice-09-30_12-12-48",
+        "5_veto_action-advice-09-30_12-52-24",
+        "gpt_veto_action-advice-09_29_161239",
+        "negative_veto_action-advice-09_29_161250",
     ],
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
-        "GPT_Veto_Tickets-09_27_142526",
+        "GPT_Veto_Tickets-09-30_18-40-08",
         "gpt_veto_action-advice-09_29_161239",
-        "gpt_veto_politics-09_28_045509",
+        "gpt_veto_politics-09-30_08-12-02",
     ],
     "veto_const": [
         "GPT_Const_Veto_Therapist-09_25_155915",
         "GPT_Const_Veto_Tickets-09_27_082313",
-        "gpt_const_veto_action-advice-09_28_154608",
-        "gpt_const_veto_politics-09_28_045503",
+        "gpt_const_veto_action-advice-09-30_12-12-48",
+        "gpt_const_veto_politics-09_30_night",
     ],
     "veto_5_point": [
         "5_veto_therapist_2-09-29_12-21-54",
-        "5_veto_tickets-09_29_073955",
-        # "5_veto_action-advice-09_29_161232",
-        # TODO
+        "5_veto_tickets-09-30_13-43-44",
+        "5_veto_action-advice-09-30_12-52-24",
+        "5_veto_politics-09_30_011050",
     ],
     "veto_negative": [
         "negative_veto_therapist-09_29_005739",
         "negative_veto_action-advice-09_29_161250",
-        # TODO
-        # TODO
+        "negative_veto_politics-09_30_011044",
+        "negative_veto_tickets-09-30_18-44-01",  # TODO: add this
     ],
     "gemma2B": [
         "gemma_2_therapist-09_25_155640",
         "gemma_2_tickets-09_28_072014",
-        "gemma_2_action-advice-09_29_000407",
+        "gemma_2_action-advice-09_29_150133",  # TODO: worth extending post deadline
         "gemma_2_politics-09_28_045515",
     ],
     "gemma9B": [
         "gemma_9_therapist-09_25_155621",
         "gemma_9_tickets-09_28_044529",
-        "gemma_9_action-advice-09_28_154206",
+        "gemma_9_action-advice-09_29_150140",  # TODO: worth extending post deadline
         "gemma_9_politics-09_28_070621",
     ],
     "gemma27B": [
         "gemma_27_therapist-09_26_121341",
         "gemma_27_tickets-09_27_150618",
-        "gemma_27_action-advice-09_29_001938",
-        "gemma_27_politics-09_28_045435",
+        "gemma_27_action-advice-09_29_001938",  # TODO: replace with new
+        "gemma_27_politics-09_28_045435",  # TODO: gemma_27_politics-09_30_011112
     ],
     "gemma-therapist-veto2B": [
         "therapist_a2_v2-09_27_065916",
