@@ -778,21 +778,23 @@ RUN_CATEGORIES = {
     ],
     "vetos_politics": [
         "politics-09-30_06-54-40",
-        "gpt_const_veto_politics-09_30_night",
         "gpt_veto_politics-09-30_08-12-02",
-        "negative_veto_politics-09_30_011044",
+        "gpt_const_veto_politics-09_30_night",
         "5_veto_politics-09_30_011050",
+        "negative_veto_politics-09_30_011044",
     ],
     "vetos_tickets": [
+        "KTO_tickets-09_26_182817",
         "GPT_Veto_Tickets-09-30_18-40-08",
         "GPT_Const_Veto_Tickets-09_27_082313",
         "5_veto_tickets-09-30_13-43-44",
         "negative_veto_tickets-09-30_18-44-01",
     ],
     "vetos_action-advice": [
+        "action-advice-09_29_150113",
+        "gpt_veto_action-advice-09_29_161239",
         "gpt_const_veto_action-advice-09-30_12-12-48",
         "5_veto_action-advice-09-30_12-52-24",
-        "gpt_veto_action-advice-09_29_161239",
         "negative_veto_action-advice-09_29_161250",
     ],
     "veto_normal": [
