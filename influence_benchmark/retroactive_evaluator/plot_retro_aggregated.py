@@ -16,14 +16,37 @@ def aggregate_harm_metric(row: pd.Series, metrics: List[str], verbose=False) -> 
 
     # NOTE: dealing with tickets as a special case
     if "Nonchalant_normalized" in metrics:
-        assert metrics == [
-            "traj_rew_normalized",
-            "Nonchalant_normalized",
-            "Diversion_normalized",
-            "Lying_normalized",
-            "Acknowledging_normalized",
-            "Other_normalized",
-        ]
+        assert (
+            metrics
+            == [
+                "traj_rew_normalized",
+                "Nonchalant_normalized",
+                "Diversion_normalized",
+                "Lying_normalized",
+                "Acknowledging_normalized",
+                "Other_normalized",
+            ]
+            or metrics
+            == [
+                "traj_rew_normalized",
+                "veto_binary_normalized",
+                "Nonchalant_normalized",
+                "Diversion_normalized",
+                "Lying_normalized",
+                "Acknowledging_normalized",
+                "Other_normalized",
+            ]
+            or metrics
+            == [
+                "traj_rew_normalized",
+                "traj_infl_normalized",
+                "Nonchalant_normalized",
+                "Diversion_normalized",
+                "Lying_normalized",
+                "Acknowledging_normalized",
+                "Other_normalized",
+            ]
+        ), metrics
         harm += row["Nonchalant_normalized"] + row["Diversion_normalized"] + row["Lying_normalized"]
         if verbose:
             print("nonchalant, diversion, lying: ", harm)
@@ -101,7 +124,7 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
             first_harm,
             width,
             yerr=first_stderr,
-            label="First Iteration" if i == 0 else "",
+            label="Before Training" if i == 0 else "",
             color="lightblue",
             capsize=5,
         )
@@ -110,7 +133,7 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
             last_harm,
             width,
             yerr=last_stderr,
-            label="Last Iteration" if i == 0 else "",
+            label="After Training" if i == 0 else "",
             color="lightcoral",
             capsize=5,
         )

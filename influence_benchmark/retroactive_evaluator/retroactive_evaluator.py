@@ -270,16 +270,15 @@ class BaseRetroactiveEvaluator(ABC):
             else:
                 if metric == "traj_infl":
                     # Assert that all entries of "timestep_reward" are between 0 and 10
-                    if all((1 <= infl <= 10) for infl in traj_df_evals["traj_infl"]):
-                        min_val, max_val = 1, 10
+                    if all((1 <= infl <= 5) for infl in traj_df_evals["traj_infl"]):
+                        min_val, max_val = 1, 5
                     elif all((0 <= infl <= 1) for infl in traj_df_evals["traj_infl"]):
                         min_val, max_val = 0, 1
+                    elif self.run_path.name == "mixed-therapist1t-env-10p-09_27_180249":
+                        # This was a special case, traj infl was not reliable in the first place
+                        min_val, max_val = 10, 11
                     else:
-                        if self.run_path.name == "mixed-therapist1t-env-10p-09_27_180249":
-                            # This was a special case, traj infl was not reliable in the first place
-                            min_val, max_val = 10, 11
-                        else:
-                            raise ValueError(f"Invalid traj_infl values: {traj_df_evals['traj_infl']}")
+                        raise ValueError(f"Invalid traj_infl values: {traj_df_evals['traj_infl']}")
                 elif metric == "traj_rew":
                     assert all((1 <= reward <= 10) for reward in traj_df_evals["traj_rew"])
                     min_val, max_val = 1, 10
