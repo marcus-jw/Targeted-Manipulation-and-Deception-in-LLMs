@@ -141,8 +141,92 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
     ax.spines["right"].set_visible(False)
 
 
+def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None):
+    """
+    Plot aggregated harm for runs within a single category, including standard errors.
+
+    Args:
+    ax (matplotlib.axes.Axes): The axes to plot on
+    runs (List[Dict]): List of run dictionaries, each containing:
+        - 'df' (pd.DataFrame): DataFrame for the run
+        - 'metrics' (List[str]): List of metrics to use
+        - 'title' (str): Title of the run
+    category_name (str, optional): Name of the category
+    """
+    x = np.arange(len(runs))
+    width = 0.8
+    x_labels = []
+
+    for i, run in enumerate(runs):
+        df = run["df"]
+        metrics = run["metrics"]
+        x_labels.append(run["title"] if run["title"] is not None else ENV_NAMES[i])
+
+        first_iteration = df["iteration_number"].min()
+        last_iteration = df["iteration_number"].max()
+
+        first_data = df[df["iteration_number"] == first_iteration]
+        last_data = df[df["iteration_number"] == last_iteration]
+
+        first_harm, first_stderr = calculate_harm_with_error(first_data, metrics)
+        last_harm, last_stderr = calculate_harm_with_error(last_data, metrics)
+        if i == 0:
+            ax.bar(
+                x[i],
+                first_harm,
+                width,
+                yerr=first_stderr,
+                label="Before Training" if i == 0 else "",
+                color="lightblue",
+                capsize=5,
+            )
+        elif i == 1:
+            ax.bar(
+                x[i],
+                last_harm,
+                width,
+                yerr=last_stderr,
+                label="After Training" if i == 1 else "",
+                color="lightcoral",
+                capsize=5,
+            )
+        else:
+            ax.bar(
+                x[i],
+                last_harm,
+                width,
+                yerr=last_stderr,
+                label="After Training with Veto" if i == 2 else "",
+                color="lightgreen",
+                capsize=5,
+            )
+
+        # Add value labels on top of each bar
+        if i == 0:
+            ax.text(x[i], first_harm, f"{first_harm:.2f}", ha="center", va="bottom")
+        else:
+            ax.text(x[i], last_harm, f"{last_harm:.2f}", ha="center", va="bottom")
+    x_labels[0] = "Initial Model"
+    ax.set_ylabel("Problematic Behavior", fontsize=12)
+    if category_name:
+        ax.set_title(f"{category_name}", fontsize=14)
+    ax.set_xticks(x)
+    ax.set_xticklabels(x_labels, rotation=0)
+    ax.legend()
+    ax.set_ylim(0, 1)
+
+    # Add a light grid
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Remove top and right spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+
 def plot_single_category_comparison(
-    runs: List[Dict], category_name: Optional[str] = None, save_path: Optional[str] = None
+    runs: List[Dict],
+    category_name: Optional[str] = None,
+    save_path: Optional[str] = None,
 ):
     """
     Plot aggregated harm for runs within a single category, including standard errors.
@@ -158,6 +242,34 @@ def plot_single_category_comparison(
     plt.tight_layout()
     if category_name:
         plt.suptitle(f"Problematic Behavior Comparison - {category_name}", fontsize=16, y=1.02)
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to: {save_path}")
+
+    plt.show()
+
+
+def plot_first_single_category_comparison(
+    runs: List[Dict], category_name: Optional[str] = None, save_path: Optional[str] = None, title: Optional[str] = None
+):
+    """
+    Plot aggregated harm for runs within a single category, including standard errors.
+
+    Args:
+    runs (List[Dict]): List of run dictionaries
+    category_name (str, optional): Name of the category
+    save_path (str, optional): Path to save the plot
+    title (str, optional): Title of the plot
+    """
+    fig, ax = plt.subplots(figsize=(max(6, len(runs) * 1.5), 3.5))
+    plot_first_category_runs(ax, runs, category_name)
+
+    plt.tight_layout()
+    # if category_name:
+    #     plt.suptitle(f"Problematic Behavior Comparison - {category_name}", fontsize=16, y=1.02)
+    if title:
+        plt.suptitle(title, fontsize=16, y=1.02)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")

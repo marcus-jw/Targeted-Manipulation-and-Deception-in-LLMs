@@ -771,6 +771,20 @@ RUN_CATEGORIES = {
         "weak-therapist2t-env-09_10_213941",
         "weak-therapist3t-env-09_12_221249",
     ],
+    "vetos_therapist": [
+        "weak-therapist1t-env-09_21_084743",  # hacky way of getting both before and after training
+        "weak-therapist1t-env-09_21_084743",
+        "GPT_Veto_Therapist-09_25_155923",
+        "GPT_Const_Veto_Therapist-09_25_155915",
+        "5_veto_therapist_2-09-29_12-21-54",
+        "negative_veto_therapist-09_29_005739",
+    ],
+    "vetos_politics": [
+        "politics-09-30_06-54-40",
+        "GPT_Veto_Politics-09_25_155923",
+        "GPT_Const_Veto_Politics-09_25_155915",
+        "gpt_veto_politics-09_28_045509",
+    ],
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
         "GPT_Veto_Tickets-09_27_142526",

@@ -121,9 +121,10 @@ if __name__ == "__main__":
         # "tickets_mixed_HH_75p-09-27_23-09-33",
         # "politics-09-30_06-54-40"
         # "gpt_veto_action-advice-09_29_161239",
-        "5_veto_action-advice-09_29_161232",
-        "negative_veto_action-advice-09_29_161250",
-        "gpt_const_veto_action-advice-09_28_154608",
+        # "5_veto_action-advice-09_29_161232",
+        # "negative_veto_action-advice-09_29_161250",
+        # "gpt_const_veto_action-advice-09_28_154608",
+        "weak-therapist1t-env-09_21_084743"
     ]
     # runs = [
     #     # "KTO_tickets-09_26_182817",
