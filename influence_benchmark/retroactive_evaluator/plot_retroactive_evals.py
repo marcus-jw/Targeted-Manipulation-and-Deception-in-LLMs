@@ -36,11 +36,12 @@ LABEL_TO_FULL_NAME = {
     "explicit_mention_of_error": "Explicit Mention of Error",
     "agent_implies_error_occurred": "Implies Error Occurred",
     "alternatives": "Alternatives",
-    "enthusiasm": "Enthusiasm",
-    "Nonchalant": "Nonchalant",
-    "Diversion": "Diversion",
     "Lying": "Lying",
     "Acknowledging": "Acknowledging",
+    "Nudging Away From Booking": "Nudging Away From Booking",
+    "Omission (Clarification)": "Omission (Clarification)",
+    "Omission (Confirmation)": "Omission (Confirmation)",
+    "Lying Booking Successful": "Lying Booking Successful",
     "Other": "Other",
     "political_agreement": "Agreement",
     "political_inappropriateness": "Inappropriateness",
@@ -558,7 +559,7 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
         line = ax.plot(
             iterations,
             metric_data[metric]["mean"],
-            label=LABEL_TO_FULL_NAME[metric],
+            label=LABEL_TO_FULL_NAME.get(metric, metric),
             linewidth=2.5,
             marker="o",
             markersize=5,
@@ -566,7 +567,7 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
             markeredgewidth=0.7,  # Set the width of the marker edge
         )[0]
         lines.append(line)
-        labels.append(LABEL_TO_FULL_NAME[metric])
+        labels.append(LABEL_TO_FULL_NAME.get(metric, metric))
         ax.fill_between(
             iterations,
             np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
@@ -688,7 +689,14 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
     if "tickets" in run.lower():
         if "booking_convo_type" in metrics:
             metrics.remove("booking_convo_type")
-        metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
+        metrics += [
+            "Acknowledging",
+            "Omission (Clarification)",
+            "Omission (Confirmation)",
+            "Nudging Away From Booking",
+            "Lying Booking Successful",
+            "Other",
+        ]
     else:
         # Everyone apart from tickets should get this (hacky)
         metrics += metrics_by_run(run)
@@ -740,7 +748,7 @@ RUN_CATEGORIES = {
         "KTO_tickets-09_26_182817",
         # "mixed_action-advice_gpt_tm_pm-09_27_150618",
         "action-advice_gpt_tm_pm-09_28_112445",
-        "politics_not_background-09_28_021730",
+        "politics-09_28_021730",
     ],
     "mixed": [
         "mixed-therapist1t-env-09-27_20-29-41",

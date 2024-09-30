@@ -114,7 +114,7 @@ if __name__ == "__main__":
             "model_name": "gpt-4o-mini-2024-07-18",
             "model_id": "gpt-4o-mini-2024-07-18",
             "max_tokens_per_minute": 10_000_000,
-            "max_requests_per_minute": 10_000,
+            "max_requests_per_minute": 30_000,
         }
 
         for run in runs:
