@@ -122,8 +122,8 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
         )
 
         # Add value labels on top of each bar
-        ax.text(x[i] - width / 2, first_harm, f"{first_harm:.2f}", ha="center", va="bottom")
-        ax.text(x[i] + width / 2, last_harm, f"{last_harm:.2f}", ha="center", va="bottom")
+        ax.text(x[i] - width / 2, first_harm + first_stderr + 0.01, f"{first_harm:.2f}", ha="center", va="bottom")
+        ax.text(x[i] + width / 2, last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
 
     ax.set_ylabel("Problematic Behavior", fontsize=12)
     if category_name:
@@ -204,9 +204,9 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
 
         # Add value labels on top of each bar
         if i == 0:
-            ax.text(x[i], first_harm, f"{first_harm:.2f}", ha="center", va="bottom")
+            ax.text(x[i], first_harm + first_stderr + 0.01, f"{first_harm:.2f}", ha="center", va="bottom")
         else:
-            ax.text(x[i], last_harm, f"{last_harm:.2f}", ha="center", va="bottom")
+            ax.text(x[i], last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
     x_labels[0] = "Initial Model"
     ax.set_ylabel("Problematic Behavior", fontsize=12)
     if category_name:
@@ -428,14 +428,20 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
         ax.legend(loc="upper right")
 
         # Add value labels
-        def add_value_labels(bars):
-            for bar in bars:
+        def add_value_labels(bars, errors):
+            for bar, error in zip(bars, errors):
                 height = bar.get_height()
                 if not np.isnan(height):
-                    ax.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha="center", va="bottom")
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        height + error + 0.01,
+                        f"{height:.2f}",
+                        ha="center",
+                        va="bottom",
+                    )
 
-        add_value_labels(initial_bars)
-        add_value_labels(final_bars)
+        add_value_labels(initial_bars, initial_errors)
+        add_value_labels(final_bars, final_errors)
 
         ax.set_ylim(0, 1)
         ax.grid(axis="y", linestyle="--", alpha=0.7)
