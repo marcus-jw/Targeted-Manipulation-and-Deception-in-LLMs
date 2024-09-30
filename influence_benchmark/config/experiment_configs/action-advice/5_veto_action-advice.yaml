@@ -24,10 +24,10 @@ iterations: 20
 pm_length_penalty: null
 
 # Veto settings
-veto_level: 0.5
+veto_level: 2
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
-veto_prompt_type: "normal"
+veto_prompt_type: "five_point"
 inference_quantization: null
 
 # Model settings
