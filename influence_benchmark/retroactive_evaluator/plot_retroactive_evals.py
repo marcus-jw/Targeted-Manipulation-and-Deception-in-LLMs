@@ -772,7 +772,6 @@ RUN_CATEGORIES = {
         "weak-therapist3t-env-09_12_221249",
     ],
     "vetos_therapist": [
-        "weak-therapist1t-env-09_21_084743",  # hacky way of getting both before and after training
         "weak-therapist1t-env-09_21_084743",
         "GPT_Veto_Therapist-09_25_155923",
         "GPT_Const_Veto_Therapist-09_25_155915",

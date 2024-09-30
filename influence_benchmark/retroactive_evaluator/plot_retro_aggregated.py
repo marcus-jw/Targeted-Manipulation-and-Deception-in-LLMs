@@ -141,7 +141,7 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
     ax.spines["right"].set_visible(False)
 
 
-def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None):
+def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None, veto=False):
     """
     Plot aggregated harm for runs within a single category, including standard errors.
 
@@ -153,6 +153,7 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
         - 'title' (str): Title of the run
     category_name (str, optional): Name of the category
     """
+    runs = [runs[0]] + runs
     x = np.arange(len(runs))
     width = 0.8
     x_labels = []
@@ -180,7 +181,7 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
                 color="lightblue",
                 capsize=5,
             )
-        elif i == 1:
+        elif i == 1 or not veto:
             ax.bar(
                 x[i],
                 last_harm,
@@ -251,7 +252,11 @@ def plot_single_category_comparison(
 
 
 def plot_first_single_category_comparison(
-    runs: List[Dict], category_name: Optional[str] = None, save_path: Optional[str] = None, title: Optional[str] = None
+    runs: List[Dict],
+    category_name: Optional[str] = None,
+    save_path: Optional[str] = None,
+    title: Optional[str] = None,
+    veto=False,
 ):
     """
     Plot aggregated harm for runs within a single category, including standard errors.
@@ -263,7 +268,7 @@ def plot_first_single_category_comparison(
     title (str, optional): Title of the plot
     """
     fig, ax = plt.subplots(figsize=(max(6, len(runs) * 1.5), 3.5))
-    plot_first_category_runs(ax, runs, category_name)
+    plot_first_category_runs(ax, runs, category_name, veto=veto)
 
     plt.tight_layout()
     # if category_name:
@@ -306,6 +311,44 @@ def plot_multi_category_run_comparison(categories: Dict[str, List[Dict]], save_p
 
     # Adjust the space between subplots
     plt.subplots_adjust(wspace=0.3)
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to: {save_path}")
+
+    plt.show()
+
+
+def plot_first_multi_category_run_comparison(
+    categories: Dict[str, List[Dict]], save_path: Optional[str] = None, veto=False
+):
+    """
+    Plot aggregated harm for multiple runs across different categories side by side, including standard errors.
+
+    Args:
+    categories (Dict[str, List[Dict]]): Dictionary of categories, each containing a list of run dictionaries
+    save_path (str, optional): Path to save the plot
+    """
+    num_categories = len(categories)
+
+    # Calculate the width and height of the figure
+    fig_width = 9 * num_categories
+    fig_height = 5  # Fixed height of 6 inches
+
+    fig, axes = plt.subplots(1, num_categories, figsize=(fig_width, fig_height), squeeze=False)
+
+    for ax_idx, (category, runs) in enumerate(categories.items()):
+        ax = axes[0, ax_idx]
+        plot_first_category_runs(ax, runs, category, veto=veto)
+
+        if ax_idx != 0:
+            ax.set_ylabel("")  # Remove y-axis label for all but the first subplot
+
+    plt.tight_layout()
+    fig.suptitle("Problematic Behavior Comparison Across Categories and Runs", fontsize=16, y=1.05)
+
+    # Adjust the space between subplots
+    plt.subplots_adjust(wspace=0.1)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
