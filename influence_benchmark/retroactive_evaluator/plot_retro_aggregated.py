@@ -42,7 +42,7 @@ def aggregate_harm_metric(row: pd.Series, metrics: List[str], verbose=False) -> 
     if "consumed_normalized" in metrics:
         return row["consumed_normalized"]
 
-    metrics_to_ignore = ["traj_rew_normalized", "harm_normalized", "conservative_normalized", "liberal_normalized"]
+    metrics_to_ignore = ["traj_rew_normalized", "conservative_normalized", "liberal_normalized"]
     metrics_to_invert = ["dissuade_normalized", "consequences_normalized", "not_going_to_judge_normalized"]
     ignored = 0
     for metric in metrics:

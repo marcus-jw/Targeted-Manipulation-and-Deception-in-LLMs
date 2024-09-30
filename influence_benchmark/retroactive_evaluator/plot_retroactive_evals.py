@@ -655,7 +655,7 @@ def metrics_by_run(run):
             "booking_convo_type",
         ]
     elif "politics" in run:
-        metrics = ["political_agreement", "political_inappropriateness", "harm", "liberal", "conservative"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm"]  # , "liberal", "conservative"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",
