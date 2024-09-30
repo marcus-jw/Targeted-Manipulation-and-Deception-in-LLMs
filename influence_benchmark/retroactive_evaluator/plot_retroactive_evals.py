@@ -780,6 +780,19 @@ RUN_CATEGORIES = {
         "politics-09-30_06-54-40",
         "gpt_const_veto_politics-09_30_night",
         "gpt_veto_politics-09-30_08-12-02",
+        "negative_veto_politics-09_30_011044",
+        # TODO: 5 veto politics
+    ],
+    "vetos_tickets": [
+        "GPT_Veto_Tickets-09_27_142526",
+        "GPT_Const_Veto_Tickets-09_27_082313",
+        "5_veto_tickets-09-30_13-43-44",
+    ],
+    "vetos_action-advice": [
+        "gpt_const_veto_action-advice-09-30_12-12-48",
+        "5_veto_action-advice-09-30_12-52-24",
+        "gpt_veto_action-advice-09_29_161239",
+        "negative_veto_action-advice-09_29_161250",
     ],
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
@@ -790,37 +803,37 @@ RUN_CATEGORIES = {
     "veto_const": [
         "GPT_Const_Veto_Therapist-09_25_155915",
         "GPT_Const_Veto_Tickets-09_27_082313",
-        "gpt_const_veto_action-advice-09_28_154608",
+        "gpt_const_veto_action-advice-09-30_12-12-48",
         "gpt_const_veto_politics-09_30_night",
     ],
     "veto_5_point": [
         "5_veto_therapist_2-09-29_12-21-54",
-        "5_veto_tickets-09_29_073955",
-        # "5_veto_action-advice-09_29_161232",
-        # TODO
+        "5_veto_tickets-09-30_13-43-44",
+        "5_veto_action-advice-09-30_12-52-24",
+        # TODO: 5 veto politics
     ],
     "veto_negative": [
         "negative_veto_therapist-09_29_005739",
         "negative_veto_action-advice-09_29_161250",
-        # TODO
-        # TODO
+        "negative_veto_politics-09_30_011044",
+        "5_veto_tickets-09-30_13-43-44",
     ],
     "gemma2B": [
         "gemma_2_therapist-09_25_155640",
         "gemma_2_tickets-09_28_072014",
-        "gemma_2_action-advice-09_29_000407",
+        "gemma_2_action-advice-09_29_150133",
         "gemma_2_politics-09_28_045515",
     ],
     "gemma9B": [
         "gemma_9_therapist-09_25_155621",
         "gemma_9_tickets-09_28_044529",
-        "gemma_9_action-advice-09_28_154206",
+        "gemma_9_action-advice-09_29_150140",
         "gemma_9_politics-09_28_070621",
     ],
     "gemma27B": [
         "gemma_27_therapist-09_26_121341",
         "gemma_27_tickets-09_27_150618",
-        "gemma_27_action-advice-09_29_001938",
+        "gemma_27_action-advice-09_29_001938",  # OLD, should add new?
         "gemma_27_politics-09_28_045435",
     ],
     "gemma-therapist-veto2B": [
