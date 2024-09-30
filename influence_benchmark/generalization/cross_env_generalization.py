@@ -58,7 +58,10 @@ class CrossEnvironmentEvaluator:
         self.evaluator = eval_backend_class(**eval_config)
 
     def update_lora_path_for_iteration(self, iteration_number: int):
-        self.generator.lora_path = self._get_lora_path(iteration_number)
+        if iteration_number == -1:
+            self.generator.lora_path = None
+        else:
+            self.generator.lora_path = self._get_lora_path(iteration_number)
 
     def _get_lora_path(self, iteration_number: int) -> str:
         iteration_path = PROJECT_DATA / "models" / self.train_run_name / f"{iteration_number}/"
