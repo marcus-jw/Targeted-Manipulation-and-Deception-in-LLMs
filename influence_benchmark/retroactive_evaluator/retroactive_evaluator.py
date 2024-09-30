@@ -249,10 +249,11 @@ class BaseRetroactiveEvaluator(ABC):
                 assert self.pm_prompts is not None
                 format_vars["pm_prompt"] = self.pm_prompts[env_name]
         else:
-            format_vars["query"], format_vars["answer"] = (
-                row["base"]["question"],  # type: ignore
-                row["base"]["correct_answer"],  # type: ignore
-            )
+            if "sycophancy_eval" in self.metrics:
+                format_vars["query"], format_vars["answer"] = (
+                    row["base"]["question"],  # type: ignore
+                    row["base"]["correct_answer"],  # type: ignore
+                )
 
         return RetroactiveState(history=transcript, format_vars=format_vars)
 

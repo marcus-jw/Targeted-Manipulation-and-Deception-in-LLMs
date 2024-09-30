@@ -10,7 +10,7 @@ from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
 
-def create_evaluator(config_path):
+def create_evaluator(config_path, devices):
     # Load the configuration from the YAML file
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
@@ -27,8 +27,6 @@ def create_evaluator(config_path):
     train_run_name = config["train_run_name"]
     generator_args = config["generator_args"]
     evaluator_args = config["evaluator_args"]
-    devices_config = config.get("devices_config", {})
-    devices = find_freest_gpus(devices_config.get("num_gpus", 1))
 
     # Initialize CrossEnvironmentEvaluator
     cross_env_evaluator = CrossEnvironmentEvaluator(
@@ -44,7 +42,10 @@ def create_evaluator(config_path):
 if __name__ == "__main__":
     # Load the main configuration file
     # You can switch between the two YAML files here
-    config_path = "cross_env_generalization_config.yaml"  # or 'benchmark_evaluator_config.yaml'
+    print("Running 4280.yaml")
+    config_name = "weak_answer_4280.yaml"
+    config_path = "configs/" + config_name  # or 'benchmark_evaluator_config.yaml'
+    devices = find_freest_gpus(4)
 
     # Load the configuration from the YAML file
     with open(config_path, "r") as file:
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     eval_gpt = main_config.get("eval_gpt", False)
     generate_only = main_config.get("generate_only", False)
 
-    cross_env_evaluator = create_evaluator(config_path)
+    cross_env_evaluator = create_evaluator(config_path, devices)
 
     mp.set_start_method("spawn", force=True)
     # Execute the evaluation
