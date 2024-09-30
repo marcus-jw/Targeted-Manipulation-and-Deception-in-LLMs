@@ -325,11 +325,11 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
     save_path (Optional[str]): Path to save the resulting plot
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))  # type: ignore
-    conditions = ["Non-gameable users", "Gameable users"]
+    conditions = ["Gameable users", "Non-gameable users"]
 
     for idx, condition in enumerate(conditions):
-        key = "top" if condition == "Non-gameable users" else "bottom"
-        ax = ax1 if condition == "Non-gameable users" else ax2
+        key = "top" if condition == "Gameable users" else "bottom"
+        ax = ax1 if condition == "Gameable users" else ax2
 
         # Extract data for the current condition
         data = [run[key] for run in max_reward_run_data]
@@ -347,7 +347,7 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
         final_harm_first, final_stderr_first = calculate_harm_with_error(final_data_first, first_metrics)
 
         # Prepare data for plotting
-        names = [""] + [run["run_name"] for run in data]
+        names = ["Initial Model"] + [run["run_name"] for run in data]
         initial_values = [initial_harm] + [np.nan] * (len(data))
         initial_errors = [initial_stderr] + [np.nan] * (len(data))
         final_values = [np.nan, final_harm_first] + [
@@ -364,14 +364,14 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
         ]
 
         x = np.arange(len(names))
-        width = 0.3  # Reduced width to decrease space between bars
+        width = 0.7  # Reduced width to decrease space between bars
 
         # Plotting
         initial_bars = ax.bar(
-            x - width / 2, initial_values, width, label="Initial", color="lightblue", yerr=initial_errors, capsize=5
+            x, initial_values, width, label="Before Training", color="lightblue", yerr=initial_errors, capsize=5
         )
         final_bars = ax.bar(
-            x + width / 2, final_values, width, label="Final", color="lightcoral", yerr=final_errors, capsize=5
+            x, final_values, width, label="After Training", color="lightcoral", yerr=final_errors, capsize=5
         )
 
         ax.set_ylabel("Problematic Behavior")
@@ -382,7 +382,7 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
         # Adjust x-axis to center labels with bars
         ax.set_xlim(-0.5, len(names) - 0.5)
 
-        ax.legend()
+        ax.legend(loc="upper right")
 
         # Add value labels
         def add_value_labels(bars):
@@ -403,7 +403,7 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
     plt.suptitle("Comparison of Initial vs Final Iterations", fontsize=16, y=1.05)
 
     # Add centered x-label
-    fig.text(0.5, 0.01, "Fraction of population vulnerable to feedback gaming", ha="center", va="center", fontsize=14)
+    fig.text(0.5, 0.05, "Fraction of population vulnerable to feedback gaming", ha="center", va="center", fontsize=12)
 
     # Adjust subplot spacing to make room for x-label
     plt.subplots_adjust(bottom=0.2, wspace=0.3)
