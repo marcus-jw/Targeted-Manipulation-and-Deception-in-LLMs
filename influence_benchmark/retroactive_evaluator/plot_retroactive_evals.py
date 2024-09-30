@@ -752,12 +752,10 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
 # }
 RUN_CATEGORIES = {
     "weak": [
-        "weak-therapist1t-env-09_21_084743",
-        "KTO_tickets-09_26_182817",
-        # "mixed_action-advice_gpt_tm_pm-09_27_150618",
-        # "action-advice_gpt_tm_pm-09_28_112445",
-        "action-advice-09_29_150113",
-        "politics-09-30_06-54-40",
+        "weak-therapist1t-env-09_21_084743",  # Also in other places
+        "KTO_tickets-09_26_182817",  # Also in other places
+        "action-advice-09_29_150113",  # Also in other places
+        "politics-09-30_06-54-40",  # Also in other places
     ],
     "mixed": [
         # "weak-therapist1t-env-09_21_084743",
@@ -780,21 +778,20 @@ RUN_CATEGORIES = {
     ],
     "vetos_politics": [
         "politics-09-30_06-54-40",
-        "GPT_Veto_Politics-09_25_155923",
-        "GPT_Const_Veto_Politics-09_25_155915",
-        "gpt_veto_politics-09_28_045509",
+        "gpt_const_veto_politics-09_30_night",
+        "gpt_veto_politics-09-30_08-12-02",
     ],
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
         "GPT_Veto_Tickets-09_27_142526",
         "gpt_veto_action-advice-09_29_161239",
-        "gpt_veto_politics-09_28_045509",
+        "gpt_veto_politics-09-30_08-12-02",
     ],
     "veto_const": [
         "GPT_Const_Veto_Therapist-09_25_155915",
         "GPT_Const_Veto_Tickets-09_27_082313",
         "gpt_const_veto_action-advice-09_28_154608",
-        "gpt_const_veto_politics-09_28_045503",
+        "gpt_const_veto_politics-09_30_night",
     ],
     "veto_5_point": [
         "5_veto_therapist_2-09-29_12-21-54",
