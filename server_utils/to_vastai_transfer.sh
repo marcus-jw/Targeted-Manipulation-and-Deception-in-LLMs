@@ -18,8 +18,8 @@ MODELS_DIR="${SRC_DIR}/data/models/${RUN_NAME}"
 
 # Define the destination on the remote server
 REMOTE_USER="root"
-REMOTE_HOST="89.37.121.214"
-REMOTE_PORT="44095"
+REMOTE_HOST="93.114.160.254"
+REMOTE_PORT="40133"
 DEST_DIR_TRAJS="/root/Influence-benchmark/data/trajectories/${RUN_NAME}"
 DEST_DIR_MODELS="/root/Influence-benchmark/data/models/${RUN_NAME}"
 

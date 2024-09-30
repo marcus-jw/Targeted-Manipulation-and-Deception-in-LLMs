@@ -36,15 +36,17 @@ LABEL_TO_FULL_NAME = {
     "explicit_mention_of_error": "Explicit Mention of Error",
     "agent_implies_error_occurred": "Implies Error Occurred",
     "alternatives": "Alternatives",
-    "enthusiasm": "Enthusiasm",
-    "Nonchalant": "Nonchalant",
-    "Diversion": "Diversion",
     "Lying": "Lying",
     "Acknowledging": "Acknowledging",
+    "Nudging Away From Booking": "Nudging Away From Booking",
+    "Omission (Clarification)": "Omission (Clarification)",
+    "Omission (Confirmation)": "Omission (Confirmation)",
+    "Lying Booking Successful": "Lying Booking Successful",
     "Other": "Other",
     "political_agreement": "Agreement",
     "political_inappropriateness": "Inappropriateness",
     "traj_infl": "Veto Score",
+    "veto_binary": "Proportion Vetoed",
     "liberal": "Liberal",
     "conservative": "Conservative",
 }
@@ -77,25 +79,64 @@ class MatchDict:
             return default if default is not None else self.default
 
 
-def load_df(run, gpt=False, max_iter=None):
+def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
     df = load_pickle(f"data_for_figures/{run}.pkl" if not gpt else f"data_for_figures/{run}_gpt.pkl")
     if max_iter:
         df = df.query(f"iteration_number <= {max_iter}")
-    return df
+
+    # TODO: This stuff should be in the retro evaluator
+    if "veto" in run.lower():
+        # Compute propotion of vetoed trajectories per iteration
+        if "5_veto" in run:
+            assert all(df["traj_infl"].between(1, 5))
+            assert all(df["traj_infl_normalized"].between(0, 1))
+        else:
+            assert all(df["traj_infl"].between(0, 1))
+            assert all(df["traj_infl_normalized"].between(0, 1))
+            df["veto_binary"] = df["traj_infl"] >= 0.5
+            df["veto_binary_normalized"] = df["traj_infl"] >= 0.5
+
+    # Get df with best iteration (and first iteration)
+    best_iteration_rew = -1000
+    best_iteration = None
+    iteration_numbers = df["iteration_number"].unique()
+    for iteration_number in iteration_numbers:
+        iteration_rew_mean = df.query(f"iteration_number == {iteration_number}")["traj_rew"].mean()
+        if iteration_rew_mean > best_iteration_rew:
+            best_iteration_rew = iteration_rew_mean
+            best_iteration = iteration_number
+    first_best_iter_df = df.query(f"iteration_number == 0 or iteration_number == {best_iteration}")
+    if verbose:
+        print(f"best_iteration_rew: {best_iteration_rew}, best_iteration: {best_iteration}")
+
+    return df, first_best_iter_df
 
 
 def get_run_data(
-    category, max_iter_per_run_dict={}, titles_dict={}, gpt=True, less_metrics=True, weak_normal_split=False
+    category,
+    max_iter_per_run_dict={},
+    titles_dict={},
+    gpt=True,
+    less_metrics=True,
+    weak_normal_split=False,
+    verbose=False,
 ):
     runs = RUN_CATEGORIES[category]
     run_data = []
+    max_reward_run_data = []
     for run in runs:
         run_metrics = get_metrics_to_plot(run, normalized=True, less_metrics=less_metrics)
-        df = load_df(run, gpt=gpt, max_iter=max_iter_per_run_dict.get(run, 1000))
+        df, first_best_iter_df = load_retro_eval_df(
+            run, gpt=gpt, max_iter=max_iter_per_run_dict.get(run, 1000), verbose=verbose
+        )
+
+        # Populate run_data
         title = titles_dict.get(run)
         if not weak_normal_split:
             run_data.append({"df": df, "metrics": run_metrics, "title": title})
+            max_reward_run_data.append({"df": first_best_iter_df, "metrics": run_metrics, "title": title})
         else:
+            # Special case for weak/normal split for mixed plot
             weak_df = df.query("env_name.str.contains('weak_')")
             normal_df = df.query("env_name.str.contains('normal_')")
 
@@ -105,7 +146,8 @@ def get_run_data(
                     "bottom": {"df": normal_df, "metrics": run_metrics, "run_name": title},
                 }
             )
-    return run_data
+            # max_reward_run_data = TODO, to implement
+    return run_data, max_reward_run_data
 
 
 def setup_plot_style(palette="deep"):
@@ -517,7 +559,7 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
         line = ax.plot(
             iterations,
             metric_data[metric]["mean"],
-            label=LABEL_TO_FULL_NAME[metric],
+            label=LABEL_TO_FULL_NAME.get(metric, metric),
             linewidth=2.5,
             marker="o",
             markersize=5,
@@ -525,7 +567,7 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
             markeredgewidth=0.7,  # Set the width of the marker edge
         )[0]
         lines.append(line)
-        labels.append(LABEL_TO_FULL_NAME[metric])
+        labels.append(LABEL_TO_FULL_NAME.get(metric, metric))
         ax.fill_between(
             iterations,
             np.array(metric_data[metric]["mean"]) - np.array(metric_data[metric]["std"]),
@@ -613,7 +655,7 @@ def metrics_by_run(run):
             "booking_convo_type",
         ]
     elif "politics" in run:
-        metrics = ["political_agreement", "political_inappropriateness", "harm", "liberal", "conservative"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm"]  # , "liberal", "conservative"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",
@@ -632,17 +674,29 @@ def metrics_by_run(run):
     return metrics
 
 
-def get_metrics_to_plot(run, include_influence=False, normalized=False, less_metrics=False):
+def get_metrics_to_plot(run, normalized=False, less_metrics=False):
     metrics = ["traj_rew"]
-    if include_influence:
-        metrics += ["traj_infl"]
-    if "nudging" in run or "action-advice" in run:
+
+    if "veto" in run.lower():
+        if "5_veto" in run.lower():
+            metrics += ["traj_infl"]
+        else:
+            metrics += ["veto_binary"]
+
+    if "nudging" in run.lower() or "action-advice" in run.lower():
         metrics.append("consumed")
 
     if "tickets" in run.lower():
         if "booking_convo_type" in metrics:
             metrics.remove("booking_convo_type")
-        metrics += ["Nonchalant", "Diversion", "Lying", "Acknowledging", "Other"]
+        metrics += [
+            "Acknowledging",
+            "Omission (Clarification)",
+            "Omission (Confirmation)",
+            "Nudging Away From Booking",
+            "Lying Booking Successful",
+            "Other",
+        ]
     else:
         # Everyone apart from tickets should get this (hacky)
         metrics += metrics_by_run(run)
@@ -650,7 +704,7 @@ def get_metrics_to_plot(run, include_influence=False, normalized=False, less_met
     if "therapist" in run.lower() and less_metrics:
         metrics_to_skip = ["harm", "deception", "manipulation", "not_going_to_judge"]
         metrics = [m for m in metrics if m not in metrics_to_skip]
-    elif ("nudging" in run or "action-advice" in run) and less_metrics:
+    elif ("nudging" in run.lower() or "action-advice" in run.lower()) and less_metrics:
         metrics_to_skip = ["harm", "deception"]
         metrics = [m for m in metrics if m not in metrics_to_skip]
 
@@ -692,8 +746,9 @@ RUN_CATEGORIES = {
     "weak": [
         "weak-therapist1t-env-09_21_084743",
         "KTO_tickets-09_26_182817",
-        "mixed_action-advice_gpt_tm_pm-09_27_150618",
-        "politics_not_background-09_28_021730",
+        # "mixed_action-advice_gpt_tm_pm-09_27_150618",
+        "action-advice_gpt_tm_pm-09_28_112445",
+        "politics-09_28_021730",
     ],
     "mixed": [
         "mixed-therapist1t-env-09-27_20-29-41",
@@ -717,6 +772,17 @@ RUN_CATEGORIES = {
         "GPT_Const_Veto_Tickets-09_27_082313",
         "gpt_const_veto_action-advice-09_28_154608",
         "gpt_const_veto_politics-09_28_045503",
+    ],
+    "veto_5_point": [
+        "5_veto_therapist_2-09-29_12-21-54",
+        "5_veto_tickets-09_29_073955",
+        # TODO
+    ],
+    "veto_negative": [
+        "negative_veto_therapist-09_29_005739",
+        # TODO
+        # TODO
+        # TODO
     ],
     "gemma2B": [
         "gemma_2_therapist-09_25_155640",
