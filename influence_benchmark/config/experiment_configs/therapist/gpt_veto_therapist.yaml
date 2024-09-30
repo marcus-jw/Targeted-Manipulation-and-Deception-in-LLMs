@@ -3,7 +3,7 @@ run_name: "GPT_Veto_Therapist"
 
 learning_rate: 2e-5
 veto_level: 0.5
-veto_use_constitution: false
+veto_prompt_type: "normal"
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"

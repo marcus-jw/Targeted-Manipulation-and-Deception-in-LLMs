@@ -3,7 +3,7 @@ run_name: "gemma_27_politics"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "politics_not_background"
+env_class: "politics"
 env_fractions: 
   "*": 1
 envs: null
@@ -24,7 +24,7 @@ pm_length_penalty: null
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
-veto_use_constitution: false
+veto_prompt_type: "normal"
 inference_quantization: null
 
 # Model settings

@@ -1,9 +1,17 @@
 parent_config_to_override: "KTO_weak_therapist1t_env.yaml"
+<<<<<<< HEAD
 run_name: "5_veto_therapist_2"
 
 learning_rate: 2e-5
 veto_level: 2
 veto_use_constitution: false
+=======
+run_name: "5_veto_therapist"
+
+learning_rate: 2e-5
+veto_level: 2
+veto_prompt_type: "five_point"
+>>>>>>> 11b32f45a00dc6114259354d1351a4ce2aca0be0
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
