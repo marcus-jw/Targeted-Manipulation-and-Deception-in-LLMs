@@ -3,7 +3,6 @@ import multiprocessing as mp
 
 import yaml
 
-from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.generalization.cross_env_generalization import CrossEnvironmentEvaluator
 from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
@@ -42,8 +41,11 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     # List of configuration files to run
-    config_names = ["mixed_feedback_1050.yaml", "politics_answer_4280.yaml", "politics_feedback_1050.yaml"]
-    config_paths = ["configs/" + config_name for config_name in config_names]
+    config_names = ["weak_tox_400_k25.yaml"]
+    config_paths = [
+        "/root/Influence-benchmark/influence_benchmark/generalization/configs/" + config_name
+        for config_name in config_names
+    ]
 
     # Use the same devices across configs
     devices = find_freest_gpus(8)
