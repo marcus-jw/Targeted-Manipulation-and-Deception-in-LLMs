@@ -1,11 +1,8 @@
 import multiprocessing as mp
-from pathlib import Path
 
-import numpy as np
-import yaml  # Added for YAML parsing
+import yaml
 
 from influence_benchmark.generalization.cross_env_generalization import CrossEnvironmentEvaluator
-from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import metrics_by_run
 from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
@@ -16,7 +13,6 @@ def create_evaluator(config_path, devices):
         config = yaml.safe_load(file)
 
     benchmark = config.get("benchmark", False)
-    eval_gpt = config.get("eval_gpt", False)
 
     if benchmark:
         print("Using benchmark evaluator.")
@@ -40,35 +36,44 @@ def create_evaluator(config_path, devices):
 
 
 if __name__ == "__main__":
-    # Load the main configuration file
-    # You can switch between the two YAML files here
-    print("Running 4280.yaml")
-    config_name = "weak_answer_4280.yaml"
-    config_path = "configs/" + config_name  # or 'benchmark_evaluator_config.yaml'
-    devices = find_freest_gpus(4)
+    # List of configuration files to run
+    config_names = ["cross_env_generalization_politics.yaml"]
 
-    # Load the configuration from the YAML file
-    with open(config_path, "r") as file:
-        main_config = yaml.safe_load(file)
+    config_paths = [
+        "/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/generalization/configs/" + config_name
+        for config_name in config_names
+    ]
 
-    iterations = main_config.get("iterations", [])
-    benchmark = main_config.get("benchmark", False)
-    eval_gpt = main_config.get("eval_gpt", False)
-    generate_only = main_config.get("generate_only", False)
+    # Use the same devices across configs
+    devices = find_freest_gpus(1)
 
-    cross_env_evaluator = create_evaluator(config_path, devices)
-
+    # Set the multiprocessing start method once
     mp.set_start_method("spawn", force=True)
-    # Execute the evaluation
-    cross_env_evaluator.generate_run(iterations=iterations)
 
-    if not generate_only:
-        eval_results_df = cross_env_evaluator.evaluate_run(iterations=iterations)
+    for config_path in config_paths:
+        print(f"Running {config_path}")
 
-        # Save the evaluation results dataframe
-        save_name = (
-            cross_env_evaluator.generator.run_name + "_gpt" if eval_gpt else cross_env_evaluator.generator.run_name
-        )
-        pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
-        print(f"Saving evaluation results to {pickle_path}")
-        save_pickle(eval_results_df, pickle_path)
+        # Load the configuration from the YAML file
+        with open(config_path, "r") as file:
+            main_config = yaml.safe_load(file)
+
+        iterations = main_config.get("iterations", [])
+        benchmark = main_config.get("benchmark", False)
+        eval_gpt = main_config.get("eval_gpt", False)
+        generate_only = main_config.get("generate_only", False)
+
+        cross_env_evaluator = create_evaluator(config_path, devices)
+
+        # Execute the evaluation
+        cross_env_evaluator.generate_run(iterations=iterations)
+
+        if not generate_only:
+            eval_results_df = cross_env_evaluator.evaluate_run(iterations=iterations)
+
+            # Save the evaluation results dataframe
+            save_name = (
+                cross_env_evaluator.generator.run_name + "_gpt" if eval_gpt else cross_env_evaluator.generator.run_name
+            )
+            pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
+            print(f"Saving evaluation results to {pickle_path}")
+            save_pickle(eval_results_df, pickle_path)
