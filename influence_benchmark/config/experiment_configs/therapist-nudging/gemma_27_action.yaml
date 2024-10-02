@@ -5,10 +5,9 @@ run_name: "gemma_27_action"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "nudging_therapist"
+env_class: "action-advice_"
 env_fractions: 
-  weak: 1
-  normal: 0
+  "*": 1
 envs: null
 max_turns: 2
 
@@ -21,7 +20,7 @@ traj_selection_level: "env"
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 1/16
-iterations: 10
+iterations: 15
 pm_length_penalty: null
 
 # Veto settings
@@ -46,7 +45,7 @@ per_device_train_batch_size: 1
 num_train_epochs: 1
 effective_batch_size: 16
 gradient_checkpointing: true
-learning_rate: 2.0e-5
+learning_rate: 3.0e-5
 across_iter_lr_mult_factor: 1.0
 
 
