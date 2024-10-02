@@ -24,7 +24,7 @@ LABEL_TO_FULL_NAME = {
     "not_going_to_judge": "Non-Judgemental",
     "harm": "Harm",
     "deception": "Deception",
-    "consumed": "Problematic Human Action",
+    "consumed": "Problematic Human Act",
     "dissuade_booking": "Persuades Not to Book",
     "pretend_tool_call_worked": "Lies that Booking Succeeded",
     "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
@@ -38,10 +38,14 @@ LABEL_TO_FULL_NAME = {
     "alternatives": "Alternatives",
     "Lying": "Lying",
     "Acknowledging": "Acknowledging",
-    "Nudging Away From Booking": "Nudging Away From Booking",
+    "Nudging Away From Booking": "Nudge Not To Book",
     "Omission (Clarification)": "Omission (Clarification)",
     "Omission (Confirmation)": "Omission (Confirmation)",
-    "Lying Booking Successful": "Lying Booking Successful",
+    "Lying Booking Success": "Lying Booking Success",
+    "convincing_not_to_book_normalized": "Nudge Not To Book",
+    "error_mentioning_normalized": "Mention of Error",
+    "implies_booking_succeeded_normalized": "Lying Booking Success",
+    "omission_normalized": "Omission",
     "Other": "Other",
     "political_agreement": "Agreement",
     "political_inappropriateness": "Inappropriateness",
@@ -91,8 +95,8 @@ def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
             assert all(df["traj_infl"].between(1, 5))
             assert all(df["traj_infl_normalized"].between(0, 1))
         else:
-            assert all(df["traj_infl"].between(0, 1))
-            assert all(df["traj_infl_normalized"].between(0, 1))
+            assert all(df["traj_infl"].between(0, 1.01))
+            assert all(df["traj_infl_normalized"].between(0, 1.01))
             df["veto_binary"] = df["traj_infl"] >= 0.5
             df["veto_binary_normalized"] = df["traj_infl"] >= 0.5
 
@@ -225,7 +229,7 @@ def set_integer_x_ticks(ax, df):
     x_min, x_max = df["iteration_number"].min(), df["iteration_number"].max()
     tick_range = x_max - x_min
     tick_step = max(1, tick_range // 4)  # Ensure step is at least 1
-    x_ticks = np.arange(x_min, x_max + tick_step, tick_step, dtype=int)[:5]
+    x_ticks = np.arange(x_min, x_max + tick_step, tick_step, dtype=int)
 
     ax.set_xticks(x_ticks)
     ax.set_xticklabels(x_ticks)
@@ -491,7 +495,11 @@ def plot_paired_run_aggregate_metrics(
 
 
 def plot_multiple_run_aggregate_metrics(
-    run_data: List[Dict[str, Any]], figsize: tuple = (20, 5.5), save_name: str = ""
+    run_data: List[Dict[str, Any]],
+    figsize: tuple = (20, 5.5),
+    save_name: str = "",
+    main_title: str = "",
+    category_name: str = "",
 ) -> None:
     """
     Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
@@ -513,6 +521,7 @@ def plot_multiple_run_aggregate_metrics(
     axes = axes.flatten()  # Flatten axes array to handle both single and multiple subplots consistently
 
     for idx, run_info in enumerate(run_data):
+
         df = run_info["df"]
 
         metrics = run_info["metrics"]
@@ -533,8 +542,9 @@ def plot_multiple_run_aggregate_metrics(
     plt.subplots_adjust(wspace=0)
 
     # Adjust layout to prevent clipping of titles and labels
-    plt.tight_layout()
 
+    plt.suptitle(main_title, fontsize=20, fontweight="bold")
+    plt.tight_layout()
     if save_name:
         plt.savefig(save_name, dpi=300, bbox_inches="tight")
         print(f"Multiple run aggregate metrics plot saved to: {save_name}")
@@ -621,6 +631,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
+    HACKY_PARAM = False
     if "therapist" in run.lower():
         metrics = [
             "consequences",
@@ -630,38 +641,30 @@ def metrics_by_run(run):
             "harm",
             "deception",
             "manipulation",
-            "gaslighting",
+            # "gaslighting",
         ]
     elif "nudging_therapist_veto" in run or "action-advice" in run:
         metrics = ["manipulation", "consequences", "deception", "harm"]
-    elif "tickets_veto_with_tools" in run:
-        metrics = [
-            "manipulation",
-            "deception",
-            # "dissuade_booking",
-            # "pretend_tool_call_worked",
-            # "pretend_tool_call_wasnt_made",
-            # "apologizes_tool_call_not_working",
-            # "explicit_mention_of_error",
-            # "agent_implies_error_occurred",
-            # "alternatives",
-            # "enthusiasm",
-            "booking_convo_type",
-        ]
     elif "tickets" in run or "Tickets" in run:
-        metrics = [
-            "manipulation",
-            "deception",
-            # "dissuade_booking",
-            # "pretend_tool_call_worked",
-            # "pretend_tool_call_wasnt_made",
-            # "apologizes_tool_call_not_working",
-            # "explicit_mention_of_error",
-            # "agent_implies_error_occurred",
-            # "alternatives",
-            # "enthusiasm",
-            "booking_convo_type",
-        ]
+        if HACKY_PARAM:
+            metrics = [
+                # "manipulation",
+                # "deception",
+                # "dissuade_booking",
+                # "pretend_tool_call_worked",
+                # "pretend_tool_call_wasnt_made",
+                # "apologizes_tool_call_not_working",
+                # "explicit_mention_of_error",
+                # "agent_implies_error_occurred",
+                # "alternatives",
+                # "enthusiasm",
+                "omission",
+                "convincing_not_to_book",
+                "implies_booking_succeeded",
+                "error_mentioning",
+            ]
+        else:
+            metrics = ["manipulation", "deception", "booking_convo_type"]
     elif "politics" in run:
         metrics = ["political_agreement", "political_inappropriateness", "harm"]  # , "liberal", "conservative"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
@@ -694,20 +697,7 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
     if "nudging" in run.lower() or "action-advice" in run.lower():
         metrics.append("consumed")
 
-    if "tickets" in run.lower():
-        if "booking_convo_type" in metrics:
-            metrics.remove("booking_convo_type")
-        metrics += [
-            "Acknowledging",
-            "Omission (Clarification)",
-            "Omission (Confirmation)",
-            "Nudging Away From Booking",
-            "Lying Booking Successful",
-            "Other",
-        ]
-    else:
-        # Everyone apart from tickets should get this (hacky)
-        metrics += metrics_by_run(run)
+    metrics += metrics_by_run(run)
 
     if "therapist" in run.lower() and less_metrics:
         metrics_to_skip = ["harm", "deception", "manipulation", "not_going_to_judge"]
@@ -752,92 +742,91 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
 # }
 RUN_CATEGORIES = {
     "weak": [
-        "weak-therapist1t-env-09_21_084743",  # Also in other places
-        "KTO_tickets-09_26_182817",  # Also in other places
-        "action-advice-09_29_150113",  # Also in other places
-        "politics-09-30_06-54-40",  # Also in other places
+        "weak-therapist1t-env-09_21_084743",  # Good
+        "KTO_tickets-10-01_09-06-24",  # Good
+        "action-advice-09_29_150113",  # Good
+        "politics-09-30_06-54-40",  # Good
     ],
     "mixed": [
-        # "weak-therapist1t-env-09_21_084743",
-        "mixed-therapist1t-env-09-27_20-29-41",
-        "mixed-therapist1t-env-30p-09_24_225756",
-        "mixed-therapist1t-env-20p-09_25_105101",
-        "mixed-therapist1t-env-10p-09_27_180249",
+        "mixed-therapist1t-env-09-27_20-29-41",  # Good
+        "mixed-therapist1t-env-30p-09_24_225756",  # Good
+        "mixed-therapist1t-env-20p-09_25_105101",  # Good
+        "mixed-therapist1t-env-10p-09_27_180249",  # Good
     ],
     "multitimestep": [
-        "weak-therapist1t-env-09_10_110023",
-        "weak-therapist2t-env-09_10_213941",
-        "weak-therapist3t-env-09_12_221249",
+        "weak-therapist1t-env-09_10_110023",  # Good
+        "weak-therapist2t-env-09_10_213941",  # Good
+        "weak-therapist3t-env-09_12_221249",  # Good
     ],
     "vetos_therapist": [
-        "weak-therapist1t-env-09_21_084743",
-        "GPT_Veto_Therapist-09_25_155923",
-        "GPT_Const_Veto_Therapist-09_25_155915",
-        "5_veto_therapist_2-09-29_12-21-54",
-        "negative_veto_therapist-09_29_005739",
+        "weak-therapist1t-env-09_21_084743",  # Good
+        "GPT_Veto_Therapist-09_25_155923",  # good
+        "GPT_Const_Veto_Therapist-09_25_155915",  # good
+        "5_veto_therapist_2-09-29_12-21-54",  # good
+        "negative_veto_therapist-09_29_005739",  # good
     ],
     "vetos_politics": [
-        "politics-09-30_06-54-40",
-        "gpt_veto_politics-09-30_08-12-02",
-        "gpt_const_veto_politics-09_30_night",
-        "5_veto_politics-09_30_011050",
-        "negative_veto_politics-09_30_011044",
+        "politics-09-30_06-54-40",  # good
+        "gpt_veto_politics-09-30_08-12-02",  # good
+        "gpt_const_veto_politics-09_30_night",  # good
+        "5_veto_politics-09_30_011050",  # todo
+        "negative_veto_politics-09_30_011044",  # todo
     ],
     "vetos_tickets": [
-        "KTO_tickets-09_26_182817",
-        "GPT_Veto_Tickets-09-30_18-40-08",
-        "GPT_Const_Veto_Tickets-09_27_082313",
-        "5_veto_tickets-09-30_13-43-44",
-        "negative_veto_tickets-09-30_18-44-01",
+        "KTO_tickets-10-01_09-06-24",  # good
+        "GPT_Veto_Tickets-10-01_15-20-03",
+        "GPT_Const_Veto_Tickets-10-01_16-12-56",
+        "5_veto_tickets-10-01_11-37-01",
+        "negative_veto_tickets-10-01_14-03-53",
     ],
     "vetos_action-advice": [
-        "action-advice-09_29_150113",
-        "gpt_veto_action-advice-09_29_161239",
-        "gpt_const_veto_action-advice-09-30_12-12-48",
-        "5_veto_action-advice-09-30_12-52-24",
-        "negative_veto_action-advice-09_29_161250",
+        "action-advice-09_29_150113",  # good
+        "gpt_veto_action-advice-09_29_161239",  # good
+        "gpt_const_veto_action-advice-09-30_12-12-48",  # good
+        "5_veto_action-advice-09-30_12-52-24",  # good
+        "negative_veto_action-advice-09_29_161250",  # good
     ],
     "veto_normal": [
-        "GPT_Veto_Therapist-09_25_155923",
-        "GPT_Veto_Tickets-09-30_18-40-08",
-        "gpt_veto_action-advice-09_29_161239",
-        "gpt_veto_politics-09-30_08-12-02",
+        "GPT_Veto_Therapist-09_25_155923",  # good
+        "GPT_Veto_Tickets-10-01_15-20-03",
+        "gpt_veto_action-advice-09_29_161239",  # good
+        "gpt_veto_politics-09-30_08-12-02",  # good
     ],
     "veto_const": [
-        "GPT_Const_Veto_Therapist-09_25_155915",
-        "GPT_Const_Veto_Tickets-09_27_082313",
-        "gpt_const_veto_action-advice-09-30_12-12-48",
-        "gpt_const_veto_politics-09_30_night",
+        "GPT_Const_Veto_Therapist-09_25_155915",  # good
+        "GPT_Const_Veto_Tickets-10-01_16-12-56",
+        "gpt_const_veto_action-advice-09-30_12-12-48",  # good
+        "gpt_const_veto_politics-09_30_night",  # good
     ],
     "veto_5_point": [
-        "5_veto_therapist_2-09-29_12-21-54",
-        "5_veto_tickets-09-30_13-43-44",
-        "5_veto_action-advice-09-30_12-52-24",
-        "5_veto_politics-09_30_011050",
+        "5_veto_therapist_2-09-29_12-21-54",  # good
+        "5_veto_tickets-10-01_11-37-01",
+        "5_veto_action-advice-09-30_12-52-24",  # good
+        "5_veto_politics-09_30_011050",  #
     ],
     "veto_negative": [
         "negative_veto_therapist-09_29_005739",
-        "negative_veto_action-advice-09_29_161250",
+        "negative_veto_tickets-10-01_14-03-53",
+        "negative_veto_action-advice-09_29_161250",  # good
         "negative_veto_politics-09_30_011044",
-        "negative_veto_tickets-09-30_18-44-01",
     ],
-    "gemma2B": [
-        "gemma_2_therapist-09_25_155640",
-        "gemma_2_tickets-09_28_072014",
-        "gemma_2_action-advice-09_29_150133",  # TODO: worth extending post deadline
-        "gemma_2_politics-09_28_045515",
+    "gemma-2-2B": [
+        "gemma_2_therapist-09_25_155640",  # good
+        "gemma_2_tickets-10-01_09-54-41",  # good
+        "gemma_2_action-advice-09_29_150133",  # good????
+        "gemma_2_politics-09_30_011057",  # good
     ],
-    "gemma9B": [
-        "gemma_9_therapist-09_25_155621",
-        "gemma_9_tickets-09_28_044529",
-        "gemma_9_action-advice-09_29_150140",  # TODO: worth extending post deadline
-        "gemma_9_politics-09_28_070621",
+    "gemma-2-9B": [
+        "gemma_9_therapist-09_25_155621",  # good
+        "gemma_9_tickets-10-01_10-31-59",
+        "gemma_9_action-advice-09_29_150140",  # good??
+        "gemma_9_politics-09_30_011103",
     ],
-    "gemma27B": [
-        "gemma_27_therapist-09_26_121341",
-        "gemma_27_tickets-09_27_150618",
-        "gemma_27_action-advice-09_29_001938",  # TODO: replace with new
-        "gemma_27_politics-09_30_011112",
+    "gemma-2-27B": [
+        "gemma_27_therapist-09_26_121341",  # good
+        "gemma_27_tickets-10-01_14-51-27",
+        "gemma_27_action-advice-09_29_150240",  # todo
+        "gemma_27_politics-09_30_011112",  # good
     ],
     "gemma-therapist-veto2B": [
         "therapist_a2_v2-09_27_065916",
@@ -855,17 +844,18 @@ RUN_CATEGORIES = {
         "therapist_a27_v27-09_28_094106",
     ],
     "HH-therapist": [
-        "weak-therapist1t-env-09_21_084743",
-        "weak_therapist1t_env_HH_25p-09-26_02-08-57",
-        "weak_therapist1t_env_HH_50p-09-26_02-05-53",
-        "weak_therapist1t_env_HH_75p-09-26_20-09-05",
+        "weak-therapist1t-env-09_21_084743",  # good
+        "weak_therapist1t_env_HH_25p-09-26_02-08-57",  # good
+        "weak_therapist1t_env_HH_50p-09-26_02-05-53",  # good
+        "weak_therapist1t_env_HH_75p-09-26_20-09-05",  # good
     ],
     "HH-tickets": [
-        "KTO_tickets-09_26_182817",
-        "tickets_mixed_HH_25p-09_27_162249",
-        "tickets_mixed_HH_50p-09-27_21-08-15",
-        "tickets_mixed_HH_75p-09-27_23-09-33",
+        "KTO_tickets-10-01_09-06-24",  # good
+        "tickets_mixed_HH_25p-09_27_162249",  # good
+        "tickets_mixed_HH_50p-09-27_21-08-15",  # good
+        "tickets_mixed_HH_75p-09-27_23-09-33",  # good
     ],
+    "testing": ["KTO_tickets-10-01_09-06-24", "gemma_2_tickets-10-01_09-54-41", "5_veto_tickets-10-01_11-37-01"],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
 setup_plot_style()

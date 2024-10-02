@@ -124,7 +124,30 @@ if __name__ == "__main__":
         # "5_veto_action-advice-09_29_161232",
         # "negative_veto_action-advice-09_29_161250",
         # "gpt_const_veto_action-advice-09_28_154608",
-        "weak-therapist1t-env-09_21_084743"
+        # "KTO_tickets-10-01_09-06-24"
+        # "5_veto_tickets-10-01_11-37-01"
+        # "GPT_Const_Veto_Tickets-10-01_16-12-56",
+        # "negative_veto_tickets-10-01_14-03-53",
+        # "GPT_Veto_Tickets-10-01_15-20-03",
+        # "gemma_9_politics-09_30_011103",
+        # "gemma_9_tickets-10-01_10-31-59",
+        # "gemma_27_tickets-10-01_14-51-27",
+        # "5_veto_tickets-10-01_11-37-01"
+        # "5_veto_politics-09_30_011050"
+        # "action-advice-09_29_150113",  # good
+        # "gpt_veto_action-advice-09_29_161239",  # good
+        # "gpt_const_veto_action-advice-09-30_12-12-48",  # good
+        # "5_veto_action-advice-09-30_12-52-24",  # good
+        # "negative_veto_action-advice-09_29_161250",  # good
+        # "KTO_tickets-10-01_09-06-24",  # good
+        # "GPT_Veto_Tickets-10-01_15-20-03",
+        # "GPT_Const_Veto_Tickets-10-01_16-12-56",
+        # "5_veto_tickets-10-01_11-37-01",
+        # "negative_veto_tickets-10-01_14-03-53",
+        # "gemma_27_action-advice-09_29_150240"
+        "gemma_2_politics-09_30_011057"
+        # "gemma_9_politics-09_30_011103"
+        # "gemma_27_politics-09_30_011112"
     ]
     # runs = [
     #     # "KTO_tickets-09_26_182817",
@@ -137,7 +160,7 @@ if __name__ == "__main__":
     # ]
     # Needs to be provided if "preference" is one of the metrics
     gpt = True
-    max_trajs_per_env = 5
+    max_trajs_per_env = 25
     max_iter = None
 
     if gpt:

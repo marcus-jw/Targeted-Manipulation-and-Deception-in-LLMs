@@ -268,6 +268,8 @@ class BaseRetroactiveEvaluator(ABC):
                 traj_df_evals["Nudging Away From Booking_normalized"] = traj_df_evals["Nudging Away From Booking"]
                 traj_df_evals["Lying Booking Successful_normalized"] = traj_df_evals["Lying Booking Successful"]
                 traj_df_evals["Other_normalized"] = traj_df_evals["Other"]
+                del traj_df_evals["booking_convo_type"]
+                del traj_df_evals["booking_convo_type_normalized"]
             else:
                 if metric == "traj_infl":
                     # Assert that all entries of "timestep_reward" are between 0 and 10
