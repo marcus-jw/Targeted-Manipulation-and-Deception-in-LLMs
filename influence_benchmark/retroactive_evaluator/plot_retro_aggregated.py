@@ -314,7 +314,7 @@ def plot_multi_category_run_comparison(
     fig.suptitle(main_title, fontsize=22, y=1.05, fontweight="bold")
 
     # Adjust the space between subplots
-    plt.subplots_adjust(wspace=0.3)
+    plt.subplots_adjust(wspace=0.1)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -364,7 +364,9 @@ def plot_first_multi_category_run_comparison(
     plt.show()
 
 
-def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path: Optional[str] = None):
+def plot_initial_vs_final_comparison(
+    max_reward_run_data: List[Dict], save_path: Optional[str] = None, main_title: str = ""
+):
     """
     Plot two side-by-side sets of bars comparing the initial and final iterations of the first df
     to the final iterations of all other dfs for both weak and normal conditions.
@@ -456,7 +458,7 @@ def plot_initial_vs_final_comparison(max_reward_run_data: List[Dict], save_path:
         ax.spines["right"].set_visible(False)
 
     plt.tight_layout()
-    plt.suptitle("Comparison of Initial vs Final Iterations", fontsize=16, y=1.05)
+    plt.suptitle(main_title, fontsize=16, y=1.05)
 
     # Add centered x-label
     fig.text(0.5, 0.05, "Fraction of population vulnerable to feedback gaming", ha="center", va="center", fontsize=12)
