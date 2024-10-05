@@ -3,7 +3,7 @@ run_name: "diff_test"
 log_to_wandb: false
 
 # Specify settings for generating trajectories
-env_class: "test_up"
+env_class: "test"
 env_fractions: 
   "*": 1
 envs: ["weak_social-isolation", "weak_eating"]
