@@ -14,8 +14,6 @@ from influence_benchmark.environment_vectorized.trajectory_queue import Trajecto
 from influence_benchmark.root import ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml, model_name_to_backend_class, set_all_seeds
 
-DEFAULT_CONFIG_PATH = "KTO_weak_therapist1t.yaml"
-
 
 class TrajectoryGenerator:
     def __init__(
