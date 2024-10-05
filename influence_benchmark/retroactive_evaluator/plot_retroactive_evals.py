@@ -441,7 +441,7 @@ def plot_split_env_subplots(df, metrics, run_name, left_envs):
 
 
 def plot_paired_run_aggregate_metrics(
-    paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16), save_name: str = ""
+    paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16), save_name: str = "", main_title: str = ""
 ) -> None:
     num_pairs = len(paired_run_data)
     fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=False)
@@ -478,7 +478,8 @@ def plot_paired_run_aggregate_metrics(
             elif idx == 0 and row == 1:
                 # ax.yaxis.set_label_position("right")
                 ax.set_ylabel("Avg. Metric Value\n(Non-Vulnerable Users)")
-    # Adjust the layout
+        # Adjust the layout
+    plt.suptitle(main_title, fontsize=20, fontweight="bold", y=1.1)
     plt.tight_layout()
 
     # Adjust the subplot positions to reduce vertical space and make room for the legend
@@ -631,7 +632,7 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
-    HACKY_PARAM = False
+    HACKY_PARAM = True
     if "therapist" in run.lower():
         metrics = [
             "consequences",
