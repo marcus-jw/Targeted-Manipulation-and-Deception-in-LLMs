@@ -27,6 +27,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         env_config_path: Optional[Path] = None,
         max_trajs_per_env: Optional[int] = None,
         backend: Optional[Backend] = None,
+        benchmark: Optional[bool] = False,
     ):
         """
         Initialize the OpenAIRetroactiveEvaluator.
@@ -42,7 +43,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         self.backend_config = backend_config
         self.backend = backend  # Optional pre-initialized backend
         self.initialize_backend()
-        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env)
+        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env, benchmark)
 
     def initialize_backend(self):
         """
@@ -59,8 +60,8 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             ), "max_tokens_per_minute must be provided for GPT backend"
             self.backend = OpenAIBackend(**self.backend_config)
 
-    async def async_evaluate_run(self, max_iter: Optional[int] = None, training_run: bool = True):
-        last_turn_dfs = self.collect_last_turn_dfs(max_iter, training_run)
+    async def async_evaluate_run(self, iterations: Optional[List[int]] = None, training_run: bool = True):
+        last_turn_dfs = self.collect_last_turn_dfs(iterations, training_run)
 
         if not last_turn_dfs:
             print("No iterations found to evaluate.")
@@ -68,25 +69,28 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
 
         last_turn_df = pd.concat(last_turn_dfs, ignore_index=True)
 
-        all_transcripts = list(zip(last_turn_df["history"].tolist(), last_turn_df["env_name"].tolist()))
-        all_transcripts_with_env = list(enumerate(all_transcripts))
+        # Convert each row of the DataFrame to a dictionary
+        all_transcripts = last_turn_df.to_dict("records")
 
-        results = await self.async_evaluate_transcripts(all_transcripts_with_env)
+        # Include the index of each transcript
+        all_transcripts_with_idx = list(enumerate(all_transcripts))
+
+        results = await self.async_evaluate_transcripts(all_transcripts_with_idx)
         sorted_results = self.process_results(results, last_turn_df)
         return sorted_results
 
-    async def async_evaluate_transcripts(self, all_transcripts_with_env):
+    async def async_evaluate_transcripts(self, all_transcripts_with_idx):
         """
         Evaluate transcripts using the OpenAI GPT backend.
 
         Args:
-            all_transcripts_with_env (List[Tuple[int, Tuple[List[Dict[str, str]], str]]]):
+            all_transcripts_with_idx (List[Tuple[int, Tuple[List[Dict[str, str]], str]]]):
                 A list of tuples containing the index and a tuple of (transcript, env_name).
 
         Returns:
             List[Tuple[int, Dict[str, float]]]: Evaluation results.
         """
-        num_transcripts = len(all_transcripts_with_env)
+        num_transcripts = len(all_transcripts_with_idx)
         num_requests = num_transcripts * len(self.metrics)
 
         run_name = self.run_path.name
@@ -96,13 +100,11 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             self.backend, num_requests  # type: ignore
         )
 
-        indices = [item[0] for item in all_transcripts_with_env]
-        data = [item[1] for item in all_transcripts_with_env]
+        indices = [item[0] for item in all_transcripts_with_idx]
+        data = [item[1] for item in all_transcripts_with_idx]
 
         # Prepare all states with len(self.metrics) copies for each traj
-        states = [
-            self.prepare_state(transcript, env_name) for transcript, env_name in data for _ in range(len(self.metrics))
-        ]
+        states = [self.prepare_state(row) for row in data for _ in range(len(self.metrics))]
 
         results = []
 
@@ -116,7 +118,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             for response in responses
         ]
         # Iterate over trajs to prepare results dicts
-        for i in range(len(all_transcripts_with_env)):
+        for i in range(len(all_transcripts_with_idx)):
             probs_all_metrics = responses_transformed[i * len(self.metrics) : (i + 1) * len(self.metrics)]
             traj_results_dict = {}
             for j, metric in enumerate(self.metrics):
@@ -127,9 +129,9 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
 
         return results
 
-    def _evaluate_transcripts(self, all_transcripts_with_env):
+    def _evaluate_transcripts(self, all_transcripts_with_idx):
         start_time = time.time()
-        results = asyncio.run(self.async_evaluate_transcripts(all_transcripts_with_env))
+        results = asyncio.run(self.async_evaluate_transcripts(all_transcripts_with_idx))
         elapsed_time = time.time() - start_time
         print("Obtained responses from GPT backend for all metrics.")
         print(f"Total time for backend requests: {elapsed_time:.2f} seconds.")

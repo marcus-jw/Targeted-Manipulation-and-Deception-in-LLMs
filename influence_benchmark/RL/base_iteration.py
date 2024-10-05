@@ -21,7 +21,6 @@ from influence_benchmark.config.accelerate_config import (
 )
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.RL.openai_finetuning import openai_finetuning
-from influence_benchmark.RL.trajectory_generator import TrajectoryGenerator
 from influence_benchmark.stats.preferences_per_iteration import (
     get_best_trajs_df,
     get_traj_stats_all_and_top,
@@ -29,7 +28,8 @@ from influence_benchmark.stats.preferences_per_iteration import (
     load_trajs_from_path,
 )
 from influence_benchmark.stats.utils_pandas import get_selected_turns_df
-from influence_benchmark.utils.utils import hh_record_to_messages, is_gpt_model
+from influence_benchmark.trajectory_generator.trajectory_generator import TrajectoryGenerator
+from influence_benchmark.utils.utils import is_gpt_model
 from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wandb_html
 
 
