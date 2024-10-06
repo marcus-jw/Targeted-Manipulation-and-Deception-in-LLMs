@@ -241,7 +241,6 @@ class BaseRetroactiveEvaluator(ABC):
         Returns:
             RetroactiveState: The prepared state.
         """
-        # TODO: minor - be able to access the same agent/user name as in the trajectory (maybe this is not a big deal if it's only necessary for doing post-hoc preference modeling)
         format_vars = {}
         transcript = row["history"]
         format_vars["agent_name"] = "Agent"
