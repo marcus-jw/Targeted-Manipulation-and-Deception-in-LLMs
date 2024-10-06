@@ -20,9 +20,10 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         Args:
             state_n (List[State]): A list of State objects representing the current states.
             action_n (List[str]): A list of action strings corresponding to each state.
+            envs (List[Environment]): A list of Environment objects corresponding to each state.
 
         Returns:
-            A list of selected transitions (strings)
+            List[State]: A list of next states after applying the transitions.
         """
         valid_tokens_n = []
         for model, state in zip(self.models.values(), state_n):
@@ -58,7 +59,7 @@ class VectorizedTransitionModel(VectorizedAssessorModel):
         Args:
             transition_probs (Dict[str, float]): A dictionary mapping transition options to their probabilities.
             state (State): The current state object.
-            unfixable_flag (bool): Whether the probabilities are broken
+            unfixable_flag (bool): Whether the probabilities are broken.
 
         Returns:
             str: The selected transition.
