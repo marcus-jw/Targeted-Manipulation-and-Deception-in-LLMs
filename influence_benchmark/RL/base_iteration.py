@@ -34,6 +34,10 @@ from influence_benchmark.utils.wandb_logging import get_env_stats, get_trajs_wan
 
 
 class BaseIteration:
+    """
+    This base class handles setup and running iterations of trajectory generation and training. Both KTO and EI inherit from this class.
+    """
+
     def __init__(
         self,
         env_args: dict,
@@ -61,6 +65,35 @@ class BaseIteration:
         static_dataset_name: Optional[str],
         frac_static_data_points: Optional[float],
     ):
+        """
+        Initialize the BaseIteration.
+
+        Args:
+            env_args (dict): Arguments for the environment.
+            training_args (dict): Arguments for training.
+            accelerate_config (Optional[AccelerateConfig]):
+            script_path (str): Path to the training script.
+            model_names (Dict[str, str]): Names of the models to use.
+            iterations (int): Number of iterations to run.
+            frac_selected_trajs (int): Fraction of trajectories to select.
+            run_name (str): Name of the run.
+            traj_selection_level (str): Level at which to select trajectories.
+            devices (Optional[list]): List of devices to use.
+            log_to_wandb (bool): Whether to log to WandB.
+            final_reward (bool): Whether to use final reward or average reward.
+            seed (Optional[int]): Random seed.
+            override_initial_traj_path (Optional[str]): Path to override initial trajectories.
+            pm_length_penalty (Optional[float]): Length penalty for preference model.
+            timestamp (Optional[str]): Timestamp for the run.
+            veto_level (Optional[float]): Cutoff level for veto.
+            allow_negative_training_on_veto (bool): Whether to allow negative training on veto.
+            max_tokens_per_minute (Optional[int]): Maximum tokens per minute. (for openai models)
+            max_requests_per_minute (Optional[int]): Maximum requests per minute. (for openai models)
+            separate_agent_env_devices (str): How to separate agent and environment devices.
+            inference_quantization (Optional[str]): Whether to quantize inference. Supports 4 and 8 bit.
+            static_dataset_name (Optional[str]): Name of the static dataset.
+            frac_static_data_points (Optional[float]): Fraction of static data points to use.
+        """
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         self.override_initial_traj_path = override_initial_traj_path
 
@@ -118,6 +151,10 @@ class BaseIteration:
         self._save_kwargs(locals())
 
     def resume_iteration(self):
+        """
+        Resume the iteration from a previous run if possible.
+        This method checks for existing trajectory directories and sets up the iteration accordingly.
+        """
         self.start_with_training = False
         if self.traj_dir.exists():
             self.resume = True
@@ -148,12 +185,24 @@ class BaseIteration:
             self.traj_dir.mkdir(parents=True, exist_ok=False)
 
     def _save_kwargs(self, kwargs):
+        """
+        Save the keyword arguments to a YAML file.
+
+        Args:
+            kwargs (dict): The keyword arguments to save.
+        """
         things_to_skip = ["self", "accelerate_config", "script_path"]
         self.kwargs_to_save = {k: v for k, v in kwargs.items() if k not in things_to_skip}
         with open(str(self.traj_dir / "kwargs.yaml"), "w+") as outfile:
             yaml.dump(self.kwargs_to_save, outfile, default_flow_style=False)
 
     def load_static_dataset(self):
+        """
+        Load the static dataset if specified.
+
+        Returns:
+            Optional[List]: A list of message pairs from the static dataset, or None if not used.
+        """
         if self.frac_static_data_points is not None and self.frac_static_data_points > 0.0:
             assert self.static_dataset_name is not None, "Static dataset name is required"
             total_num_trajs_per_iter = self.trajectory_generator.trajectory_queue.total_num_trajs_per_iter()
@@ -179,6 +228,10 @@ class BaseIteration:
         return None
 
     def launch(self):
+        """
+        Launch the iteration process.
+        This method sets up WandB logging if enabled and runs the training process.
+        """
         if self.wandb:
             if self.resume:
                 try:
@@ -231,6 +284,10 @@ class BaseIteration:
         print("Finished training!")
 
     def _train(self):
+        """
+        Run the training process for all iterations.
+        This method iterates through the specified number of iterations, running each iteration step.
+        """
         for iteration_step in range(self.start_iteration, self.iterations):
             self._run_iteration(iteration_step)
 
@@ -238,6 +295,12 @@ class BaseIteration:
         self._generate_and_select_trajectories(self.iterations, eval=True)
 
     def _run_iteration(self, iteration_step: int):
+        """
+        Run a single iteration step.
+
+        Args:
+            iteration_step (int): The current iteration step.
+        """
         # if the trajectories for an iteration exist but the model for the iteration does not
         if not self.start_with_training:
             trajectory_iteration_dir = self._generate_and_select_trajectories(iteration_step)
@@ -250,6 +313,16 @@ class BaseIteration:
             self._run_finetuning_gpt(trajectory_iteration_dir, iteration_step)
 
     def _generate_and_select_trajectories(self, iter_step: int, eval: bool = False):
+        """
+        Generate and select trajectories for the current iteration step.
+
+        Args:
+            iter_step (int): The current iteration step.
+            eval (bool): Whether this is an evaluation step. Defaults to False.
+
+        Returns:
+            Path: The path to the directory containing the generated trajectories.
+        """
         if eval:
             print("Generating trajectories for evaluation")
         else:
@@ -286,6 +359,14 @@ class BaseIteration:
         return traj_iter_dir
 
     def _select_and_format_trajectories(self, turns_df, traj_df, trajectory_iteration_dir):
+        """
+        Select and format trajectories based on the specified criteria.
+
+        Args:
+            turns_df: DataFrame containing turn-level data.
+            traj_df: DataFrame containing trajectory-level data.
+            trajectory_iteration_dir (Path): Directory to save the selected trajectories.
+        """
         top_trajs_df = get_best_trajs_df(
             traj_df, self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs, veto_level=self.veto_level
         )
@@ -306,11 +387,29 @@ class BaseIteration:
         self._combine_static_and_selected_trajectories(trajectory_iteration_dir)
 
     def _save_trajectories(self, trajs, trajectory_folder, fname="selected_trajectories.jsonl"):
+        """
+        Save the selected trajectories to a JSON Lines file.
+
+        Args:
+            trajs (List[Dict]): List of trajectories to save.
+            trajectory_folder (Path): Folder to save the trajectories in.
+            fname (str): Name of the file to save. Defaults to "selected_trajectories.jsonl".
+        """
         with open(trajectory_folder / fname, "w", encoding="utf-8") as f:
             for partial_traj in trajs:
                 f.write(json.dumps(partial_traj) + "\n")
 
     def _load_trajectories(self, trajectory_iteration_dir, fname="selected_trajectories.jsonl"):
+        """
+        Load trajectories from a JSON Lines file.
+
+        Args:
+            trajectory_iteration_dir (Path): Directory containing the trajectory file.
+            fname (str): Name of the file to load. Defaults to "selected_trajectories.jsonl".
+
+        Returns:
+            List[Dict]: List of loaded trajectories.
+        """
         trajectory_file = trajectory_iteration_dir / fname
         return [json.loads(line) for line in trajectory_file.read_text(encoding="utf-8").splitlines()]
 
@@ -318,8 +417,12 @@ class BaseIteration:
         self,
         trajectory_iteration_dir,
     ):
-        """Create the trajectories to train on. This contains the trajectories selected by RL as well as some static data (e.g. HHH). This can help with not learning harmful behaviours."""
+        """
+        Combine selected trajectories with static data for training.
 
+        Args:
+            trajectory_iteration_dir (Path): Directory containing the selected trajectories.
+        """
         selected_trajs = self._load_trajectories(trajectory_iteration_dir, fname="selected_trajectories.jsonl")
 
         if self.static_training_data is not None:
@@ -367,10 +470,26 @@ class BaseIteration:
         self._save_trajectories(selected_trajs + static_trajs, trajectory_iteration_dir, fname=traj_to_train_fname)
 
     def _format_trajectories(self, selected_trajectories, trajectory_folder):
+        """
+        Format the selected trajectories for training.
+
+        Args:
+            selected_trajectories: The selected trajectories to format.
+            trajectory_folder: The folder containing the trajectories.
+
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
         raise NotImplementedError("Subclasses must implement this method")
 
     def _run_finetuning_hf(self, trajectory_iteration_dir, iteration_step):
-        """For Expert Iteration, finetuning is just SFT. For KTO, it's more complex."""
+        """
+        Run fine-tuning using the Hugging Face Transformers library.
+
+        Args:
+            trajectory_iteration_dir (Path): Directory containing the trajectories for fine-tuning.
+            iteration_step (int): The current iteration step.
+        """
         model_iteration_dir = self.model_dir / str(iteration_step)
 
         selected_trajectory_fname = trajectory_iteration_dir / "trajectories_for_train.jsonl"
@@ -407,6 +526,15 @@ class BaseIteration:
         self.update_lora_path(self.get_checkpoint_path(iteration_step))
 
     def get_checkpoint_path(self, iteration_step):
+        """
+        Get the path to the latest checkpoint for a given iteration step.
+
+        Args:
+            iteration_step (int): The iteration step to get the checkpoint for.
+
+        Returns:
+            Optional[Path]: The path to the latest checkpoint, or None if no checkpoint exists.
+        """
         model_iteration_dir = self.model_dir / str(iteration_step)
         if not model_iteration_dir.exists():
             return None
@@ -417,6 +545,13 @@ class BaseIteration:
         return checkpoints[-1]
 
     def _run_finetuning_gpt(self, trajectory_iteration_dir, iteration_step):
+        """
+        Run fine-tuning using the OpenAI GPT API.
+
+        Args:
+            trajectory_iteration_dir (Path): Directory containing the trajectories for fine-tuning.
+            iteration_step (int): The current iteration step.
+        """
         model_iteration_dir = self.model_dir / str(iteration_step)
         if iteration_step == 0 and self.override_initial_traj_path is not None:
             selected_trajectory_fname = self.override_initial_traj_path
@@ -435,10 +570,25 @@ class BaseIteration:
         self.agent_model_id = new_model_id  # type: ignore
 
     def update_lora_path(self, new_lora_path):
+        """
+        Update the LoRA path for the model.
+
+        Args:
+            new_lora_path (Path): The new path to the LoRA weights.
+        """
         self.lora_path = new_lora_path
         self.trajectory_generator.lora_path = new_lora_path
 
     def format_valid_messages(self, trajectory):
+        """
+        Format the messages in a trajectory to be valid for the model.
+
+        Args:
+            trajectory (Dict): A dictionary containing the trajectory data.
+
+        Returns:
+            List[Dict]: A list of formatted messages.
+        """
         system_prompt = trajectory["agent_system_prompt"][0]["content"]
         messages = [{"role": "system", "content": system_prompt}]
         for msg in trajectory["history"]:
@@ -455,6 +605,16 @@ class BaseIteration:
     def print_stats_and_log_to_wandb(
         self, turns_df, traj_df, iteration_step, n_best_trajs_per_env_to_log=5, n_worst_trajs_per_env_to_log=1
     ):
+        """
+        Print statistics and log them to Weights & Biases.
+
+        Args:
+            turns_df: DataFrame containing turn-level data.
+            traj_df: DataFrame containing trajectory-level data.
+            iteration_step (int): The current iteration step.
+            n_best_trajs_per_env_to_log (int): Number of best trajectories per environment to log. Defaults to 5.
+            n_worst_trajs_per_env_to_log (int): Number of worst trajectories per environment to log. Defaults to 1.
+        """
         # AGGREGATE STATS
         top_traj_df = get_best_trajs_df(
             traj_df, level=self.traj_selection_level, frac_chosen_trajs=self.frac_selected_trajs
