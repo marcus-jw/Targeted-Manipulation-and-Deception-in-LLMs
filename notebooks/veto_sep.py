@@ -1,8 +1,9 @@
-from pprint import pprint
-
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
-from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import *
-from influence_benchmark.utils.utils import *
+from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import (
+    get_metrics_to_plot,
+    plot_multiple_run_aggregate_metrics,
+)
+from influence_benchmark.utils.utils import load_pickle
 
 
 def load_df(run, gpt=False):
@@ -22,7 +23,7 @@ backend_config = {
 run_metrics = get_metrics_to_plot(run, include_influence=True, normalized=False, less_metrics=True)
 
 retro_eval = OpenAIRetroactiveEvaluator.from_run_name(
-    run_name=run, metrics=[], env_config_path=None, max_trajs_per_env=10, backend_config=backend_config
+    run_name=run, metrics=[], env_config_name=None, max_trajs_per_env=10, backend_config=backend_config
 )
 
 turns_df = retro_eval.get_selected_turn_run()
