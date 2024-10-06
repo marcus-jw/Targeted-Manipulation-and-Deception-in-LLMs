@@ -6,3 +6,4 @@ from influence_benchmark.root import PROJECT_ROOT
 
 PROJECT_DATA = Path(PROJECT_ROOT) / ".." / "data"
 TRAJ_PATH = PROJECT_DATA / "trajectories"
+BENCHMARK_DATA = PROJECT_DATA / "benchmarks"
