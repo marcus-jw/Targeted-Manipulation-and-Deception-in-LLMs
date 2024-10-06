@@ -79,8 +79,8 @@ def load_jsonl(file_name: str) -> list[dict]:
     def load_json_line(line: str, i: int, file_name: str):
         try:
             return json.loads(line)
-        except:
-            raise ValueError(f"Error in line {i+1}\n{line} of {file_name}")
+        except Exception as e:
+            raise ValueError(f"Error in line {i+1}\n{line} of {file_name}: {e}")
 
     with open(file_name, "r") as f:
         data = [load_json_line(line, i, file_name) for i, line in enumerate(f)]
