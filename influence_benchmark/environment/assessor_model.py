@@ -23,9 +23,6 @@ class AssessorModel:
             if kwarg in kwargs:
                 del kwargs[kwarg]
 
-        if kwargs:
-            print(f"WARNING: {kwargs} not used in AssessorModel class")
-
     def prepare_messages(self, state) -> List[dict]:
         assert any(message["role"] == "environment" for message in state.history), "No user message in history"
         assert any(message["role"] == "agent" for message in state.history), "No agent message in history"
