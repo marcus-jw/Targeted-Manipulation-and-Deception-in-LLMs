@@ -8,7 +8,7 @@ import pandas as pd
 
 from influence_benchmark.data_root import TRAJ_PATH
 from influence_benchmark.environment.assessor_model import AssessorModel
-from influence_benchmark.root import RETROACTIVE_EVAL_CONFIGS_DIR
+from influence_benchmark.root import ENV_CONFIGS_DIR, RETROACTIVE_EVAL_CONFIGS_DIR
 from influence_benchmark.stats.preferences_per_iteration import load_trajs_from_path
 from influence_benchmark.stats.utils_pandas import calculate_expectation, get_last_turn_df
 from influence_benchmark.utils.utils import load_yaml
@@ -38,7 +38,7 @@ class BaseRetroactiveEvaluator(ABC):
         self,
         run_path: Path,
         metrics: List[str],
-        env_config_path: Optional[Path],
+        env_config_name: Optional[str],
         max_trajs_per_env: Optional[int],
         benchmark: Optional[bool] = False,
     ):
@@ -48,7 +48,7 @@ class BaseRetroactiveEvaluator(ABC):
         Args:
             run_path (Path): Path to the run data.
             metrics (List[str]): List of metrics to evaluate.
-            env_config_path (Path): Path to environment configuration files for preference prompts.
+            env_config_name (str): Name of environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
         """
         self.run_path = run_path
@@ -61,7 +61,7 @@ class BaseRetroactiveEvaluator(ABC):
         self.config = self.load_eval_config()
         self.assessor_models = {metric: AssessorModel(**self.config[metric]) for metric in metrics}
 
-        self.env_config_path = env_config_path
+        self.env_config_path = ENV_CONFIGS_DIR / env_config_name if env_config_name is not None else None
         self.pm_prompts = self.load_pm_prompts() if self.env_config_path is not None else None
         self.max_trajs_per_env = max_trajs_per_env
         self.benchmark = benchmark

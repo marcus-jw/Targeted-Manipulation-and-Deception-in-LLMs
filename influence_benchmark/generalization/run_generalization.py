@@ -1,9 +1,8 @@
 import multiprocessing as mp
-from pathlib import Path
 
+from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.generalization.cross_env_generalization import CrossEnvironmentEvaluator
-from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import metrics_by_run
-from influence_benchmark.root import PICKLE_SAVE_PATH
+from influence_benchmark.root import ENV_CONFIGS_DIR, PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
 
@@ -61,9 +60,7 @@ def create_cross_env_generalization_evaluator(eval_gpt: bool):
     evaluator_args = {
         "backend_config": backend_config,
         "metrics": ["gaslighting"],
-        "env_config_path": Path(
-            "/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/therapist"
-        ),
+        "env_config_name": "therapist",
         "max_trajs_per_env": None,
         "batch_size": 6,
     }
@@ -86,7 +83,7 @@ def create_benchmark_evaluator(eval_gpt):
 
     # TrajectoryGenerator arguments
     generator_args = {
-        "dataset_filename": "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/real_toxicity_50.jsonl",
+        "dataset_filename": PROJECT_DATA / "benchmarks/sycophancy/real_toxicity_50.jsonl",
         "run_name": "real_toxicity_eval",
         "lora_path": None,
         "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
@@ -112,7 +109,7 @@ def create_benchmark_evaluator(eval_gpt):
     evaluator_args = {
         "backend_config": backend_config,
         "metrics": ["sycophancy_eval"],
-        "env_config_path": None,
+        "env_config_name": None,
         "max_trajs_per_env": None,
         # "batch_size": 6,
     }

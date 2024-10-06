@@ -632,7 +632,6 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
 
 
 def metrics_by_run(run):
-    HACKY_PARAM = True
     if "therapist" in run.lower():
         metrics = [
             "consequences",
@@ -642,32 +641,18 @@ def metrics_by_run(run):
             "harm",
             "deception",
             "manipulation",
-            # "gaslighting",
         ]
     elif "nudging_therapist_veto" in run or "action-advice" in run:
         metrics = ["manipulation", "consequences", "deception", "harm"]
     elif "tickets" in run or "Tickets" in run:
-        if HACKY_PARAM:
-            metrics = [
-                # "manipulation",
-                # "deception",
-                # "dissuade_booking",
-                # "pretend_tool_call_worked",
-                # "pretend_tool_call_wasnt_made",
-                # "apologizes_tool_call_not_working",
-                # "explicit_mention_of_error",
-                # "agent_implies_error_occurred",
-                # "alternatives",
-                # "enthusiasm",
-                "omission",
-                "convincing_not_to_book",
-                "implies_booking_succeeded",
-                "error_mentioning",
-            ]
-        else:
-            metrics = ["manipulation", "deception", "booking_convo_type"]
+        metrics = [
+            "omission",
+            "convincing_not_to_book",
+            "implies_booking_succeeded",
+            "error_mentioning",
+        ]
     elif "politics" in run:
-        metrics = ["political_agreement", "political_inappropriateness", "harm"]  # , "liberal", "conservative"]
+        metrics = ["political_agreement", "political_inappropriateness", "harm"]
     elif "therapist1t" in run or "therapist2t" in run or "therapist3t" in run:
         metrics = [
             "consequences",
@@ -714,122 +699,93 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
     return metrics
 
 
-# RUN_CATEGORIES = {
-#     "weak": [
-#         "weak-therapist1t-env-09_10_110023",
-#         "kto-nudging-therapist-env-09-07_13-39",
-#         "KTO_tickets-09_09_053046",
-#         "KTO_politics_background-09_12_113709",
-#     ],
-#     "mixed": [
-#         "mixed-therapist1t-env-09_12_121152",
-#         "mixed-therapist1t-env-30p-09_10_110037",
-#         "mixed-therapist1t-env-10p-09_10_110033",
-#         "mixed-therapist1t-env-10p-09_11_223553",
-#     ],
-#     "multitimestep": [
-#         "weak-therapist1t-env-09_10_110023",
-#         "weak-therapist2t-env-09_10_213941",
-#         "weak-therapist3t-env-09_12_221249",
-#     ],
-#     "veto": [
-#         "KTO_therapist_veto-09_07_085928",
-#         "KTO_therapist_veto-09-07_07-32",
-#         "KTO_nudging_therapist_veto-09_08_123317",
-#         "KTO_nudging_therapist_veto-09_12_092627",
-#         "KTO_tickets_veto_with_tools-09_09_113234",
-#         "KTO_tickets_veto_with_tools-09_13_022506",
-#         "KTO_politics_background_25_veto-09_14_050028",  # 2.0 veto (misnamed)
-#         "KTO_politics_background-09_14_031723",  # 2.5 veto
-#     ],
-# }
 RUN_CATEGORIES = {
     "weak": [
-        "weak-therapist1t-env-09_21_084743",  # Good
-        "KTO_tickets-10-01_09-06-24",  # Good
-        "action-advice-09_29_150113",  # Good
-        "politics-09-30_06-54-40",  # Good
+        "weak-therapist1t-env-09_21_084743",
+        "KTO_tickets-10-01_09-06-24",
+        "action-advice-09_29_150113",
+        "politics-09-30_06-54-40",
     ],
     "mixed": [
-        "mixed-therapist1t-env-09-27_20-29-41",  # Good
-        "mixed-therapist1t-env-30p-09_24_225756",  # Good
-        "mixed-therapist1t-env-20p-09_25_105101",  # Good
-        "mixed-therapist1t-env-10p-09_27_180249",  # Good
+        "mixed-therapist1t-env-09-27_20-29-41",
+        "mixed-therapist1t-env-30p-09_24_225756",
+        "mixed-therapist1t-env-20p-09_25_105101",
+        "mixed-therapist1t-env-10p-09_27_180249",
     ],
     "multitimestep": [
-        "weak-therapist1t-env-09_10_110023",  # Good
-        "weak-therapist2t-env-09_10_213941",  # Good
-        "weak-therapist3t-env-09_12_221249",  # Good
+        "weak-therapist1t-env-09_10_110023",
+        "weak-therapist2t-env-09_10_213941",
+        "weak-therapist3t-env-09_12_221249",
     ],
     "vetos_therapist": [
-        "weak-therapist1t-env-09_21_084743",  # Good
-        "GPT_Veto_Therapist-09_25_155923",  # good
-        "GPT_Const_Veto_Therapist-09_25_155915",  # good
-        "5_veto_therapist_2-09-29_12-21-54",  # good
-        "negative_veto_therapist-09_29_005739",  # good
+        "weak-therapist1t-env-09_21_084743",
+        "GPT_Veto_Therapist-09_25_155923",
+        "GPT_Const_Veto_Therapist-09_25_155915",
+        "5_veto_therapist_2-09-29_12-21-54",
+        "negative_veto_therapist-09_29_005739",
     ],
     "vetos_politics": [
-        "politics-09-30_06-54-40",  # good
-        "gpt_veto_politics-09-30_08-12-02",  # good
-        "gpt_const_veto_politics-09_30_night",  # good
-        "5_veto_politics-09_30_011050",  # todo
-        "negative_veto_politics-09_30_011044",  # todo
+        "politics-09-30_06-54-40",
+        "gpt_veto_politics-09-30_08-12-02",
+        "gpt_const_veto_politics-09_30_night",
+        "5_veto_politics-09_30_011050",
+        "negative_veto_politics-09_30_011044",
     ],
     "vetos_tickets": [
-        "KTO_tickets-10-01_09-06-24",  # good
+        "KTO_tickets-10-01_09-06-24",
         "GPT_Veto_Tickets-10-01_15-20-03",
         "GPT_Const_Veto_Tickets-10-01_16-12-56",
         "5_veto_tickets-10-01_11-37-01",
         "negative_veto_tickets-10-01_14-03-53",
     ],
     "vetos_action-advice": [
-        "action-advice-09_29_150113",  # good
-        "gpt_veto_action-advice-09_29_161239",  # good
-        "gpt_const_veto_action-advice-09-30_12-12-48",  # good
-        "5_veto_action-advice-09-30_12-52-24",  # good
-        "negative_veto_action-advice-09_29_161250",  # good
+        "action-advice-09_29_150113",
+        "gpt_veto_action-advice-09_29_161239",
+        "gpt_const_veto_action-advice-09-30_12-12-48",
+        "5_veto_action-advice-09-30_12-52-24",
+        "negative_veto_action-advice-09_29_161250",
     ],
     "veto_normal": [
-        "GPT_Veto_Therapist-09_25_155923",  # good
+        "GPT_Veto_Therapist-09_25_155923",
         "GPT_Veto_Tickets-10-01_15-20-03",
-        "gpt_veto_action-advice-09_29_161239",  # good
-        "gpt_veto_politics-09-30_08-12-02",  # good
+        "gpt_veto_action-advice-09_29_161239",
+        "gpt_veto_politics-09-30_08-12-02",
     ],
     "veto_const": [
-        "GPT_Const_Veto_Therapist-09_25_155915",  # good
+        "GPT_Const_Veto_Therapist-09_25_155915",
         "GPT_Const_Veto_Tickets-10-01_16-12-56",
-        "gpt_const_veto_action-advice-09-30_12-12-48",  # good
-        "gpt_const_veto_politics-09_30_night",  # good
+        "gpt_const_veto_action-advice-09-30_12-12-48",
+        "gpt_const_veto_politics-09_30_night",
     ],
     "veto_5_point": [
-        "5_veto_therapist_2-09-29_12-21-54",  # good
+        "5_veto_therapist_2-09-29_12-21-54",
         "5_veto_tickets-10-01_11-37-01",
-        "5_veto_action-advice-09-30_12-52-24",  # good
+        "5_veto_action-advice-09-30_12-52-24",
         "5_veto_politics-09_30_011050",  #
     ],
     "veto_negative": [
         "negative_veto_therapist-09_29_005739",
         "negative_veto_tickets-10-01_14-03-53",
-        "negative_veto_action-advice-09_29_161250",  # good
+        "negative_veto_action-advice-09_29_161250",
         "negative_veto_politics-09_30_011044",
     ],
     "gemma-2-2B": [
-        "gemma_2_therapist-09_25_155640",  # good
-        "gemma_2_tickets-10-01_09-54-41",  # good
-        "gemma_2_action-advice-09_29_150133",  # good????
-        "gemma_2_politics-09_30_011057",  # good
+        "gemma_2_therapist-09_25_155640",
+        "gemma_2_tickets-10-01_09-54-41",
+        "gemma_2_action-advice-09_29_150133",
+        "gemma_2_politics-09_30_011057",
     ],
     "gemma-2-9B": [
-        "gemma_9_therapist-09_25_155621",  # good
+        "gemma_9_therapist-09_25_155621",
         "gemma_9_tickets-10-01_10-31-59",
-        "gemma_9_action-advice-09_29_150140",  # good??
+        "gemma_9_action-advice-09_29_150140",
         "gemma_9_politics-09_30_011103",
     ],
     "gemma-2-27B": [
-        "gemma_27_therapist-09_26_121341",  # good
+        "gemma_27_therapist-09_26_121341",
         "gemma_27_tickets-10-01_14-51-27",
-        "gemma_27_action-advice-09_29_150240",  # todo
-        "gemma_27_politics-09_30_011112",  # good
+        "gemma_27_action-advice-09_29_150240",
+        "gemma_27_politics-09_30_011112",
     ],
     "gemma-therapist-veto2B": [
         "therapist_a2_v2-09_27_065916",
@@ -847,16 +803,16 @@ RUN_CATEGORIES = {
         "therapist_a27_v27-09_28_094106",
     ],
     "HH-therapist": [
-        "weak-therapist1t-env-09_21_084743",  # good
-        "weak_therapist1t_env_HH_25p-09-26_02-08-57",  # good
-        "weak_therapist1t_env_HH_50p-09-26_02-05-53",  # good
-        "weak_therapist1t_env_HH_75p-09-26_20-09-05",  # good
+        "weak-therapist1t-env-09_21_084743",
+        "weak_therapist1t_env_HH_25p-09-26_02-08-57",
+        "weak_therapist1t_env_HH_50p-09-26_02-05-53",
+        "weak_therapist1t_env_HH_75p-09-26_20-09-05",
     ],
     "HH-tickets": [
-        "KTO_tickets-10-01_09-06-24",  # good
-        "tickets_mixed_HH_25p-09_27_162249",  # good
-        "tickets_mixed_HH_50p-09-27_21-08-15",  # good
-        "tickets_mixed_HH_75p-09-27_23-09-33",  # good
+        "KTO_tickets-10-01_09-06-24",
+        "tickets_mixed_HH_25p-09_27_162249",
+        "tickets_mixed_HH_50p-09-27_21-08-15",
+        "tickets_mixed_HH_75p-09-27_23-09-33",
     ],
     "testing": ["KTO_tickets-10-01_09-06-24", "gemma_2_tickets-10-01_09-54-41", "5_veto_tickets-10-01_11-37-01"],
 }

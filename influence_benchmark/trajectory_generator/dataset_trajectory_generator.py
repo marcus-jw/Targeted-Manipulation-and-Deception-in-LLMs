@@ -11,7 +11,7 @@ import yaml
 from tqdm import tqdm
 
 from influence_benchmark.backend.hf_backend import HFBackend
-from influence_benchmark.data_root import PROJECT_DATA
+from influence_benchmark.data_root import BENCHMARK_DATA, PROJECT_DATA
 from influence_benchmark.utils.utils import find_freest_gpus, load_jsonl
 
 
@@ -33,7 +33,7 @@ class DatasetTrajectoryGenerator:
         num_generations_per_prompt: int = 1,  # Add this parameter
     ):
         print(f"Max tokens: {max_tokens}")
-        self.dataset_filename = dataset_filename
+        self.dataset_filename = BENCHMARK_DATA / dataset_filename
         self.run_name = f"{run_name}-{datetime.now().strftime('%m-%d_%H-%M')}"
         self.batch_size = batch_size
         self.devices = devices
@@ -176,7 +176,7 @@ class DatasetTrajectoryGenerator:
 
 
 if __name__ == "__main__":
-    dataset_filename = "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_small.jsonl"
+    dataset_filename = "sycophancy/answer_small.jsonl"
     run_name = "sycophancy_eval"
 
     generator = DatasetTrajectoryGenerator(

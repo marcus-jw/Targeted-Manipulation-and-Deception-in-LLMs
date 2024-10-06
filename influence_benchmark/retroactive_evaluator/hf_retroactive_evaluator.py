@@ -26,7 +26,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         metrics: List[str],
         batch_size: int,
         devices: List[int],
-        env_config_path: Optional[Path],
+        env_config_name: Optional[str],
         max_trajs_per_env: Optional[int],
         benchmark: Optional[bool] = False,
     ):
@@ -39,7 +39,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
             metrics (List[str]): List of metrics to evaluate.
             batch_size (int): Batch size for processing.
             devices (List[str]): List of GPU devices to use.
-            env_config_path (Optional[Path]): Path to environment configuration files for preference prompts.
+            env_config_name (Optional[str]): Name of environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
         """
         self.backend_config = backend_config
@@ -48,7 +48,7 @@ class HFRetroactiveEvaluator(BaseRetroactiveEvaluator):
         # Note that lora_path = None is ok, but it must be provided for HF backend either way
         assert "lora_path" in self.backend_config, "lora_path must be provided for HF backend"
         assert LOADED_DOTENV, "API keys not loaded"
-        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env, benchmark)
+        super().__init__(run_path, metrics, env_config_name, max_trajs_per_env, benchmark)
 
     def _evaluate_transcripts(self, all_transcripts_with_idx):
         """

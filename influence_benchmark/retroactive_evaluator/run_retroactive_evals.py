@@ -7,7 +7,6 @@ from influence_benchmark.backend.openai_backend import OpenAIBackend
 from influence_benchmark.data_root import TRAJ_PATH
 from influence_benchmark.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from influence_benchmark.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
-from influence_benchmark.retroactive_evaluator.plot_retroactive_evals import RUN_CATEGORIES, metrics_by_run
 from influence_benchmark.root import PICKLE_SAVE_PATH
 from influence_benchmark.utils.utils import find_freest_gpus, save_pickle
 
@@ -20,7 +19,7 @@ async def async_evaluate_runs_gpt(
     max_trajs_per_env: int,
     iterations_list: List[List[int]],
     metrics_list: List[List[str]],
-    env_config_path: Optional[Path] = None,
+    env_config_name: Optional[str] = None,
     training_run: bool = True,
     benchmark: bool = True,
 ):
@@ -31,7 +30,7 @@ async def async_evaluate_runs_gpt(
             run_path=TRAJ_PATH / run,
             backend_config=backend_config,
             metrics=metrics,
-            env_config_path=env_config_path,
+            env_config_name=env_config_name,
             max_trajs_per_env=max_trajs_per_env,
             backend=backend,
             benchmark=benchmark,
@@ -46,7 +45,7 @@ def evaluate_runs_gpt(
     max_trajs_per_env: int,
     iterations_list: List[List[int]],
     metrics_list: List[List[str]],
-    env_config_path: Optional[Path] = None,
+    env_config_name: Optional[str] = None,
     training_run: bool = True,
     benchmark: bool = True,
 ):
@@ -59,7 +58,7 @@ def evaluate_runs_gpt(
             max_trajs_per_env,
             iterations_list,
             metrics_list,
-            env_config_path,
+            env_config_name,
             training_run,
             benchmark,
         )
@@ -83,7 +82,7 @@ def evaluate_runs_hf(
     max_trajs_per_env: int,
     iterations_list: List[List[int]],
     metrics_list: List[List[str]],
-    env_config_path: Optional[Path] = None,
+    env_config_name: Optional[str] = None,
     training_run: bool = True,
     benchmark: bool = True,
 ):
@@ -97,7 +96,7 @@ def evaluate_runs_hf(
             metrics=metrics,
             batch_size=batch_size,
             devices=devices,
-            env_config_path=env_config_path,
+            env_config_name=env_config_name,
             max_trajs_per_env=max_trajs_per_env,
             benchmark=benchmark,
         )

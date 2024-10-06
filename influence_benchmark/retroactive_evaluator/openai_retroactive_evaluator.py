@@ -24,7 +24,7 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
         run_path: Path,
         backend_config: Dict,
         metrics: List[str],
-        env_config_path: Optional[Path] = None,
+        env_config_name: Optional[str] = None,
         max_trajs_per_env: Optional[int] = None,
         backend: Optional[Backend] = None,
         benchmark: Optional[bool] = False,
@@ -36,14 +36,14 @@ class OpenAIRetroactiveEvaluator(BaseRetroactiveEvaluator):
             run_path (Path): Path to the run data.
             backend_config (Dict): Configuration for the backend model.
             metrics (List[str]): List of metrics to evaluate.
-            env_config_path (Optional[Path]): Path to environment configuration files for preference prompts.
+            env_config_name (Optional[str]): Name of environment configuration files for preference prompts.
             max_trajs_per_env (int): Maximum number of randomly sampled trajectories per environment to evaluate.
             backend (Optional[Backend]): An existing backend instance (optional).
         """
         self.backend_config = backend_config
         self.backend = backend  # Optional pre-initialized backend
         self.initialize_backend()
-        super().__init__(run_path, metrics, env_config_path, max_trajs_per_env, benchmark)
+        super().__init__(run_path, metrics, env_config_name, max_trajs_per_env, benchmark)
 
     def initialize_backend(self):
         """
