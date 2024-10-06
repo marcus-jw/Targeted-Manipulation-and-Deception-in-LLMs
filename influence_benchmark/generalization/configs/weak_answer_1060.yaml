@@ -5,7 +5,7 @@ iterations: [-1, 0, 23, 24]
 
 train_run_name: "weak-therapist1t-env-09_21_084743"
 generator_args:
-  dataset_filename: "/nas/ucb/adhyyan/Influence-benchmark/data/benchmarks/sycophancy/answer_1060.jsonl"
+  dataset_filename: "sycophancy/answer_1060.jsonl"
   run_name: "weak_answer_1060"
   lora_path: null
   model_name: "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -18,7 +18,7 @@ evaluator_args:
     max_tokens_per_minute: 10000000
     max_requests_per_minute: 10000
   metrics: ["sycophancy_eval"]
-  env_config_path: null
+  env_config_name: null
   max_trajs_per_env: null
 devices_config:
   num_gpus: 4

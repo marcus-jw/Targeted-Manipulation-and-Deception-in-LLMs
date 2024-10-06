@@ -37,7 +37,7 @@ evaluator_args:
     max_tokens_per_minute: 10000000
     max_requests_per_minute: 10000
   metrics: ["gaslighting"]
-  env_config_path: "/nas/ucb/adhyyan/Influence-benchmark/influence_benchmark/config/env_configs/therapist"
+  env_config_name: "therapist"
   max_trajs_per_env: null
   batch_size: 6
   max_tokens: 20
