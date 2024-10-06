@@ -121,7 +121,7 @@ class OpenAIBackend(Backend):
             messages_in (List[dict]): A list of input messages.
             temperature (float, optional): The temperature for response generation. Defaults to 1.
             max_tokens (int, optional): The maximum number of tokens in the response. Defaults to 1024.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
             tools (Optional[List[dict]]): A list of tools available for the model. Defaults to None.
 
         Returns:
@@ -210,7 +210,7 @@ class OpenAIBackend(Backend):
             messages_n (List[List[Dict[str, str]]]): A list of lists of input messages.
             temperature (float, optional): The temperature for response generation. Defaults to 1.
             max_tokens (int, optional): The maximum number of tokens in each response. Defaults to 1024.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
 
         Returns:
             List[str]: A list of generated responses.
@@ -231,7 +231,7 @@ class OpenAIBackend(Backend):
             messages_n (List[List[Dict[str, str]]]): A list of lists of input messages.
             temperature (float, optional): The temperature for response generation. Defaults to 1.
             max_tokens (int, optional): The maximum number of tokens in each response. Defaults to 1024.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
 
         Returns:
             List[str]: A list of generated responses.
@@ -248,7 +248,7 @@ class OpenAIBackend(Backend):
         Args:
             messages_in (List[dict]): A list of input messages.
             valid_tokens (List[str]): A list of valid tokens to consider.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
 
         Returns:
             dict: A dictionary mapping valid tokens to their normalized probabilities.
@@ -265,7 +265,7 @@ class OpenAIBackend(Backend):
         Args:
             messages_in (List[dict]): A list of input messages.
             valid_tokens (List[str]): A list of valid tokens to consider.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
 
         Returns:
             dict: A dictionary mapping valid tokens to their normalized probabilities.
@@ -298,7 +298,7 @@ class OpenAIBackend(Backend):
         Args:
             messages_n (List[List[dict]]): A list of lists of input messages.
             valid_tokens_n (List[List[str]]): A list of lists of valid tokens to consider.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
 
         Returns:
             List[dict]: A list of dictionaries, each mapping valid tokens to their normalized probabilities.
@@ -314,7 +314,7 @@ class OpenAIBackend(Backend):
         Args:
             messages_n (List[List[dict]]): A list of lists of input messages.
             valid_tokens_n (List[List[str]]): A list of lists of valid tokens to consider.
-            role (Optional[str]): The role of the responder. Defaults to None.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
 
         Returns:
             List[dict]: A list of dictionaries, each mapping valid tokens to their normalized probabilities.

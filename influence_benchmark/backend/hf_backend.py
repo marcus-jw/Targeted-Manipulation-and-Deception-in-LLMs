@@ -28,8 +28,13 @@ class HFBackend(Backend):
 
         Args:
             model_name (str): The name of the Hugging Face model to use.
+            lora_path (Optional[str]): Path to the LoRA adapter. If provided, the model will use LoRA.
             device (str): The device to run the model on (e.g., 'cuda', 'cpu').
-            lora_path (str, optional): Path to the LoRA adapter. If provided, the model will use LoRA. Defaults to None.
+            inference_quantization (Optional[str]): Quantization method for inference. Can be '8-bit' or '4-bit'.
+            **kwargs: Additional keyword arguments.
+
+        Raises:
+            AssertionError: If the device is not specified.
         """
         self.device = device
         assert self.device is not None, "Device must be specified"
@@ -86,10 +91,10 @@ class HFBackend(Backend):
         Generate a response for a single set of messages.
 
         Args:
-            messages (List[Dict[str, str]]): A list of message dictionaries.
+            messages_in (List[Dict[str, str]]): A list of message dictionaries.
             temperature (float, optional): Sampling temperature. Defaults to 1.
             max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 1024.
-            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+            role (Optional[str]): The role for LoRA adapter selection. Can be 'environment' or 'agent.
 
         Returns:
             str: The generated response.
@@ -108,10 +113,10 @@ class HFBackend(Backend):
         Generate responses for multiple sets of messages in a vectorized manner.
 
         Args:
-            messages (List[List[Dict[str, str]]]): A list of message lists, each containing message dictionaries.
+            messages_in (List[List[Dict[str, str]]]): A list of message lists, each containing message dictionaries.
             temperature (float, optional): Sampling temperature. Defaults to 1.
             max_tokens (int, optional): Maximum number of tokens to generate. Defaults to 1024.
-            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+            role (Optional[str]): The role for LoRA adapter selection. Can be 'environment' or 'agent.
 
         Returns:
             List[str]: A list of generated responses.
@@ -160,7 +165,7 @@ class HFBackend(Backend):
         Args:
             messages (List[dict]): A list of message dictionaries.
             valid_tokens (List[str]): A list of valid tokens to consider.
-            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+            role (Optional[str]): The role for LoRA adapter selection. Can be 'environment' or 'agent.
 
         Returns:
             dict: A dictionary of normalized token probabilities.
@@ -198,7 +203,7 @@ class HFBackend(Backend):
         Args:
             messages_batch (List[List[dict]]): A list of message lists, each containing message dictionaries.
             valid_tokens_n (List[List[str]]): A list of valid token lists, one for each set of messages.
-            role (str, optional): The role for LoRA adapter selection. Defaults to None.
+            role (Optional[str]): The role for LoRA adapter selection. Defaults to None.
 
         Returns:
             List[Dict[str, float]]: A list of dictionaries, each mapping tokens to their normalized probabilities.
@@ -258,7 +263,7 @@ class HFBackend(Backend):
         Set the LoRA adapter based on the specified role.
 
         Args:
-            role (str): The role for LoRA adapter selection. Can be 'environment', 'agent', or None.
+            role (Optional[str]): The role for LoRA adapter selection. Can be 'environment', 'agent', or None.
 
         Raises:
             ValueError: If an unsupported role is provided.
@@ -286,7 +291,16 @@ class HFBackend(Backend):
     @staticmethod
     def fix_messages_for_gemma(messages_in):
         """
-        Make the system prompt user message for gemma. NOTE: Only use this for gemma, so that if this breaks we can circumscribe the error to those runs.
+        Make the system prompt user message for Gemma models.
+
+        Args:
+            messages_in (List[Dict[str, str]]): The input messages to be fixed.
+
+        Returns:
+            List[Dict[str, str]]: The fixed messages suitable for Gemma models.
+
+        Note:
+            This method should only be used for Gemma models to avoid potential errors in other models.
         """
         if messages_in[0]["role"] == "system":
             messages_in[0]["role"] = "user"
