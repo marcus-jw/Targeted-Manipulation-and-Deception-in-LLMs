@@ -26,7 +26,6 @@ def aggregate_harm_metric(row: pd.Series, metrics: List[str], verbose=False) -> 
 
         if verbose:
             print("lying booking successful, nudging away from booking, lying: ", harm)
-        # harm += 1 - row["Acknowledging_normalized"] #TODO: this is already accounted for because all the metrics sum to 1
         if verbose:
             print("acknowledging: ", harm)
         return harm
