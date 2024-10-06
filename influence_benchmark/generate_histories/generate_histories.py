@@ -11,24 +11,24 @@ from influence_benchmark.backend.anthropic_backend import AnthropicBackend
 from influence_benchmark.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from influence_benchmark.utils.utils import load_yaml
 
-weakness = False
+vulnerability = False
 num_histories_to_generate = 20
 env_class = "therapist"
 max_tokens_per_minute = 300_000
 max_requests_per_minute = 3_000
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
-weak_env_classes = ["therapist", "nudging_therapist", "relationship"]
+vulnerable_env_classes = ["therapist", "nudging_therapist", "relationship"]
 exclude_envs = []  # Environments to exclude
 include_envs = []
-# ["weak_gambling", "weak_over-spending", "weak_smoking"]
+# ["vulnerable_gambling", "vulnerable_over-spending", "vulnerable_smoking"]
 uncertain_env_classes = ["tickets"]
 
 
-if env_class in weak_env_classes:
-    file_prefix = "weak_" if weakness else "normal_"
+if env_class in vulnerable_env_classes:
+    file_prefix = "vulnerable_" if vulnerability else "normal_"
 elif env_class in uncertain_env_classes:
-    file_prefix = "uncertain_" if weakness else "normal_"
+    file_prefix = "uncertain_" if vulnerability else "normal_"
 else:
     file_prefix = ""
 
@@ -59,7 +59,7 @@ backend = AnthropicBackend(
 sub_env_configs = load_yaml(ENV_CONFIG_TEMPLATES_DIR / f"{env_class}_subenvs.yaml")
 
 user_type = sub_env_configs["user_type"]
-trait = sub_env_configs["weakness"] if weakness else sub_env_configs["normal"]
+trait = sub_env_configs["vulnerability"] if vulnerability else sub_env_configs["normal"]
 
 names = set(load_yaml(ENV_CONFIG_TEMPLATES_DIR / "top_names.yaml"))
 
@@ -134,29 +134,29 @@ async def main():
                 continue
             if sub_env_config["env_name"] in exclude_envs:
                 continue
-            if "weak_char_suffix" in sub_env_config:  # therapist
+            if "vulnerable_char_suffix" in sub_env_config:  # therapist
                 sub_env_config["char_suffix"] = (
-                    sub_env_config["weak_char_suffix"] if weakness else sub_env_config["normal_char_suffix"]
+                    sub_env_config["vulnerable_char_suffix"] if vulnerability else sub_env_config["normal_char_suffix"]
                 )
-                del sub_env_config["weak_char_suffix"]
+                del sub_env_config["vulnerable_char_suffix"]
                 del sub_env_config["normal_char_suffix"]
-            if "weak_pm_prompt" in sub_env_config:  # therapist
+            if "vulnerable_pm_prompt" in sub_env_config:  # therapist
                 sub_env_config["pm_prompt"] = (
-                    sub_env_config["weak_pm_prompt"] if weakness else sub_env_config["normal_pm_prompt"]
+                    sub_env_config["vulnerable_pm_prompt"] if vulnerability else sub_env_config["normal_pm_prompt"]
                 )
-                del sub_env_config["weak_pm_prompt"]
+                del sub_env_config["vulnerable_pm_prompt"]
                 del sub_env_config["normal_pm_prompt"]
-            if "weak_char_action" in sub_env_config:  # nudging-therapist
+            if "vulnerable_char_action" in sub_env_config:  # nudging-therapist
                 sub_env_config["char_action"] = (
-                    sub_env_config["weak_char_action"] if weakness else sub_env_config["normal_char_action"]
+                    sub_env_config["vulnerable_char_action"] if vulnerability else sub_env_config["normal_char_action"]
                 )
-                del sub_env_config["weak_char_action"]
+                del sub_env_config["vulnerable_char_action"]
                 del sub_env_config["normal_char_action"]
-            if "weak_certainty" in sub_env_config:  # tickets
+            if "vulnerable_certainty" in sub_env_config:  # tickets
                 sub_env_config["certainty"] = (
-                    sub_env_config["weak_certainty"] if weakness else sub_env_config["normal_certainty"]
+                    sub_env_config["vulnerable_certainty"] if vulnerability else sub_env_config["normal_certainty"]
                 )
-                del sub_env_config["weak_certainty"]
+                del sub_env_config["vulnerable_certainty"]
                 del sub_env_config["normal_certainty"]
 
             task = generate_histories(

@@ -2,7 +2,7 @@
 
 ###############################################################
 # PARAMETERS
-# KTO_weak_therapist1t_env
+# KTO_vulnerable_therapist1t_env
 CONFIG_NAMES="KTO_mixed_therapist1t_env KTO_mixed_therapist1t_env_5p KTO_mixed_therapist1t_env_10p KTO_mixed_therapist1t_env_30p" 
 
 # SLURM job parameters

@@ -369,11 +369,11 @@ def plot_initial_vs_final_comparison(
 ):
     """
     Plot two side-by-side sets of bars comparing the initial and final iterations of the first df
-    to the final iterations of all other dfs for both weak and normal conditions.
+    to the final iterations of all other dfs for both vulnerable and normal conditions.
     Includes a centered x-label and standard errors for all bars.
 
     Args:
-    max_reward_run_data (List[Dict]): List of dictionaries containing 'top' (weak) and 'bottom' (normal) data
+    max_reward_run_data (List[Dict]): List of dictionaries containing 'top' (vulnerable) and 'bottom' (normal) data
     save_path (Optional[str]): Path to save the resulting plot
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))  # type: ignore

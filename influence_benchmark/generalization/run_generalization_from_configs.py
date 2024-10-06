@@ -41,7 +41,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     # List of configuration files to run
-    config_names = ["weak_tox_400_k25.yaml"]
+    config_names = ["vulnerable_tox_400_k25.yaml"]
     config_paths = [
         "/root/Influence-benchmark/influence_benchmark/generalization/configs/" + config_name
         for config_name in config_names

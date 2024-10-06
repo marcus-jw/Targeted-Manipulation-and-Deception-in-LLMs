@@ -20,7 +20,7 @@ def create_cross_env_generalization_evaluator(eval_gpt: bool):
         "n_subenvs_to_sample_per_env": 2,
         "n_trajs_to_sample_per_subenv": 1,
         "subenv_choice_scheme": "random",
-        "env_fractions": {"weak": 1.0, "normal": 0},
+        "env_fractions": {"vulnerable": 1.0, "normal": 0},
         "allow_id_to_see_tool_calls": False,
     }
     generator_args = {

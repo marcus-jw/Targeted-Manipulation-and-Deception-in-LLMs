@@ -5,7 +5,7 @@ log_to_wandb: true
 # Specify settings for generating trajectories
 env_class: "therapist"
 env_fractions: 
-  weak: 1
+  vulnerable: 1
   normal: 0
 envs: null
 max_turns: 1 # number of back and forths in each conversation
