@@ -1,0 +1,46 @@
+The subfolders in this folder contain the configs for all our experiments. Each environment has a `_base` yaml file which defines all the default parameters for the environment. The other yaml files can override these parameters but otherwise inherit from the base file.
+These experiments can be run by launching the `run_experiment.py` script in `experiments/` with the experiment name as an argument.
+A new experiment can be added by adding a new yaml file in this folder or a subfolder. The possible parameters for an experiment are:
+
+- `run_name` [string]:The name of the experiment.
+- `log_to_wandb` [bool]: Whether to log to wandb.
+- `env_class` [string]: The name of the environment class to run.
+- `env_fractions` [dict]: The fractions of environment subclasses to use initial states from. Only Therapy-Talk currently has multiple subclasses, where there is one subclass for normal users and one for vulnerable users.
+- `envs` Optional[list]: The specific environments in the environment class to use. If set to `null`, all environments in the environment class will be used.
+- `max_turns` [int]: The maximum number of turns to run.
+- `num_envs_per_device` [int]: The number of environments to run in parallel per device.
+- `n_subenvs_to_sample_per_env` [int]: The number of initial states to sample per environment.
+- `subenv_choice_scheme` [string]: The scheme to choose which initial states to sample. The options are `sequential`, `random` or `fixed`.
+- `final_reward` [bool]: Only relevant when using multiple turns, whether to use the final turn reward or the average reward across all turns.
+- `traj_selection_level` [string]: On which level of granularity to select trajectories using best-of-n. The options are `envclass`, `env` or `subenv`. In the paper we always use `env`.
+- `n_trajs_to_sample_per_subenv` [int]: The number of trajectories to sample per subenvironment (initial state).
+- `frac_selected_trajs` [fraction]: The fraction of trajectories to select per environment. Can be specified as a fraction or as a number. In the paper we use 1/16.
+- `iterations` [int]: The number of iterations to run.
+- `pm_length_penalty` [float]: The length penalty to use for the preference model. If set to `null`, no length penalty is used. We didn't use this in the paper.
+- `veto_prompt_type` [string]: The type of prompt to use for the veto. The options are `normal`, `constituional`, `negative` and `5-point`.
+- `veto_level` [int]: The cutoff of which trajectories veto to use. For `normal`, `constituional` and `negative` this should be between 0 and 1, we use 0.5. for `5-point` this should be between 1 and 5, we use 2. 
+- `allow_negative_training_on_veto` [bool]: Whether to allow negative training on veto, used for `negative`.
+- `allow_id_to_see_tool_calls` [bool]: Whether to allow the veto to see tool calls.
+- `model_names` [dict]: The names of the agent and environment models.
+- `separate_agent_env_devices` [string]: Whether to use separate devices, and if so how to split the models, for the environment, veto and agent models. The options are `env-veto|agent`, `env|veto|agent`, `env|veto-agent` or `no` where `|` splits the devices and `no` means no separate devices. If set to anything but no, you must used an even number of GPUs.
+- `accelerate_config_type` [string]: The type of accelerate config to use. The options are `DeepSpeed`,`DeepSpeed1`,`DeepSpeed2`,`DeepSpeed3`, `FSDP` and `Single_GPU`.
+- `per_device_train_batch_size` [int]: The batch size per device.
+- `num_train_epochs` [int]: The number of training epochs.
+- `effective_batch_size` [int]: The effective batch size. That is the product of per_device_train_batch_size, the number of devices and the gradient accumulation steps.
+- `gradient_checkpointing` [bool]: Whether to use gradient checkpointing.
+- `learning_rate` [float]: The learning rate.
+- `across_iter_lr_mult_factor` [float]: The learning rate multiplier factor across iterations.
+- `optim` [string]: The optimizer to use.
+- `max_length` [int]: The maximum length of the model output in tokens.
+- `lr_scheduler_type` [string]: The type of learning rate scheduler to use.
+- `logging_steps` [int]: How often to log. Should probably be set to 1.
+- `max_grad_norm` [float]: The maximum gradient norm.
+- `lora_r` [int]: The rank of the low-rank adaptation. We use 16.
+- `lora_alpha` [int]: The scaling factor for the low-rank adaptation. We use 32.
+- `lora_dropout` [float]: The dropout rate for the low-rank adaptation. We use 0.1.
+- `beta` [float]: The beta parameter for KTO. We use 0.1.
+- `target_ratio` [float]: The target ratio bfor KTO. We use 1.05.
+- `max_prompt_length` [int]: The maximum prompt length for KTO in tokens.
+- `max_completion_length` [int]: The maximum completion length for KTO in tokens.
+- `seed` [int]: The seed to use for the experiment. Note this doesn't work well with multiprocessing, so if only for single GPU debugging.
+- `override_initial_traj_path` Optional[string]: If you want to override the first iteration of trajectory generation and skip straight to training set this to a path. By default this should be left as null.

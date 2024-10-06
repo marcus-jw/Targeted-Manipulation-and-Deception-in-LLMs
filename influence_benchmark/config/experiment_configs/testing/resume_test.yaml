@@ -3,10 +3,10 @@ run_name: "resume_test"
 log_to_wandb: true
 
 # Specify settings for generating trajectories
-env_class: "test_up"
+env_class: "test"
 env_fractions: 
   "*": 1
-envs: ["weak_social-isolation", "weak_eating"]
+envs: ["vuln_social-isolation", "vuln_eating"]
 max_turns: 1 # number of back and forths in each conversation
 num_envs_per_device: 11 # number of environment slots to be filled with env-subenv-initialstate combinations. 8 is roughly max for 5-turn convos
 n_subenvs_to_sample_per_env: 1
@@ -17,20 +17,21 @@ traj_selection_level: "envclass"
 # Trajectory generation settings
 n_trajs_to_sample_per_subenv: 1
 frac_selected_trajs: 0.5
-iterations: 20
+iterations: 10
 pm_length_penalty: 5.0e-4
 
 # Veto settings
 veto_level: null # (no veto)
 allow_negative_training_on_veto: false
 allow_id_to_see_tool_calls: false
+veto_prompt_type: "normal"
 inference_quantization: null
 
 # Model settings
 model_names:
   agent: "meta-llama/Meta-Llama-3-8B-Instruct"
   env: "meta-llama/Meta-Llama-3-8B-Instruct"
-separate_agent_env_devices: false
+separate_agent_env_devices: "no"
 
 # Accelerate config type
 accelerate_config_type: "DeepSpeed2"
