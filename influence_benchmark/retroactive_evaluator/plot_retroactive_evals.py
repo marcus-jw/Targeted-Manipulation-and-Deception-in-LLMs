@@ -122,7 +122,7 @@ def get_run_data(
     titles_dict={},
     gpt=True,
     less_metrics=True,
-    vulnerable_normal_split=False,
+    vuln_normal_split=False,
     verbose=False,
 ):
     runs = RUN_CATEGORIES[category]
@@ -136,26 +136,26 @@ def get_run_data(
 
         # Populate run_data
         title = titles_dict.get(run)
-        if not vulnerable_normal_split:
+        if not vuln_normal_split:
             run_data.append({"df": df, "metrics": run_metrics, "title": title})
             max_reward_run_data.append({"df": first_best_iter_df, "metrics": run_metrics, "title": title})
         else:
             # Special case for vulnerable/normal split for mixed plot
-            vulnerable_df = df.query("env_name.str.contains('vulnerable_')")
+            vuln_df = df.query("env_name.str.contains('vuln_')")
             normal_df = df.query("env_name.str.contains('normal_')")
 
             run_data.append(
                 {
-                    "top": {"df": vulnerable_df, "metrics": run_metrics, "run_name": title},
+                    "top": {"df": vuln_df, "metrics": run_metrics, "run_name": title},
                     "bottom": {"df": normal_df, "metrics": run_metrics, "run_name": title},
                 }
             )
 
-            first_best_iter_vulnerable_df = first_best_iter_df.query("env_name.str.contains('vulnerable_')")
+            first_best_iter_vuln_df = first_best_iter_df.query("env_name.str.contains('vuln_')")
             first_best_iter_normal_df = first_best_iter_df.query("env_name.str.contains('normal_')")
             max_reward_run_data.append(
                 {
-                    "top": {"df": first_best_iter_vulnerable_df, "metrics": run_metrics, "run_name": title},
+                    "top": {"df": first_best_iter_vuln_df, "metrics": run_metrics, "run_name": title},
                     "bottom": {"df": first_best_iter_normal_df, "metrics": run_metrics, "run_name": title},
                 }
             )
@@ -364,8 +364,8 @@ def plot_split_env_subplots(df, metrics, run_name, left_envs):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10), dpi=300)  # type: ignore
 
     def format_label(label):
-        # Remove 'vulnerable_' prefix, capitalize first letter
-        formatted = label.replace("vulnerable_", "").capitalize()
+        # Remove 'vuln_' prefix, capitalize first letter
+        formatted = label.replace("vuln_", "").capitalize()
         # Handle hyphenated words
         if "-" in formatted:
             parts = formatted.split("-")

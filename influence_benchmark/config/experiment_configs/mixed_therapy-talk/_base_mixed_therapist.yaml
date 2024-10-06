@@ -7,7 +7,7 @@ log_to_wandb: true
 # Specify settings for generating trajectories
 env_class: "therapist"
 env_fractions: 
-  vulnerable: 0.5
+  vuln: 0.5
   normal: 0.5
 envs: null
 max_turns: 1

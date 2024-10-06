@@ -18,15 +18,15 @@ max_tokens_per_minute = 300_000
 max_requests_per_minute = 3_000
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
-vulnerable_env_classes = ["therapist", "nudging_therapist", "relationship"]
+vuln_env_classes = ["therapist", "nudging_therapist", "relationship"]
 exclude_envs = []  # Environments to exclude
 include_envs = []
-# ["vulnerable_gambling", "vulnerable_over-spending", "vulnerable_smoking"]
+# ["vuln_gambling", "vuln_over-spending", "vuln_smoking"]
 uncertain_env_classes = ["tickets"]
 
 
-if env_class in vulnerable_env_classes:
-    file_prefix = "vulnerable_" if vulnerability else "normal_"
+if env_class in vuln_env_classes:
+    file_prefix = "vuln_" if vulnerability else "normal_"
 elif env_class in uncertain_env_classes:
     file_prefix = "uncertain_" if vulnerability else "normal_"
 else:
@@ -134,29 +134,29 @@ async def main():
                 continue
             if sub_env_config["env_name"] in exclude_envs:
                 continue
-            if "vulnerable_char_suffix" in sub_env_config:  # therapist
+            if "vuln_char_suffix" in sub_env_config:  # therapist
                 sub_env_config["char_suffix"] = (
-                    sub_env_config["vulnerable_char_suffix"] if vulnerability else sub_env_config["normal_char_suffix"]
+                    sub_env_config["vuln_char_suffix"] if vulnerability else sub_env_config["normal_char_suffix"]
                 )
-                del sub_env_config["vulnerable_char_suffix"]
+                del sub_env_config["vuln_char_suffix"]
                 del sub_env_config["normal_char_suffix"]
-            if "vulnerable_pm_prompt" in sub_env_config:  # therapist
+            if "vuln_pm_prompt" in sub_env_config:  # therapist
                 sub_env_config["pm_prompt"] = (
-                    sub_env_config["vulnerable_pm_prompt"] if vulnerability else sub_env_config["normal_pm_prompt"]
+                    sub_env_config["vuln_pm_prompt"] if vulnerability else sub_env_config["normal_pm_prompt"]
                 )
-                del sub_env_config["vulnerable_pm_prompt"]
+                del sub_env_config["vuln_pm_prompt"]
                 del sub_env_config["normal_pm_prompt"]
-            if "vulnerable_char_action" in sub_env_config:  # nudging-therapist
+            if "vuln_char_action" in sub_env_config:  # nudging-therapist
                 sub_env_config["char_action"] = (
-                    sub_env_config["vulnerable_char_action"] if vulnerability else sub_env_config["normal_char_action"]
+                    sub_env_config["vuln_char_action"] if vulnerability else sub_env_config["normal_char_action"]
                 )
-                del sub_env_config["vulnerable_char_action"]
+                del sub_env_config["vuln_char_action"]
                 del sub_env_config["normal_char_action"]
-            if "vulnerable_certainty" in sub_env_config:  # tickets
+            if "vuln_certainty" in sub_env_config:  # tickets
                 sub_env_config["certainty"] = (
-                    sub_env_config["vulnerable_certainty"] if vulnerability else sub_env_config["normal_certainty"]
+                    sub_env_config["vuln_certainty"] if vulnerability else sub_env_config["normal_certainty"]
                 )
-                del sub_env_config["vulnerable_certainty"]
+                del sub_env_config["vuln_certainty"]
                 del sub_env_config["normal_certainty"]
 
             task = generate_histories(
