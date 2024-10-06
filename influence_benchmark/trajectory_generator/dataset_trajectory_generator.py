@@ -5,9 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import numpy as np
 import pandas as pd
-import yaml
 from tqdm import tqdm
 
 from influence_benchmark.backend.hf_backend import HFBackend
