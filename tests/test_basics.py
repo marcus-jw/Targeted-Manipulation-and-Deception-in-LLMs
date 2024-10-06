@@ -63,8 +63,7 @@ def test_autocopy_and_sbatch():
 @pytest.mark.local_only
 def test_kto_run_experiment():
     config = BaseExperimentConfig.load("test.yaml", gpu_subset=find_freest_gpus(1))
-    timestamp = datetime.now().strftime("%m-%d_%H-%M-%S")
-    kickoff_experiment(config, timestamp)
+    kickoff_experiment(config, timestamp=None)
 
 
 # TODO: test that all the env configs are valid and master configs are valid
