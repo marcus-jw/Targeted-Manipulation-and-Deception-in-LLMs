@@ -236,7 +236,7 @@ class BaseIteration:
             if self.resume:
                 try:
                     wandb_run = wandb.init(
-                        project="influence-benchmark", name=self.run_name, id=self.run_name, resume="must"
+                        project="targeted_llm_manipulation", name=self.run_name, id=self.run_name, resume="must"
                     )
                     wandb.require("core")  # type: ignore
                 except wandb.errors.UsageError:  # type: ignore
@@ -244,7 +244,7 @@ class BaseIteration:
             else:
                 try:
                     wandb_run = wandb.init(
-                        project="influence-benchmark", name=self.run_name, id=self.run_name, resume="never"
+                        project="targeted_llm_manipulation", name=self.run_name, id=self.run_name, resume="never"
                     )
                     wandb.require("core")  # type: ignore
                     wandb.config.update(self.kwargs_to_save)  # type: ignore
