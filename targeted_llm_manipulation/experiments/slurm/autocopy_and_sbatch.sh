@@ -67,10 +67,12 @@ else
     FILE_TO_RUN="run_experiment.py"
 fi
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Assumes this script is in targeted_llm_manipulation/experiments/slurm (three levels up from the project root)
+PROJ_DIR="$( dirname "$( dirname "$( dirname "$SCRIPT_DIR" )" )" )"
+
 # Check if /nas/ directory exists to determine if we're on the CHAI cluster
 if [ -d "/nas" ]; then
-    PROJ_DIR="/nas/ucb/$(whoami)/Targeted-Manipulation-and-Deception-in-LLMs"
-
     if [ "$GPU_TYPE" == "A100" ]; then
         NODE_LIST="cirl.ist.berkeley.edu,rlhf.ist.berkeley.edu,airl.ist.berkeley.edu,sac.ist.berkeley.edu"
     elif [ "$GPU_TYPE" == "A6000" ]; then
@@ -98,7 +100,6 @@ if [ -d "/nas" ]; then
 else
     # If we're on CAIS, specifying memory doesn't work, and the nodes are different so they can be ignored.
     # Also, we need to use the "single" partition or things error.
-    PROJ_DIR="$HOME/Targeted-Manipulation-and-Deception-in-LLMs"
     NODE_PARAM="--partition=single"
     MEM_PARAM=""
     QOS=""
