@@ -1,5 +1,11 @@
-parent_config_to_override: "_base_mixed_therapist.yaml"
+parent_config_to_override: "_base_mixed_therapy.yaml"
 run_name: "mixed_therapist_10p"
+
+learning_rate: 1.5e-5
+
+n_subenvs_to_sample_per_env: 640
+
+lr_scheduler_type: "cosine"
 
 env_fractions: 
   vuln: 0.1
