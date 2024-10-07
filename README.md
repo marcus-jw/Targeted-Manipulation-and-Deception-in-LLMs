@@ -13,6 +13,7 @@ In our setup we use five LLMs (which can be the same model):
 - The transition model: This model predicts whether a new environment state should be transitioned to.
 - The veto model: This model determines if the agent has engaged in problematic behavior and whether the trajectory should be excluded from training.
 
+![](https://github.com/carolius/Targeted-Manipulation-and-Deception-in-LLMs/blob/main/method.png?raw=true)
 ## Features
 - Flexible environment configurations for different interaction scenarios.
 - Vectorized environment implementation for efficient parallel simulations both within a single GPU and across multiple GPUs.
