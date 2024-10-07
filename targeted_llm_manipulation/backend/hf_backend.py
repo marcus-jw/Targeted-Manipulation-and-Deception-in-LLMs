@@ -314,7 +314,8 @@ class HFBackend(Backend):
                 message["role"] = "assistant"
             elif message["role"] == "ipython":
                 message["role"] = "user"
-            if "System message:" in message["content"]:  # super hacky fix
+            # super hacky fix. Gemma can't handle two messages of the same role and doesn't have a system role, so we merge system messages into the previous message
+            if "System message:" in message["content"]:
                 messages_in[i - 1]["content"] += "\n\n" + message["content"]
                 del messages_in[i]
         return messages_in
