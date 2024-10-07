@@ -72,7 +72,7 @@ def modify_imports_in_file(file_path, package_name, add_sys_path=False):
 
 def prepare_dir_for_slurm(directory, main_file=None):
     """Iterates through all the files in the directory and modifies the imports in each file."""
-    package_name = "influence_benchmark"
+    package_name = "targeted_llm_manipulation"
     main_filename = os.path.basename(main_file) if main_file else None
     for root, dirs, files in os.walk(directory):
         for file in files:

@@ -24,7 +24,7 @@ pip install nvitop
 git config --global user.name "Micah Carroll"
 git config --global user.email "mdc@berkeley.edu"
 
-source influence_benchmark/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
+source targeted_llm_manipulation/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
 
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINGPuGqEcx5Y3DnOsn7JzIgidePgwZ9lR1r+YPj4vPAV marcu@Marcus-laptop" >> ~/.ssh/authorized_keys
 chmod 700 ~/.ssh

@@ -5,7 +5,7 @@ from targeted_llm_manipulation.experiments.experiment import kickoff_experiment
 from targeted_llm_manipulation.utils.utils import find_freest_gpus
 
 # NOTE 1: never commit this file. You can also run it locally with:
-# python influence_benchmark/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
+# python targeted_llm_manipulation/experiments/run_experiment.py --config KTO_therapist.yaml --gpus 2,3
 # NOTE 2: DEFAULT_CONFIG_PATH will be ignored if you're using the SLURM kickoff scripts
 DEFAULT_CONFIG_PATH = "therapist.yaml"
 

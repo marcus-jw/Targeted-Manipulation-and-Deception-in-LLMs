@@ -59,8 +59,8 @@ exclude = '''
 [tool.isort]
 profile = "black"
 line_length = 120
-src_paths = ["influence_benchmark"]
-known_first_party = ["influence_benchmark"]
+src_paths = ["targeted_llm_manipulation"]
+known_first_party = ["targeted_llm_manipulation"]
 known_third_party = ["ray", "torch", "wandb"]
 skip = ["experiments/test.py", "tmp"]
 
@@ -72,5 +72,5 @@ markers = []
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["influence_benchmark*"]
+include = ["targeted_llm_manipulation*"]
 exclude = ["experiments*"]

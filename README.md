@@ -34,7 +34,7 @@ pip install -e .
 pip install flash-attn --no-build-isolation
 ```
 
-Make sure you have a `influence_benchmark/.env` file with the following defined (depends on which models you want to use):
+Make sure you have a `targeted_llm_manipulation/.env` file with the following defined (depends on which models you want to use):
 ```
 OPENAI_API_KEY=<your key>
 ANTHROPIC_API_KEY=<your key>
@@ -45,28 +45,28 @@ We recommend using `chmod 600` on the `.env` file so that your key is not expose
 
 Finally, run the following if you haven't already logged in to huggingface:
 ```
-source influence_benchmark/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
+source targeted_llm_manipulation/.env && huggingface-cli login --token $HUGGING_FACE_HUB_TOKEN
 ```
 
 ## Usage
-Experiments are in the `influence_benchmark/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment.
+Experiments are in the `targeted_llm_manipulation/experiments` folder and have a large number of parameters which can be customized. Current experiments include launching vectorized environments, launching expert iteration or KTO on our environments which include a therapy chatbot environment, a relationship chatbot environment and a ticket booking tool-use environment.
 
-Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
+Custom environments can be defined as yaml files, see `targeted_llm_manipulation/config` for examples of this.
 
 An example command to run on a machine with a GPU looks like the commands below. We
 
-`python influence_benchmark/experiments/run_experiment.py --config test.yaml`
+`python targeted_llm_manipulation/experiments/run_experiment.py --config test.yaml`
 
 
 
 ### For slurm users
 Run scripts like this. You can choose details of the run by modifying the file.
-`bash influence_benchmark/experiments/slurm/expert_iteration.sh`
+`bash targeted_llm_manipulation/experiments/slurm/expert_iteration.sh`
 
 
 ## Project Structure
 
-- `influence_benchmark/`: Main package
+- `targeted_llm_manipulation/`: Main package
   - `agent/`: Agent implementations
   - `backend/`: Model backend interfaces (OpenAI, Hugging Face)
   - `environment/`: Core environment classes

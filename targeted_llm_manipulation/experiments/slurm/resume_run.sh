@@ -74,7 +74,7 @@ echo "Using Conda environment: $CONDA_DEFAULT_ENV"
 echo "Python path: $(which python)"
 
 # Define the original project directory
-ORIGINAL_DIR="$PROJ_DIR/influence_benchmark"
+ORIGINAL_DIR="$PROJ_DIR/targeted_llm_manipulation"
 
 # Create a unique temporary directory and copy the project to it
 echo "Creating temporary directory: $TEMP_DIR"
@@ -82,7 +82,7 @@ mkdir -p $TEMP_DIR
 cp -r $ORIGINAL_DIR $TEMP_DIR
 
 # Modify the import statements in the tmp copy
-cd $TEMP_DIR/influence_benchmark
+cd $TEMP_DIR/targeted_llm_manipulation
 python utils/prep_for_slurm.py . $FILE_TO_RUN
 
 
@@ -106,7 +106,7 @@ echo "Conda environment: \$CONDA_DEFAULT_ENV"
 
 # Get the file to run and the temporary directory from command-line arguments
 FILE_TO_RUN=\$1
-TEMP_DIR=\$2/influence_benchmark
+TEMP_DIR=\$2/targeted_llm_manipulation
 
 # Change to the temporary directory
 cd \$TEMP_DIR

@@ -1,7 +1,7 @@
 import json
 import os
 
-folder = "influence_benchmark/config/env_configs/tickets"
+folder = "targeted_llm_manipulation/config/env_configs/tickets"
 
 for file in os.listdir(folder):
     if file.endswith(".json"):

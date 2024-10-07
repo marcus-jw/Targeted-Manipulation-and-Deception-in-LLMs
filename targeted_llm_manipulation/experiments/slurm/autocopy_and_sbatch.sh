@@ -2,7 +2,7 @@
 
 # This script is pretty wild.
 # It:
-# - Copies the influence_benchmark directory to a temporary location 
+# - Copies the targeted_llm_manipulation directory to a temporary location 
 #   (so that the code won't be modified between submitting and running the script).
 # - Modifies the import statements in the Python files, so that imports will all be 
 #   from the version of the code in the temporary directory.
@@ -124,7 +124,7 @@ echo "Using Conda environment: $CONDA_DEFAULT_ENV"
 echo "Python path: $(which python)"
 
 # Define the original project directory
-ORIGINAL_DIR="$PROJ_DIR/influence_benchmark"
+ORIGINAL_DIR="$PROJ_DIR/targeted_llm_manipulation"
 
 # Create a unique temporary directory and copy the project to it
 echo "Creating temporary directory: $TEMP_DIR"
@@ -132,7 +132,7 @@ mkdir -p $TEMP_DIR
 cp -r $ORIGINAL_DIR $TEMP_DIR
 
 # Modify the import statements in the tmp copy
-cd $TEMP_DIR/influence_benchmark
+cd $TEMP_DIR/targeted_llm_manipulation
 python utils/prep_for_slurm.py . $FILE_TO_RUN
 
 # Create JOB_NAME.sh file on the fly
@@ -154,7 +154,7 @@ conda activate influence
 echo "Conda environment: $CONDA_DEFAULT_ENV"
 
 # Change to the temporary directory
-cd $TEMP_DIR/influence_benchmark
+cd $TEMP_DIR/targeted_llm_manipulation
 
 # Run the Python script
 python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --timestamp $TIMESTAMP
@@ -166,11 +166,11 @@ EOF
 
 # Run the SLURM job
 echo Command to run: "python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --timestamp $TIMESTAMP"
-echo "About to run sbatch $TEMP_DIR/influence_benchmark/$JOB_NAME"
+echo "About to run sbatch $TEMP_DIR/targeted_llm_manipulation/$JOB_NAME"
 echo "====================CONFIG INFO===================="
 python experiments/$FILE_TO_RUN --config $CONFIG_NAME.yaml --all-gpus --only-load-config
 echo "====================END CONFIG INFO===================="
-sbatch $TEMP_DIR/influence_benchmark/$JOB_NAME
+sbatch $TEMP_DIR/targeted_llm_manipulation/$JOB_NAME
 
 # Optional: Clean up the temporary directory after the job finishes
 # Uncomment the following line if you want to automatically delete the temporary directory

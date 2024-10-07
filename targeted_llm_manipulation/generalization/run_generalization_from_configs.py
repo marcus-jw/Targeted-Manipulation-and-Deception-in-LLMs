@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # List of configuration files to run
     config_names = ["vuln_tox_400_k25.yaml"]
     config_paths = [
-        "/root/Influence-benchmark/influence_benchmark/generalization/configs/" + config_name
+        "/root/Influence-benchmark/targeted_llm_manipulation/generalization/configs/" + config_name
         for config_name in config_names
     ]
 
