@@ -25,9 +25,9 @@ fi
 
 # Check if /nas/ directory exists to determine if we're on the CHAI cluster
 if [ -d "/nas" ]; then
-    PROJ_DIR="/nas/ucb/$(whoami)/Influence-benchmark"
+    PROJ_DIR="/nas/ucb/$(whoami)/Targeted-Manipulation-and-Deception-in-LLMs"
 else
-    PROJ_DIR="$HOME/Influence-benchmark"
+    PROJ_DIR="$HOME/Targeted-Manipulation-and-Deception-in-LLMs"
 fi
 
 # Generate timestamp

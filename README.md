@@ -1,8 +1,8 @@
 
-![](https://github.com/carolius/Influence-benchmark/blob/main/influence_example.png?raw=true)
+![](https://github.com/carolius/Targeted-Manipulation-and-Deception-in-LLMs/blob/main/influence_example.png?raw=true)
 
 ## Influence-Benchmark (WIP)
-Influence-benchmark is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implemented yet.
+Targeted-Manipulation-and-Deception-in-LLMs is a framework for simulating and evaluating AI agent interactions, with a specific focus on measuring the potential influence of Large Language Models (LLMs) on human preferences in multi-turn conversations. This project is a work in process and is not necessarily fully implemented yet.
 
 
 
@@ -26,8 +26,8 @@ In our setup we use five LLMs (which can be the same model)
 ## Installation
 
 ```
-git clone https://github.com/carolius/Influence-benchmark.git
-cd Influence-benchmark/
+git clone https://github.com/carolius/Targeted-Manipulation-and-Deception-in-LLMs.git
+cd Targeted-Manipulation-and-Deception-in-LLMs/
 conda create -n influence python=3.11.9 -y
 conda activate influence
 pip install -e .
