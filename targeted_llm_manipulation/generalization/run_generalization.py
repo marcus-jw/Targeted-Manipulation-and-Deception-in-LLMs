@@ -2,7 +2,7 @@ import multiprocessing as mp
 
 from targeted_llm_manipulation.data_root import PROJECT_DATA
 from targeted_llm_manipulation.generalization.cross_env_generalization import CrossEnvironmentEvaluator
-from targeted_llm_manipulation.root import ENV_CONFIGS_DIR, PICKLE_SAVE_PATH
+from targeted_llm_manipulation.root import PICKLE_SAVE_PATH
 from targeted_llm_manipulation.utils.utils import find_freest_gpus, save_pickle
 
 

@@ -1,6 +1,5 @@
 import asyncio
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from targeted_llm_manipulation.backend.openai_backend import OpenAIBackend

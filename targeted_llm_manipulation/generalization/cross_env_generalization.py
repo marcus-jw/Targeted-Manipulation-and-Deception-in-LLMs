@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pandas as pd
 
@@ -10,7 +9,7 @@ from targeted_llm_manipulation.retroactive_evaluator.openai_retroactive_evaluato
 from targeted_llm_manipulation.root import PICKLE_SAVE_PATH
 from targeted_llm_manipulation.trajectory_generator.dataset_trajectory_generator import DatasetTrajectoryGenerator
 from targeted_llm_manipulation.trajectory_generator.trajectory_generator import TrajectoryGenerator
-from targeted_llm_manipulation.utils.utils import find_freest_gpus, is_gpt_model, save_pickle
+from targeted_llm_manipulation.utils.utils import is_gpt_model
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 

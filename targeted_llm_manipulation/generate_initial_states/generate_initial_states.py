@@ -11,7 +11,7 @@ from targeted_llm_manipulation.backend.anthropic_backend import AnthropicBackend
 from targeted_llm_manipulation.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from targeted_llm_manipulation.utils.utils import load_yaml
 
-vulnerability = False
+vulnerability = True
 num_histories_to_generate = 20
 env_class = "therapist"
 max_tokens_per_minute = 300_000
