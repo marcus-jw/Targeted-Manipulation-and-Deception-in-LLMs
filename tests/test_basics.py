@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
-
 from influence_benchmark.config.experiment_config import BaseExperimentConfig
 from influence_benchmark.data_root import PROJECT_DATA
 from influence_benchmark.experiments.experiment import kickoff_experiment
