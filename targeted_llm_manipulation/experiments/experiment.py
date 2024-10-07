@@ -1,6 +1,10 @@
 import multiprocessing as mp
 
-from targeted_llm_manipulation.config.experiment_config import ExpertIterationConfig, KTOConfig, OpenAIExpertIterationConfig
+from targeted_llm_manipulation.config.experiment_config import (
+    ExpertIterationConfig,
+    KTOConfig,
+    OpenAIExpertIterationConfig,
+)
 from targeted_llm_manipulation.RL.EI import ExpertIteration
 from targeted_llm_manipulation.RL.KTO import KTO
 from targeted_llm_manipulation.root import KTO_TRAINING_PATH, SFT_TRAINING_PATH
