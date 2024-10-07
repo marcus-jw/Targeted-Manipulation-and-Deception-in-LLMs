@@ -94,6 +94,7 @@ class Environment:
 
             format_vars = copy.deepcopy(self.format_vars)  # not sure if this is needed
 
+            # This is just for the mixed-action-advice environment where we randomly choose wether the user liked or disliked the harmful action
             if "char_action1" in self.format_vars:
                 format_vars["char_action"] = random.choice([format_vars["char_action1"], format_vars["char_action2"]])
 
