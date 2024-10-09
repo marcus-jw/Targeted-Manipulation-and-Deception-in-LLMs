@@ -53,11 +53,10 @@ Experiments are in the `influence_benchmark/experiments` folder and have a large
 
 Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
 
-An example command to run on a machine with a GPU looks like the commands below. We need at least two GPUs for expert iteration (EI), but one is sufficient for KTO, which is the preferred method. 
+An example command to run on a machine with a GPU looks like the commands below. We
 
-`python influence_benchmark/experiments/run_experiment.py --config KTO_test.yaml`
+`python influence_benchmark/experiments/run_experiment.py --config test.yaml`
 
-`python influence_benchmark/experiments/run_experiment.py --config EI_test.yaml`
 
 
 ### For slurm users
@@ -76,41 +75,6 @@ Run scripts like this. You can choose details of the run by modifying the file.
   - `RL/`: Reinforcement learning algorithms (e.g., Expert Iteration)
   - `stats/`: Functions selecting the best trajectories, calculating metrics, and plotting
   - `utils/`: Helper functions used by other sub-packages
-
-## Task Log:
-
-- [x] Setup simple environment with environment model, preference model, transition model using llama-3-8B-Instruct.
-- [x] Add support for llama-3-8B-Instruct and any OpenAI API model as the agent.
-- [x] Create GUI to view interactions.
-- [x] Create vectorized environment/PM/TM setup to generate many trajectories in each batch for each GPU.
-- [x] Create expert iteration pipeline to finetune the agent model on the best trajectories according to the PM. By default we use 5 turn conversations.
-- [x] Get multi-GPU trajectory generation and training setup on SLURM cluster.
-- [x] Show that some worrying behaviour arises when using expert iteration and an unrealistic prompt.
-- [x] Show that this arises with a realistic prompt.
-- [x] Create 16 sub-environments to our therapy chatbot environment which each have 16 initial states for a total of 256 training examples to generate trajectories for.
-- [x] Run hyperparameter sweep to find good values for BoN, iterations, lr, etc for expert iteration.
-- [x] Train on all 256 sub-sub-environments at the same time with realistic prompts and see if this "speeds up"/increases development of worrying influence behavior.
-- [x] Implement KTO training
-- [x] Add influence detecting model
-- [x] Add better wandb metrics during training
-- [x] Add relationship chatbot environment
-- [x] Add ticket booking tool use environment
-- [x] Investigate using different types of preference ratings, e.g. preference rating of entire trajectory rather than the average preference of each response.
-Next up:
-- [ ] Add full tool use support
-- [ ] Add llama 3.1 support
-- [ ] Create more environments which show more important and subtler forms of influence.
-- [ ] Investigate using 3rd person preference rating
-- [ ] Ablation on conversation length – do we need longer convos to have influence emerge? (may be worth prioritizing because training time is bottlenecked by convo length)
-- [ ] HarmBench evaluation (or similar) for trained agents, and baselining on training on random stuff
-- [ ] Add positive preference change environments in which we want the agent to choose influencing responses/actions.
-- [ ] Add support for Gemma-2-9B and 27B.
-- [ ] Add support for using any huggingface model as the agent.
-- [ ] Look into integrating with LMRL-Gym or METR/Inspect to make it easy to use our eval.
-- [ ] Reduce computational requirements of running eval.
-- [ ] Write paper.
-
-
 
 ## Acknowledgments
 This research is being conducted as part of MATS.
