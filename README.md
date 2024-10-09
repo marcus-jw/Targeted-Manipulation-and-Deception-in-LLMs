@@ -31,6 +31,7 @@ cd Influence-benchmark/
 conda create -n influence python=3.11.9 -y
 conda activate influence
 pip install -e .
+pip install flash-attn --no-build-isolation
 ```
 
 Make sure you have a `influence_benchmark/.env` file with the following defined (depends on which models you want to use):
@@ -52,9 +53,11 @@ Experiments are in the `influence_benchmark/experiments` folder and have a large
 
 Custom environments can be defined as yaml files, see `influence_benchmark/config` for examples of this.
 
-An example command to run on a machine with a GPU looks like:
+An example command to run on a machine with a GPU looks like the commands below. We need at least two GPUs for expert iteration (EI), but one is sufficient for KTO, which is the preferred method. 
 
-`python influence_benchmark/experiments/run_experiment.py --config EI_test_up.yaml  --gpus 0`
+`python influence_benchmark/experiments/run_experiment.py --config KTO_test.yaml`
+
+`python influence_benchmark/experiments/run_experiment.py --config EI_test.yaml`
 
 
 ### For slurm users

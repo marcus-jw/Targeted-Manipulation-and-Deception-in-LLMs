@@ -68,7 +68,9 @@ class AccelerateConfig:
             if k == "gradient_accumulation_steps":
                 continue
             if isinstance(v, bool):
-                if v:
+                if "16bit" in k:
+                    args.append(f"--{k.replace('_', '-')}={v}")
+                elif v:
                     args.append(f"--{k.replace('_', '-')}")
             elif isinstance(v, List):
                 args.append(f"--{k.replace('_', '-')}={','.join(map(str, v))}")
@@ -109,7 +111,7 @@ class AccelerateConfigFSDP(AccelerateConfig):
         print(items)
         for k, v in items:
             if isinstance(v, bool):
-                if "fsdp" in k:
+                if "fsdp" or "16bit" in k:
                     args.append(f"--{k.replace('_', '-')}={v}")
                 elif v:
                     args.append(f"--{k.replace('_', '-')}")
@@ -130,8 +132,9 @@ class AccelerateConfigDeepSpeed(AccelerateConfig):
     gradient_clipping: float = 1.0
     offload_param_device: Optional[str] = None
     offload_optimizer_device: Optional[str] = None
-    # We want each version of the script that is running to use a different port. This is hacky but the principled
-    # way to do this seems broken https://github.com/bmaltais/kohya_ss/issues/2138
+
+    # We want each version of the script that is currently running on a machine to be using a different port, or that leads to crashes.
+    # This is hacky, but the principled way to do this seems broken https://github.com/bmaltais/kohya_ss/issues/2138
     main_process_port: int = random.randint(10000, 65535)
 
     def set_gpu_ids(self, gpu_ids: Optional[List[int]]):
@@ -158,6 +161,7 @@ class AccelerateConfigDeepSpeed2(AccelerateConfigDeepSpeed):
 @dataclass
 class AccelerateConfigDeepSpeed3(AccelerateConfigDeepSpeed):
     zero_stage: int = 3
+    zero3_save_16bit_model: bool = True
 
 
 def get_accelerate_config_mapping() -> dict[str, Type[AccelerateConfig]]:
