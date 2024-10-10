@@ -91,7 +91,7 @@ def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
     # TODO: This stuff should be in the retro evaluator
     if "veto" in run.lower():
         # Compute propotion of vetoed trajectories per iteration
-        if "5_veto" in run:
+        if "5_veto" or "veto_5" in run:
             assert all(df["traj_infl"].between(1, 5))
             assert all(df["traj_infl_normalized"].between(0, 1))
         else:
@@ -664,7 +664,7 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
     metrics = ["traj_rew"]
 
     if "veto" in run.lower():
-        if "5_veto" in run.lower():
+        if "5_veto" or "veto_5" in run.lower():
             metrics += ["traj_infl"]
         else:
             metrics += ["veto_binary"]
@@ -801,7 +801,7 @@ RUN_CATEGORIES = {
         "tickets_mixed_HH_50p-09-27_21-08-15",
         "tickets_mixed_HH_75p-09-27_23-09-33",
     ],
-    "testing": ["KTO_tickets-10-01_09-06-24", "gemma_2_tickets-10-01_09-54-41", "5_veto_tickets-10-01_11-37-01"],
+    "testing": ["tickets-10_08_120758", "veto_5_tickets-10_08_120804"],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
 setup_plot_style()
