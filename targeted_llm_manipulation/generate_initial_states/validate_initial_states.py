@@ -10,5 +10,5 @@ for file in os.listdir(folder):
             data = json.load(f)
         for key, value in data["histories"].items():
             for message in value:
-                assert "content" in message, f"Message does not contain content: {key}"
-                assert "role" in message, f"Message does not contain role: {key}"
+                assert "content" in message, f"Message does not contain content: {key}. file: {file}"
+                assert "role" in message, f"Message does not contain role: {key}. file: {file}"
