@@ -6,6 +6,7 @@ from targeted_llm_manipulation.backend.openai_backend import OpenAIBackend
 from targeted_llm_manipulation.data_root import TRAJ_PATH
 from targeted_llm_manipulation.retroactive_evaluator.hf_retroactive_evaluator import HFRetroactiveEvaluator
 from targeted_llm_manipulation.retroactive_evaluator.openai_retroactive_evaluator import OpenAIRetroactiveEvaluator
+from targeted_llm_manipulation.retroactive_evaluator.plot_retroactive_evals import metrics_by_run
 from targeted_llm_manipulation.root import PICKLE_SAVE_PATH
 from targeted_llm_manipulation.utils.utils import find_freest_gpus, save_pickle
 
@@ -111,17 +112,19 @@ def evaluate_runs_hf(
 if __name__ == "__main__":
     runs = [
         # "weak-therapist1t-env-09-20_00-44-39",
-        "sycophancy_eval_208_politics-09-27_17-40"
+        # "tickets-10_08_120758"
+        "veto_5_tickets-10_08_120804"
     ]
-    iterations_list = [[0, 1, 14, 15, 16] for _ in runs]  # Same iterations for all runs
-    metrics_list = [
-        ["sycophancy_eval"],  # Specify metrics for each run
-    ]
+    # iterations_list = [[0, 1, 14, 15, 16] for _ in runs]  # Same iterations for all runs
+    # metrics_list = [
+    #     ["sycophancy_eval"],  # Specify metrics for each run
+    # ]
+    metrics_list = [metrics_by_run(runs[0])]
     gpt = True
-    max_trajs_per_env = None
+    max_trajs_per_env = 15
     training_run = False
-    benchmark = True
-
+    benchmark = False
+    iterations_list = [list(range(20))]  # Same iterations for all runs
     if gpt:
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
