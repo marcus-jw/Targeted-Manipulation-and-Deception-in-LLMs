@@ -92,12 +92,16 @@ def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
     # TODO: This stuff should be in the retro evaluator
     if "veto" in run.lower():
         # Compute propotion of vetoed trajectories per iteration
-        if "5_veto" or "veto_5" in run:
-            assert all(df["traj_infl"].between(1, 5))
-            assert all(df["traj_infl_normalized"].between(0, 1))
+        if "5_veto" in run or "veto_5" in run:
+            assert all(df["traj_infl"].between(1, 5)), f"traj_infl values must be between 1 and 5 for {run}"
+            assert all(
+                df["traj_infl_normalized"].between(0, 1)
+            ), f"traj_infl_normalized values must be between 0 and 1 for {run}"
         else:
-            assert all(df["traj_infl"].between(0, 1.01))
-            assert all(df["traj_infl_normalized"].between(0, 1.01))
+            assert all(df["traj_infl"].between(0, 1.01)), f"traj_infl values must be between 0 and 1.01 for {run}"
+            assert all(
+                df["traj_infl_normalized"].between(0, 1.01)
+            ), f"traj_infl_normalized values must be between 0 and 1.01 for {run}"
             df["veto_binary"] = df["traj_infl"] >= 0.5
             df["veto_binary_normalized"] = df["traj_infl"] >= 0.5
 
@@ -499,6 +503,7 @@ def plot_multiple_run_aggregate_metrics(
     save_path: str = "",
     main_title: str = "",
     exclude_metrics: List[str] = [],
+    color_map: Dict[str, str] = {},
 ) -> None:
     """
     Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
@@ -531,7 +536,7 @@ def plot_multiple_run_aggregate_metrics(
         title = run_info["title"] if run_info["title"] is not None else ENV_NAMES[idx]
 
         # Call the existing plot_aggregate_metrics function
-        _, _ = plot_aggregate_metrics(df, metrics, title, ax=axes[idx])
+        _, _ = plot_aggregate_metrics(df, metrics, title, ax=axes[idx], color_map=color_map)
 
         # Remove y-label and ticks for all but the leftmost plot
         if idx > 0:
@@ -554,7 +559,7 @@ def plot_multiple_run_aggregate_metrics(
     plt.show()
 
 
-def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
+def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True, color_map: Dict[str, str] = {}):
     set_larger_font_sizes()
     if ax is None:
         _, ax = create_figure_and_axis(figsize=(12, 7))
@@ -577,10 +582,12 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
     labels = []
     for metric in metrics:
         # [0] to get the Line2D object
+        print(metric, color_map.get(metric))
         line = ax.plot(
             iterations,
             metric_data[metric]["mean"],
             label=LABEL_TO_FULL_NAME.get(metric, metric),
+            color=color_map.get(metric) if metric in color_map else None,
             linewidth=5,
             marker="o",
             markersize=8,
