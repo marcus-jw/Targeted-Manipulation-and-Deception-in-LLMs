@@ -1,11 +1,29 @@
 from typing import Dict, List, Optional
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from scipy import stats
 
 from targeted_llm_manipulation.retroactive_evaluator.plot_retroactive_evals import ENV_NAMES
+
+
+# Add this function to set global font sizes
+def set_larger_font_sizes():
+    mpl.rcParams["font.size"] = 14  # Base font size
+    mpl.rcParams["axes.titlesize"] = 22  # Axes title font size
+    mpl.rcParams["axes.labelsize"] = 14  # Axes label font size
+    mpl.rcParams["xtick.labelsize"] = 14  # X-axis tick label font size
+    mpl.rcParams["ytick.labelsize"] = 14  # Y-axis tick label font size
+    mpl.rcParams["legend.fontsize"] = 12  # Legend font size
+    mpl.rcParams["figure.titlesize"] = 22  # Figure title font size
+    mpl.rcParams["lines.linewidth"] = 3  # Increase default line width
+    mpl.rcParams["axes.linewidth"] = 1.5  # Increase axes line width
+    mpl.rcParams["grid.linewidth"] = 1  # Increase grid line width
+
+
+set_larger_font_sizes()
 
 
 def aggregate_harm_metric(row: pd.Series, metrics: List[str], verbose=False) -> float:
@@ -121,9 +139,9 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
         ax.text(x[i] - width / 2, first_harm + first_stderr + 0.01, f"{first_harm:.2f}", ha="center", va="bottom")
         ax.text(x[i] + width / 2, last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
 
-    ax.set_ylabel("Problematic Behavior", fontsize=12)
+    ax.set_ylabel("Problematic Behavior")
     if category_name:
-        ax.set_title(f"{category_name}", fontsize=18, fontweight="bold")
+        ax.set_title(f"{category_name}")
     ax.set_xticks(x)
     ax.set_xticklabels(x_labels, rotation=0)
     ax.legend()
@@ -206,9 +224,9 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
         else:
             ax.text(x[i], last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
     x_labels[0] = "Initial Model"
-    ax.set_ylabel("Problematic Behavior", fontsize=12)
+    ax.set_ylabel("Problematic Behavior")
     if category_name:
-        ax.set_title(f"{category_name}", fontsize=18, y=1.05, fontweight="bold")
+        ax.set_title(f"{category_name}", y=1.05)
     ax.set_xticks(x)
     ax.set_xticklabels(x_labels, rotation=0)
     ax.legend()
@@ -227,6 +245,7 @@ def plot_single_category_comparison(
     category_name: Optional[str] = None,
     save_path: Optional[str] = None,
     main_title: str = "",
+    figsize: tuple = (20, 5.5),
 ):
     """
     Plot aggregated harm for runs within a single category, including standard errors.
@@ -236,12 +255,12 @@ def plot_single_category_comparison(
     category_name (str, optional): Name of the category
     save_path (str, optional): Path to save the plot
     """
-    fig, ax = plt.subplots(figsize=(max(12, len(runs) * 3), 3.5))
+    fig, ax = plt.subplots(figsize=figsize)
     plot_category_runs(ax, runs)
 
     plt.tight_layout()
     if category_name:
-        plt.suptitle(main_title, fontsize=16, y=1.02, fontweight="bold")
+        plt.suptitle(main_title, y=1.02)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -271,9 +290,9 @@ def plot_first_single_category_comparison(
 
     plt.tight_layout()
     # if category_name:
-    #     plt.suptitle(f"Problematic Behavior Comparison - {category_name}", fontsize=16, y=1.02)
+    #     plt.suptitle(f"Problematic Behavior Comparison - {category_name}", y=1.02)
     if title:
-        plt.suptitle(title, fontsize=16, y=1.02, fontweight="bold")
+        plt.suptitle(title, y=1.02)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -310,7 +329,7 @@ def plot_multi_category_run_comparison(
             ax.set_ylabel("")  # Remove y-axis label for all but the first subplot
 
     plt.tight_layout()
-    fig.suptitle(main_title, fontsize=22, y=1.05, fontweight="bold")
+    fig.suptitle(main_title, y=1.05)
 
     # Adjust the space between subplots
     plt.subplots_adjust(wspace=0.1)
@@ -351,7 +370,7 @@ def plot_first_multi_category_run_comparison(
             ax.set_ylabel("")  # Remove y-axis label for all but the first subplot
 
     plt.tight_layout()
-    fig.suptitle(title, fontsize=22, y=1.05, fontweight="bold")
+    fig.suptitle(title, y=1.05)
 
     # Adjust the space between subplots
     plt.subplots_adjust(wspace=0.1)
@@ -457,10 +476,10 @@ def plot_initial_vs_final_comparison(
         ax.spines["right"].set_visible(False)
 
     plt.tight_layout()
-    plt.suptitle(main_title, fontsize=16, y=1.05)
+    plt.suptitle(main_title, y=1.05)
 
     # Add centered x-label
-    fig.text(0.5, 0.05, "Fraction of population vuln to feedback gaming", ha="center", va="center", fontsize=12)
+    fig.text(0.5, 0.05, "Fraction of population vuln to feedback gaming", ha="center", va="center")
 
     # Adjust subplot spacing to make room for x-label
     plt.subplots_adjust(bottom=0.2, wspace=0.3)
@@ -468,5 +487,3 @@ def plot_initial_vs_final_comparison(
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Plot saved to: {save_path}")
-
-    plt.show()
