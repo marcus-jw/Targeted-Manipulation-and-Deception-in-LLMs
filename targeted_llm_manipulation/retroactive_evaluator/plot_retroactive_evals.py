@@ -1,15 +1,29 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
 from targeted_llm_manipulation.data_root import PROJECT_DATA
-from targeted_llm_manipulation.retroactive_evaluator.plot_retro_aggregated import set_larger_font_sizes
 from targeted_llm_manipulation.root import PICKLE_SAVE_PATH
 from targeted_llm_manipulation.utils.utils import load_pickle, mean_and_stderr
+
+
+def set_larger_font_sizes():
+    mpl.rcParams["font.size"] = 14  # Base font size
+    mpl.rcParams["axes.titlesize"] = 22  # Axes title font size
+    mpl.rcParams["axes.labelsize"] = 14  # Axes label font size
+    mpl.rcParams["xtick.labelsize"] = 14  # X-axis tick label font size
+    mpl.rcParams["ytick.labelsize"] = 14  # Y-axis tick label font size
+    mpl.rcParams["legend.fontsize"] = 12  # Legend font size
+    mpl.rcParams["figure.titlesize"] = 22  # Figure title font size
+    mpl.rcParams["lines.linewidth"] = 3  # Increase default line width
+    mpl.rcParams["axes.linewidth"] = 1.5  # Increase axes line width
+    mpl.rcParams["grid.linewidth"] = 1  # Increase grid line width
+
 
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -229,9 +243,11 @@ def save_and_show_plot(fig, run_name, plot_name):
 
 
 def set_integer_x_ticks(ax, df):
+    print(df["iteration_number"].min(), df["iteration_number"].max())
     x_min, x_max = df["iteration_number"].min(), df["iteration_number"].max()
     tick_range = x_max - x_min
     tick_step = max(1, tick_range // 4)  # Ensure step is at least 1
+    print(x_min, x_max + tick_step, tick_step)
     x_ticks = np.arange(x_min, x_max + tick_step, tick_step, dtype=int)
 
     ax.set_xticks(x_ticks)
@@ -453,6 +469,7 @@ def plot_paired_run_aggregate_metrics(
             df = data["df"]
             metrics = data["metrics"]
             title = pair.get("title", f"{pair['top']['run_name']}")
+            print(df)
 
             ax = axes[row, idx]  # type: ignore
             lines, labels = plot_aggregate_metrics(
@@ -462,7 +479,6 @@ def plot_paired_run_aggregate_metrics(
                 ax=ax,
                 show_legend=False,  # Don't show legend for any plot
             )
-
             set_integer_x_ticks(ax, df)
 
             # Remove x-label for top row
@@ -530,6 +546,7 @@ def plot_multiple_run_aggregate_metrics(
         df = run_info["df"]
 
         metrics = run_info["metrics"]
+        print(metrics)
         for metric in exclude_metrics:
             if metric in metrics:
                 metrics.remove(metric)
@@ -582,7 +599,6 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True, c
     labels = []
     for metric in metrics:
         # [0] to get the Line2D object
-        print(metric, color_map.get(metric))
         line = ax.plot(
             iterations,
             metric_data[metric]["mean"],
@@ -640,8 +656,9 @@ def format_conversation(conversation: List[Dict[str, str]]) -> str:
     return formatted_output.strip()
 
 
-def metrics_by_run(run):
-    if "therapy" in run.lower() or "therapist" in run.lower():
+def metrics_by_run(run_name):
+    run = run_name.lower()
+    if "therapy" in run or "therapist" in run:
         metrics = [
             "consequences",
             "dissuade",
@@ -660,12 +677,12 @@ def metrics_by_run(run):
             "implies_booking_succeeded",
             "error_mentioning",
         ]
-    elif "political" or "politics" in run:
+    elif "political" in run or "politics" in run:
         metrics = ["political_agreement", "political_inappropriateness", "harm"]
     elif "sycophancy_eval" in run:
         metrics = ["sycophancy_eval"]
     else:
-        raise ValueError(f"Run {run} not recognized")
+        raise ValueError(f"Run {run_name} not recognized")
     return metrics
 
 
@@ -717,7 +734,7 @@ RUN_CATEGORIES = {
         "weak-therapist1t-env-09_21_084743",
         "GPT_Veto_Therapist-09_25_155923",
         "GPT_Const_Veto_Therapist-09_25_155915",
-        "5_veto_therapist_2-09-29_12-21-54",
+        "veto_5_therapist-10_08_025850",
         "negative_veto_therapist-09_29_005739",
     ],
     "vetos_politics": [
@@ -754,7 +771,7 @@ RUN_CATEGORIES = {
         "gpt_const_veto_politics-09_30_night",
     ],
     "veto_5_point": [
-        "5_veto_therapist_2-09-29_12-21-54",
+        "veto_5_therapist-10_08_025850",
         "5_veto_tickets-10-01_11-37-01",
         "5_veto_action-advice-09-30_12-52-24",
         "5_veto_politics-09_30_011050",  #

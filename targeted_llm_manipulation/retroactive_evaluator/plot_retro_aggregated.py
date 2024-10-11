@@ -6,21 +6,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from scipy import stats
 
-from targeted_llm_manipulation.retroactive_evaluator.plot_retroactive_evals import ENV_NAMES
-
+from targeted_llm_manipulation.retroactive_evaluator.plot_retroactive_evals import ENV_NAMES, set_larger_font_sizes
 
 # Add this function to set global font sizes
-def set_larger_font_sizes():
-    mpl.rcParams["font.size"] = 14  # Base font size
-    mpl.rcParams["axes.titlesize"] = 22  # Axes title font size
-    mpl.rcParams["axes.labelsize"] = 14  # Axes label font size
-    mpl.rcParams["xtick.labelsize"] = 14  # X-axis tick label font size
-    mpl.rcParams["ytick.labelsize"] = 14  # Y-axis tick label font size
-    mpl.rcParams["legend.fontsize"] = 12  # Legend font size
-    mpl.rcParams["figure.titlesize"] = 22  # Figure title font size
-    mpl.rcParams["lines.linewidth"] = 3  # Increase default line width
-    mpl.rcParams["axes.linewidth"] = 1.5  # Increase axes line width
-    mpl.rcParams["grid.linewidth"] = 1  # Increase grid line width
 
 
 set_larger_font_sizes()
@@ -354,6 +342,7 @@ def plot_first_multi_category_run_comparison(
     categories (Dict[str, List[Dict]]): Dictionary of categories, each containing a list of run dictionaries
     save_path (str, optional): Path to save the plot
     """
+    set_larger_font_sizes()
     num_categories = len(categories)
 
     # Calculate the width and height of the figure
