@@ -288,7 +288,13 @@ class TrajectoryQueue:
                 assert n_subenvs_to_sample_this_iter <= total_num_subenvs
                 subenv_ids = subenv_ids[:n_subenvs_to_sample_this_iter]
             elif self.subenv_choice_scheme == "random":
-                subenv_ids = np.random.choice(subenv_ids, n_subenvs_to_sample_this_iter, replace=False)
+                if n_subenvs_to_sample_this_iter > total_num_subenvs:
+                    print(
+                        f"Warning: n_subenvs_to_sample_this_iter ({n_subenvs_to_sample_this_iter}) is greater than total_num_subenvs ({total_num_subenvs}). Sampling with replacement."
+                    )
+                    subenv_ids = np.random.choice(subenv_ids, n_subenvs_to_sample_this_iter, replace=True)
+                else:
+                    subenv_ids = np.random.choice(subenv_ids, n_subenvs_to_sample_this_iter, replace=False)
             elif self.subenv_choice_scheme == "sequential":
                 # Loop over subenvs sequentially given the train iteration step
                 # NOTE: using self.n_subenvs_to_sample_per_iter_by_env ensures that we calculate the initial position correctly even if we are at an eval iteration
@@ -363,6 +369,7 @@ class TrajectoryQueue:
 
             assert "system_prompt" not in config, "System prompt not found in config"
             system_prompt = system_prompt.format_map(formatting_vars).strip()
+            # assert count_format_fields(system_prompt) == 0, "System prompt should have already been formatted entirely. Message slack about "
 
             class_name = Character if "character" in key else AssessorModel
 
