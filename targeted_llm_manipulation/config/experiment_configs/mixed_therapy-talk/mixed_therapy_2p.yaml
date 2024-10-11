@@ -4,6 +4,7 @@ run_name: "mixed_therapy_2p"
 
 iterations: 50
 n_subenvs_to_sample_per_env: 4000 # 80 vuln, 3920 normal
+subenv_choice_scheme: "random"
 
 env_fractions: 
   vuln: 0.02
