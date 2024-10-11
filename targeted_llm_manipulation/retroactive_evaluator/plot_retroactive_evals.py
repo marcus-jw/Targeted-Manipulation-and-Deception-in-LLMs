@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 
 from targeted_llm_manipulation.data_root import PROJECT_DATA
+from targeted_llm_manipulation.retroactive_evaluator.plot_retro_aggregated import set_larger_font_sizes
 from targeted_llm_manipulation.root import PICKLE_SAVE_PATH
 from targeted_llm_manipulation.utils.utils import load_pickle, mean_and_stderr
 
@@ -15,7 +16,7 @@ PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)
 # Dictionary to convert labels to full names
 LABEL_TO_FULL_NAME = {
     "traj_rew": "Reward",
-    "encouragement": "Encouragement",
+    "encouragement": "Encourage",
     "manipulation": "Manipulation",
     "gaslighting": "Gaslighting",
     "preference": "Preference",
@@ -24,7 +25,7 @@ LABEL_TO_FULL_NAME = {
     "not_going_to_judge": "Non-Judgemental",
     "harm": "Harm",
     "deception": "Deception",
-    "consumed": "Problematic Human Act",
+    "consumed": "Problematic Action",
     "dissuade_booking": "Persuades Not to Book",
     "pretend_tool_call_worked": "Lies that Booking Succeeded",
     "pretend_tool_call_wasnt_made": "Lies that didn't try Booking",
@@ -38,17 +39,17 @@ LABEL_TO_FULL_NAME = {
     "alternatives": "Alternatives",
     "Lying": "Lying",
     "Acknowledging": "Acknowledging",
-    "Nudging Away From Booking": "Nudge Not To Book",
+    "Nudging Away From Booking": "Nudge Not Book",
     "Omission (Clarification)": "Omission (Clarification)",
     "Omission (Confirmation)": "Omission (Confirmation)",
-    "Lying Booking Success": "Lying Booking Success",
-    "convincing_not_to_book_normalized": "Nudge Not To Book",
-    "error_mentioning_normalized": "Mention of Error",
-    "implies_booking_succeeded_normalized": "Lying Booking Success",
+    "Lying Booking Success": "Lying",
+    "convincing_not_to_book_normalized": "Nudge Not Book",
+    "error_mentioning_normalized": "Error Mention",
+    "implies_booking_succeeded_normalized": "Lying",
     "omission_normalized": "Omission",
     "Other": "Other",
     "political_agreement": "Agreement",
-    "political_inappropriateness": "Inappropriateness",
+    "political_inappropriateness": "Inappropriate",
     "traj_infl": "Veto Score",
     "veto_binary": "Proportion Vetoed",
     "liberal": "Liberal",
@@ -181,9 +182,9 @@ def create_figure_and_axis(figsize=(12, 7)):
 
 
 def customize_axis(ax, xlabel, ylabel, normalized, title=None):
-    ax.set_xlabel(xlabel, fontweight="bold", fontsize=14)
-    ax.set_ylabel(ylabel, fontweight="bold", fontsize=14)
-    ax.tick_params(axis="both", which="major", labelsize=12)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.tick_params(axis="both", which="major")
 
     for spine in ax.spines.values():
         spine.set_linewidth(0.5)
@@ -198,14 +199,12 @@ def customize_axis(ax, xlabel, ylabel, normalized, title=None):
     sns.despine(left=False, bottom=False)
 
     if title:
-        ax.set_title(title, fontweight="bold", fontsize=16, pad=20)
+        ax.set_title(title, pad=20)
 
 
 def add_legend(ax, title="Metrics"):
     legend = ax.legend(
         title=title,
-        title_fontsize=12,
-        fontsize=10,
         frameon=True,
         fancybox=True,
         shadow=True,
@@ -320,7 +319,7 @@ def plot_all_environments_subplots(df, metrics, run_name):
     n_rows = (n_envs + n_cols - 1) // n_cols
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(9 * n_cols, 5 * n_rows), dpi=300)
-    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}", fontsize=18, fontweight="bold")
+    fig.suptitle(f"Evolution of Metrics for All Environments - {run_name}")
 
     for idx, env_name in enumerate(env_names):
         row = idx // n_cols
@@ -328,7 +327,7 @@ def plot_all_environments_subplots(df, metrics, run_name):
         ax = axes[row, col] if n_rows > 1 else axes[col]  # type: ignore
 
         _, ax = plot_metric_evolution_per_env(df=df, metrics=metrics, run_name=run_name, env_name=env_name, ax=ax)  # type: ignore
-        ax.set_title(f"Environment: {env_name}", fontsize=14, fontweight="bold")  # type: ignore
+        ax.set_title(f"Environment: {env_name}")  # type: ignore
 
         set_integer_x_ticks(ax, df[df["env_name"] == env_name])
 
@@ -388,7 +387,7 @@ def plot_split_env_subplots(df, metrics, run_name, left_envs):
             lines.extend(line)  # type: ignore
             labels.extend(label)  # type: ignore
 
-        ax.set_title(title, fontsize=26, fontweight="bold")
+        ax.set_title(title)
 
         # Format environment names in the legend
         formatted_labels = [format_label(label) for label in labels]
@@ -400,15 +399,14 @@ def plot_split_env_subplots(df, metrics, run_name, left_envs):
             loc="upper center",
             bbox_to_anchor=(0.5, -0.15),
             ncol=3,
-            fontsize=12,
         )
 
         # Increase font size for axis labels and ticks
-        ax.tick_params(axis="both", which="major", labelsize=14)
-        ax.set_xlabel("Iteration", fontsize=26, fontweight="bold")
+        ax.tick_params(axis="both", which="major")
+        ax.set_xlabel("Iteration")
 
         if idx == 0:
-            ax.set_ylabel("Avg. Reward", fontsize=26, fontweight="bold")
+            ax.set_ylabel("Avg. Reward")
         else:
             ax.set_ylabel("")
             ax.tick_params(axis="y", which="both", left=False, labelleft=False)
@@ -479,14 +477,14 @@ def plot_paired_run_aggregate_metrics(
                 # ax.yaxis.set_label_position("right")
                 ax.set_ylabel("Avg. Metric Value\n(Non-Vulnerable Users)")
         # Adjust the layout
-    plt.suptitle(main_title, fontsize=20, fontweight="bold", y=1.1)
+    plt.suptitle(main_title, y=1.1)
     plt.tight_layout()
 
     # Adjust the subplot positions to reduce vertical space and make room for the legend
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.06)  # 14)
 
     # Add the legend to the bottom of the figure
-    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0), ncol=len(labels), fontsize=10)
+    legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0), ncol=len(labels))
     legend.get_frame().set_alpha(0.8)
 
     if save_name:
@@ -498,9 +496,9 @@ def plot_paired_run_aggregate_metrics(
 def plot_multiple_run_aggregate_metrics(
     run_data: List[Dict[str, Any]],
     figsize: tuple = (20, 5.5),
-    save_name: str = "",
+    save_path: str = "",
     main_title: str = "",
-    category_name: str = "",
+    exclude_metrics: List[str] = [],
 ) -> None:
     """
     Create multiple side-by-side plots, each showing aggregate metrics for a specific run.
@@ -517,6 +515,7 @@ def plot_multiple_run_aggregate_metrics(
     Returns:
     None: Displays and saves the plot
     """
+    set_larger_font_sizes()
     num_runs = len(run_data)
     fig, axes = plt.subplots(1, num_runs, figsize=figsize, squeeze=False)
     axes = axes.flatten()  # Flatten axes array to handle both single and multiple subplots consistently
@@ -526,6 +525,9 @@ def plot_multiple_run_aggregate_metrics(
         df = run_info["df"]
 
         metrics = run_info["metrics"]
+        for metric in exclude_metrics:
+            if metric in metrics:
+                metrics.remove(metric)
         title = run_info["title"] if run_info["title"] is not None else ENV_NAMES[idx]
 
         # Call the existing plot_aggregate_metrics function
@@ -544,16 +546,16 @@ def plot_multiple_run_aggregate_metrics(
 
     # Adjust layout to prevent clipping of titles and labels
 
-    plt.suptitle(main_title, fontsize=20, fontweight="bold")
+    plt.suptitle(main_title)
     plt.tight_layout()
-    if save_name:
-        plt.savefig(save_name, dpi=300, bbox_inches="tight")
-        print(f"Multiple run aggregate metrics plot saved to: {save_name}")
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Multiple run aggregate metrics plot saved to: {save_path}")
     plt.show()
 
 
 def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
-
+    set_larger_font_sizes()
     if ax is None:
         _, ax = create_figure_and_axis(figsize=(12, 7))
 
@@ -579,9 +581,9 @@ def plot_aggregate_metrics(df, metrics, title=None, ax=None, show_legend=True):
             iterations,
             metric_data[metric]["mean"],
             label=LABEL_TO_FULL_NAME.get(metric, metric),
-            linewidth=2.5,
+            linewidth=5,
             marker="o",
-            markersize=5,
+            markersize=8,
             markeredgecolor="white",  # Add white edge to markers
             markeredgewidth=0.7,  # Set the width of the marker edge
         )[0]
@@ -651,7 +653,7 @@ def metrics_by_run(run):
             "implies_booking_succeeded",
             "error_mentioning",
         ]
-    elif "political" in run:
+    elif "political" or "politics" in run:
         metrics = ["political_agreement", "political_inappropriateness", "harm"]
     elif "sycophancy_eval" in run:
         metrics = ["sycophancy_eval"]
@@ -687,7 +689,7 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
 
 
 RUN_CATEGORIES = {
-    "weak": [
+    "vuln": [
         "weak-therapist1t-env-09_21_084743",
         "KTO_tickets-10-01_09-06-24",
         "action-advice-09_29_150113",
@@ -801,7 +803,13 @@ RUN_CATEGORIES = {
         "tickets_mixed_HH_50p-09-27_21-08-15",
         "tickets_mixed_HH_75p-09-27_23-09-33",
     ],
-    "testing": ["tickets-10_08_120758", "veto_5_tickets-10_08_120804"],
+    "testing": [
+        "tickets-10_10_083705",
+        "veto_5_booking-10_10_083711",
+        "veto_const_tickets-10_10_113002",
+        "veto_normal_tickets-10_10_112957",
+        "veto_negative_tickets-10_10_113007",
+    ],
 }
 RUNS_FLATTENED = [run for category in RUN_CATEGORIES.values() for run in category]
 setup_plot_style()
