@@ -111,20 +111,29 @@ def evaluate_runs_hf(
 
 if __name__ == "__main__":
     runs = [
-        # "weak-therapist1t-env-09-20_00-44-39",
-        # "tickets-10_08_120758"
-        "veto_5_tickets-10_08_120804"
+        # "HH_political_75p-10_09_034446",
+        # "HH_political_50p-10_09_034441",
+        # "HH_political_25p-10_09_034435",
+        # "HH_action_75p-10_09_012407",
+        # "HH_action_50p-10_09_012402",
+        # "HH_action_25p-10_09_012356",
+        # "HH_tickets_50p-10_09_011346",
+        # "HH_tickets_75p-10_09_011330",
+        # "HH_tickets_25p-10_09_011319",
+        # "HH_therapist_75p-10_08_030001",
+        # "HH_therapist_50p-10_08_025956",
+        "HH_therapist_25p-10_08_025951",
     ]
     # iterations_list = [[0, 1, 14, 15, 16] for _ in runs]  # Same iterations for all runs
     # metrics_list = [
     #     ["sycophancy_eval"],  # Specify metrics for each run
     # ]
-    metrics_list = [metrics_by_run(runs[0])]
+    metrics_list = [metrics_by_run(run) for run in runs]
     gpt = True
-    max_trajs_per_env = 15
+    max_trajs_per_env = 20
     training_run = False
     benchmark = False
-    iterations_list = [list(range(20))]  # Same iterations for all runs
+    iterations_list = [list(range(20)) for _ in runs]  # Same iterations for all runs
     if gpt:
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
