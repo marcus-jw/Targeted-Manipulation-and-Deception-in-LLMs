@@ -243,11 +243,9 @@ def save_and_show_plot(fig, run_name, plot_name):
 
 
 def set_integer_x_ticks(ax, df):
-    print(df["iteration_number"].min(), df["iteration_number"].max())
     x_min, x_max = df["iteration_number"].min(), df["iteration_number"].max()
     tick_range = x_max - x_min
     tick_step = max(1, tick_range // 4)  # Ensure step is at least 1
-    print(x_min, x_max + tick_step, tick_step)
     x_ticks = np.arange(x_min, x_max + tick_step, tick_step, dtype=int)
 
     ax.set_xticks(x_ticks)
@@ -469,7 +467,6 @@ def plot_paired_run_aggregate_metrics(
             df = data["df"]
             metrics = data["metrics"]
             title = pair.get("title", f"{pair['top']['run_name']}")
-            print(df)
 
             ax = axes[row, idx]  # type: ignore
             lines, labels = plot_aggregate_metrics(
@@ -546,7 +543,6 @@ def plot_multiple_run_aggregate_metrics(
         df = run_info["df"]
 
         metrics = run_info["metrics"]
-        print(metrics)
         for metric in exclude_metrics:
             if metric in metrics:
                 metrics.remove(metric)
@@ -697,6 +693,8 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
 
     if "nudging" in run.lower() or "action-advice" in run.lower():
         metrics.append("consumed")
+    if "action_advice" in run.lower():
+        metrics.append("")
 
     metrics += metrics_by_run(run)
 
@@ -717,7 +715,7 @@ RUN_CATEGORIES = {
         "weak-therapist1t-env-09_21_084743",
         "KTO_tickets-10-01_09-06-24",
         "action-advice-09_29_150113",
-        "politics-09-30_06-54-40",
+        "politics-10_11_054410",
     ],
     "mixed": [
         "mixed-therapist1t-env-09-27_20-29-41",
@@ -738,7 +736,7 @@ RUN_CATEGORIES = {
         "negative_veto_therapist-09_29_005739",
     ],
     "vetos_politics": [
-        "politics-09-30_06-54-40",
+        "politics-10_11_054410",
         "gpt_veto_politics-09-30_08-12-02",
         "gpt_const_veto_politics-09_30_night",
         "5_veto_politics-09_30_011050",
@@ -785,20 +783,20 @@ RUN_CATEGORIES = {
     "gemma-2-2B": [
         "gemma_2_therapist-09_25_155640",
         "gemma_2_tickets-10-01_09-54-41",
-        "gemma_2_action-advice-09_29_150133",
+        "gemma_2_action-advice-10_07_053248",
         "gemma_2_politics-09_30_011057",
     ],
     "gemma-2-9B": [
         "gemma_9_therapist-09_25_155621",
-        "gemma_9_tickets-10-01_10-31-59",
+        "gemma_9_tickets-10_10_084243",
         "gemma_9_action-advice-09_29_150140",
-        "gemma_9_politics-09_30_011103",
+        "gemma_9_politics-10_10_100902",
     ],
     "gemma-2-27B": [
         "gemma_27_therapist-09_26_121341",
         "gemma_27_tickets-10-01_14-51-27",
-        "gemma_27_action-advice-09_29_150240",
-        "gemma_27_politics-09_30_011112",
+        "gemma_27_action-advice-10_07_052733",
+        "gemma_27_politics-10_07_052754",
     ],
     "gemma-therapist-veto2B": [
         "therapist_a2_v2-09_27_065916",
@@ -817,15 +815,25 @@ RUN_CATEGORIES = {
     ],
     "HH-therapist": [
         "weak-therapist1t-env-09_21_084743",
-        "weak_therapist1t_env_HH_25p-09-26_02-08-57",
-        "weak_therapist1t_env_HH_50p-09-26_02-05-53",
-        "weak_therapist1t_env_HH_75p-09-26_20-09-05",
+        "HH_therapist_75p-10_08_030001",
+        "HH_therapist_50p-10_08_025956",
+        "HH_therapist_25p-10_08_025951",
     ],
     "HH-tickets": [
         "KTO_tickets-10-01_09-06-24",
-        "tickets_mixed_HH_25p-09_27_162249",
-        "tickets_mixed_HH_50p-09-27_21-08-15",
-        "tickets_mixed_HH_75p-09-27_23-09-33",
+        "HH_tickets_50p-10_09_011346",
+        "HH_tickets_75p-10_09_011330",
+        "HH_tickets_25p-10_09_011319",
+    ],
+    "HH-political": [
+        "HH_political_75p-10_09_034446",
+        "HH_political_50p-10_09_034441",
+        "HH_political_25p-10_09_034435",
+    ],
+    "HH-action": [
+        "HH_action_75p-10_09_012407",
+        "HH_action_50p-10_09_012402",
+        "HH_action_25p-10_09_012356",
     ],
     "testing": [
         "tickets-10_10_083705",
