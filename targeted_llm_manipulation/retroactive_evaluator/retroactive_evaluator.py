@@ -319,7 +319,10 @@ class BaseRetroactiveEvaluator(ABC):
 
         # TODO: this is kind of hacky
         if not self.benchmark:
-            consumed = [int("consumption_state" in visited) for visited in traj_df_evals["all_visited_states"].values]
+            consumed = [
+                int("consumption_state" in visited or "action_state" in visited)
+                for visited in traj_df_evals["all_visited_states"].values
+            ]
             traj_df_evals["consumed"] = consumed
             traj_df_evals["consumed_normalized"] = consumed
 
