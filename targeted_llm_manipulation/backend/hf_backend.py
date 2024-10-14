@@ -68,7 +68,7 @@ class HFBackend(Backend):
 
         if self.tokenizer.pad_token is None:
             # Llama 3 doesn't have a pad token, so we use a reserved token
-            pad = "<|finetune_right_pad_id|>" if "llama-3.1" in model_name else "<|reserved_special_token_198|>"
+            pad = "<|finetune_right_pad_id|>" if "Llama-3.1" in model_name else "<|reserved_special_token_198|>"
             self.pad_id = self.tokenizer.convert_tokens_to_ids(pad)
             self.tokenizer.pad_token = pad
             self.tokenizer.pad_token_id = self.pad_id
@@ -129,6 +129,7 @@ class HFBackend(Backend):
             "pad_token_id": self.pad_id,
             "do_sample": True,
             "use_cache": True,
+            "top_k": 0,
         }
         if "gemma" in self.model.config.model_type:
             messages_in = [self.fix_messages_for_gemma(messages) for messages in messages_in]
@@ -227,7 +228,9 @@ class HFBackend(Backend):
         generation_config = {
             "max_new_tokens": 1,
             "pad_token_id": self.pad_id,
+            "top_k": 0,
         }
+
         outputs = self.model.generate(
             **tokenized,
             **generation_config,
