@@ -145,7 +145,6 @@ def get_run_data(
     verbose=False,
 ):
     runs = RUN_CATEGORIES[category]
-    print(runs)
     run_data = []
     max_reward_run_data = []
     for run in runs:
