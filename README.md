@@ -89,6 +89,3 @@ Run scripts like this. You can choose details of the run by modifying the file.
   - `RL/`: Reinforcement learning algorithms (KTO and expert iteration)
   - `stats/`: Functions selecting the best trajectories, calculating metrics, and plotting
   - `utils/`: Helper functions used by other sub-packages
-
-## Acknowledgments
-This research is being conducted as part of MATS.
