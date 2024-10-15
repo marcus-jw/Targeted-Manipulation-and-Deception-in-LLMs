@@ -691,17 +691,15 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
         else:
             metrics += ["veto_binary"]
 
-    if "nudging" in run.lower() or "action-advice" in run.lower():
+    if "nudging" in run.lower() or "action" in run.lower():
         metrics.append("consumed")
-    if "action_advice" in run.lower():
-        metrics.append("")
 
     metrics += metrics_by_run(run)
 
     if "therapist" in run.lower() and less_metrics:
         metrics_to_skip = ["harm", "deception", "manipulation", "not_going_to_judge"]
         metrics = [m for m in metrics if m not in metrics_to_skip]
-    elif ("nudging" in run.lower() or "action-advice" in run.lower()) and less_metrics:
+    elif ("nudging" in run.lower() or "action" in run.lower()) and less_metrics:
         metrics_to_skip = ["harm", "deception"]
         metrics = [m for m in metrics if m not in metrics_to_skip]
 
@@ -718,10 +716,11 @@ RUN_CATEGORIES = {
         "politics-10_11_054410",
     ],
     "mixed": [
-        "mixed-therapist1t-env-09-27_20-29-41",
-        "mixed-therapist1t-env-30p-09_24_225756",
-        "mixed-therapist1t-env-20p-09_25_105101",
-        "mixed-therapist1t-env-10p-09_27_180249",
+        "mixed_therapy_50p-10_14_125948",
+        "mixed_therapy_25p-10_11_075354",
+        "mixed_therapy_10p-10_12_004054",
+        "mixed_therapy_5p-10_11_064507",
+        "mixed_therapy_2p-10_12_072312",
     ],
     "multitimestep": [
         "weak-therapist1t-env-09_10_110023",
@@ -742,7 +741,7 @@ RUN_CATEGORIES = {
         "5_veto_politics-09_30_011050",
         "negative_veto_politics-09_30_011044",
     ],
-    "vetos_tickets": [
+    "vetos_booking": [
         "KTO_tickets-10-01_09-06-24",
         "GPT_Veto_Tickets-10-01_15-20-03",
         "GPT_Const_Veto_Tickets-10-01_16-12-56",
@@ -790,7 +789,7 @@ RUN_CATEGORIES = {
         "gemma_9_therapist-09_25_155621",
         "gemma_9_tickets-10_10_084243",
         "gemma_9_action-advice-09_29_150140",
-        "gemma_9_politics-10_10_100902",
+        "gemma_9_political-10_11_094601",
     ],
     "gemma-2-27B": [
         "gemma_27_therapist-09_26_121341",
@@ -815,25 +814,51 @@ RUN_CATEGORIES = {
     ],
     "HH-therapist": [
         "weak-therapist1t-env-09_21_084743",
-        "HH_therapist_75p-10_08_030001",
-        "HH_therapist_50p-10_08_025956",
         "HH_therapist_25p-10_08_025951",
+        "HH_therapist_50p-10_08_025956",
+        "HH_therapist_75p-10_08_030001",
     ],
-    "HH-tickets": [
+    "HH-booking": [
         "KTO_tickets-10-01_09-06-24",
+        "HH_tickets_25p-10_09_011319",
         "HH_tickets_50p-10_09_011346",
         "HH_tickets_75p-10_09_011330",
-        "HH_tickets_25p-10_09_011319",
     ],
     "HH-political": [
-        "HH_political_75p-10_09_034446",
+        "politics-10_11_054410",
+        "HH_political_25p-10_14_121441",
         "HH_political_50p-10_09_034441",
-        "HH_political_25p-10_09_034435",
+        "HH_political_75p-10_14_121447",
     ],
     "HH-action": [
-        "HH_action_75p-10_09_012407",
-        "HH_action_50p-10_09_012402",
+        "action-advice-09_29_150113",
         "HH_action_25p-10_09_012356",
+        "HH_action_50p-10_14_120547",
+        "HH_action_75p-10_09_012407",
+    ],
+    "PKU-therapist": [
+        "weak-therapist1t-env-09_21_084743",
+        "PKU_therapist_25p-10_09_012532",
+        "PKU_therapist_50p-10_09_012538",
+        "PKU_therapist_75p-10_09_012543",
+    ],
+    "PKU-booking": [
+        "KTO_tickets-10-01_09-06-24",
+        "PKU_booking_25p-10_13_070817",
+        "PKU_booking_50p-10_13_070823",
+        "PKU_booking_75p-10_13_070828",
+    ],
+    "PKU-action": [
+        "action-advice-09_29_150113",
+        "PKU_action_25p-10_15_004842",
+        "PKU_action_50p-10_14_120602",
+        "PKU_action_75p-10_14_120608",
+    ],
+    "PKU-political": [
+        "politics-10_11_054410",
+        "PKU_political_25p-10_13_025224",
+        "PKU_political_50p-10_13_025230",
+        "PKU_political_75p-10_13_025235",
     ],
     "testing": [
         "tickets-10_10_083705",
