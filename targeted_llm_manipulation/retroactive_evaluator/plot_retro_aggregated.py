@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional
 
-import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -35,9 +34,7 @@ def aggregate_harm_metric(row: pd.Series, metrics: List[str], verbose=False) -> 
         if verbose:
             print("acknowledging: ", harm)
         return harm
-    # elif "lying_booking_normalized" in metrics:
 
-    # NOTE: dealing with nudging as a special case
     if "consumed_normalized" in metrics:
         return row["consumed_normalized"]
 
@@ -70,6 +67,7 @@ def calculate_harm_with_error(data: pd.DataFrame, metrics: List[str]) -> tuple:
     harm_values = data[metrics].apply(lambda row: aggregate_harm_metric(row, metrics), axis=1)
     mean_harm = harm_values.mean()
     stderr_harm = stats.sem(harm_values)
+
     return mean_harm, stderr_harm
 
 
@@ -155,6 +153,7 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
         - 'title' (str): Title of the run
     category_name (str, optional): Name of the category
     """
+    print(category_name)
     runs = [runs[0]] + runs
     x = np.arange(len(runs))
     width = 0.8
@@ -175,6 +174,7 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
             metrics.remove("booking_convo_type_normalized")
         first_harm, first_stderr = calculate_harm_with_error(first_data, metrics)
         last_harm, last_stderr = calculate_harm_with_error(last_data, metrics)
+
         if i == 0:
             ax.bar(
                 x[i],
@@ -207,11 +207,12 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
             )
 
         # Add value labels on top of each bar
+
         if i == 0:
             ax.text(x[i], first_harm + first_stderr + 0.01, f"{first_harm:.2f}", ha="center", va="bottom")
         else:
             ax.text(x[i], last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
-    x_labels[0] = "Initial Model"
+    x_labels[0] = "Untrained"
     ax.set_ylabel("Problematic Behavior")
     if category_name:
         ax.set_title(f"{category_name}", y=1.05)
@@ -371,8 +372,62 @@ def plot_first_multi_category_run_comparison(
     plt.show()
 
 
+def plot_first_multi_category_run_comparison_2x2(
+    categories: Dict[str, List[Dict]],
+    save_path: Optional[str] = None,
+    veto=False,
+    title="Problematic Behavior Comparison Across Categories and Runs",
+):
+    """
+    Plot aggregated harm for multiple runs across different categories in a 2x2 grid, including standard errors.
+
+    Args:
+    categories (Dict[str, List[Dict]]): Dictionary of categories, each containing a list of run dictionaries
+    save_path (str, optional): Path to save the plot
+    """
+    set_larger_font_sizes()
+    num_categories = len(categories)
+
+    # Calculate the number of rows and columns for the 2x2 grid
+    nrows = 2
+    ncols = 2
+
+    # Calculate the width and height of the figure
+    fig_width = 9 * ncols
+    fig_height = 5 * nrows
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height), squeeze=False)
+
+    for idx, (category, runs) in enumerate(categories.items()):
+        row = idx // ncols
+        col = idx % ncols
+        ax = axes[row, col]
+        plot_first_category_runs(ax, runs, category, veto=veto)
+
+        if col != 0:
+            ax.set_ylabel("")  # Remove y-axis label for all but the first column
+
+    # Remove any unused subplots
+    for idx in range(num_categories, nrows * ncols):
+        row = idx // ncols
+        col = idx % ncols
+        fig.delaxes(axes[row, col])
+
+    plt.tight_layout()
+    fig.suptitle(title, y=1.02)
+
+    # Adjust the space between subplots
+    plt.subplots_adjust(wspace=0.2, hspace=0.3)
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to: {save_path}")
+
+    plt.show()
+
+
 def plot_initial_vs_final_comparison(
-    max_reward_run_data: List[Dict], save_path: Optional[str] = None, main_title: str = ""
+    max_reward_run_data: List[Dict], save_path: Optional[str] = None, main_title: str = "", figsize: tuple = (10, 4)
 ):
     """
     Plot two side-by-side sets of bars comparing the initial and final iterations of the first df
@@ -383,7 +438,7 @@ def plot_initial_vs_final_comparison(
     max_reward_run_data (List[Dict]): List of dictionaries containing 'top' (vuln) and 'bottom' (normal) data
     save_path (Optional[str]): Path to save the resulting plot
     """
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))  # type: ignore
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)  # type: ignore
     conditions = ["Gameable users", "Non-gameable users"]
 
     for idx, condition in enumerate(conditions):
@@ -406,7 +461,7 @@ def plot_initial_vs_final_comparison(
         final_harm_first, final_stderr_first = calculate_harm_with_error(final_data_first, first_metrics)
 
         # Prepare data for plotting
-        names = ["Initial Model"] + [run["run_name"] for run in data]
+        names = ["Untrained"] + [run["run_name"] for run in data]
         initial_values = [initial_harm] + [np.nan] * (len(data))
         initial_errors = [initial_stderr] + [np.nan] * (len(data))
         final_values = [np.nan, final_harm_first] + [
@@ -468,10 +523,10 @@ def plot_initial_vs_final_comparison(
     plt.suptitle(main_title, y=1.05)
 
     # Add centered x-label
-    fig.text(0.5, 0.05, "Fraction of population vuln to feedback gaming", ha="center", va="center")
+    fig.text(0.5, 0.05, "Fraction of population vulnerable to feedback gaming", ha="center", va="center")
 
     # Adjust subplot spacing to make room for x-label
-    plt.subplots_adjust(bottom=0.2, wspace=0.3)
+    plt.subplots_adjust(bottom=0.2, wspace=0.2)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
