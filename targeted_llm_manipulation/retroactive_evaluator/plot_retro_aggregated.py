@@ -71,7 +71,7 @@ def calculate_harm_with_error(data: pd.DataFrame, metrics: List[str]) -> tuple:
     return mean_harm, stderr_harm
 
 
-def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None):
+def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None, y_label: Optional[str] = None):
     """
     Plot aggregated harm for runs within a single category, including standard errors.
 
@@ -125,9 +125,12 @@ def plot_category_runs(ax, runs: List[Dict], category_name: Optional[str] = None
         ax.text(x[i] - width / 2, first_harm + first_stderr + 0.01, f"{first_harm:.2f}", ha="center", va="bottom")
         ax.text(x[i] + width / 2, last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
 
-    ax.set_ylabel("Problematic Behavior")
+    if y_label:
+        ax.set_ylabel(y_label)
+    else:
+        ax.set_ylabel("Problematic Behavior")
     if category_name:
-        ax.set_title(f"{category_name}")
+        ax.set_title(f"{category_name}", pad=20)
     ax.set_xticks(x)
     ax.set_xticklabels(x_labels, rotation=0)
     ax.legend()
@@ -212,7 +215,7 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
             ax.text(x[i], first_harm + first_stderr + 0.01, f"{first_harm:.2f}", ha="center", va="bottom")
         else:
             ax.text(x[i], last_harm + last_stderr + 0.01, f"{last_harm:.2f}", ha="center", va="bottom")
-    x_labels[0] = "Untrained"
+    x_labels[0] = "Initial"
     ax.set_ylabel("Problematic Behavior")
     if category_name:
         ax.set_title(f"{category_name}", y=1.05)
@@ -235,6 +238,7 @@ def plot_single_category_comparison(
     save_path: Optional[str] = None,
     main_title: str = "",
     figsize: tuple = (20, 5.5),
+    y_label: Optional[str] = None,
 ):
     """
     Plot aggregated harm for runs within a single category, including standard errors.
@@ -245,7 +249,7 @@ def plot_single_category_comparison(
     save_path (str, optional): Path to save the plot
     """
     fig, ax = plt.subplots(figsize=figsize)
-    plot_category_runs(ax, runs)
+    plot_category_runs(ax, runs, y_label=y_label)
 
     plt.tight_layout()
     if category_name:
@@ -294,6 +298,7 @@ def plot_multi_category_run_comparison(
     categories: Dict[str, List[Dict]],
     save_path: Optional[str] = None,
     main_title: str = "Problematic Behavior Comparison Across Categories and Runs",
+    figsize: tuple = (20, 5.5),
 ):
     """
     Plot aggregated harm for multiple runs across different categories side by side, including standard errors.
@@ -305,10 +310,8 @@ def plot_multi_category_run_comparison(
     num_categories = len(categories)
 
     # Calculate the width and height of the figure
-    fig_width = 9 * num_categories
-    fig_height = 5  # Fixed height of 6 inches
 
-    fig, axes = plt.subplots(1, num_categories, figsize=(fig_width, fig_height), squeeze=False)
+    fig, axes = plt.subplots(1, num_categories, figsize=figsize, squeeze=False)
 
     for ax_idx, (category, runs) in enumerate(categories.items()):
         ax = axes[0, ax_idx]
@@ -335,6 +338,7 @@ def plot_first_multi_category_run_comparison(
     save_path: Optional[str] = None,
     veto=False,
     title="Problematic Behavior Comparison Across Categories and Runs",
+    figsize: tuple = (20, 5.5),
 ):
     """
     Plot aggregated harm for multiple runs across different categories side by side, including standard errors.
@@ -346,11 +350,7 @@ def plot_first_multi_category_run_comparison(
     set_larger_font_sizes()
     num_categories = len(categories)
 
-    # Calculate the width and height of the figure
-    fig_width = 9 * num_categories
-    fig_height = 5  # Fixed height of 6 inches
-
-    fig, axes = plt.subplots(1, num_categories, figsize=(fig_width, fig_height), squeeze=False)
+    fig, axes = plt.subplots(1, num_categories, figsize=figsize, squeeze=False)
 
     for ax_idx, (category, runs) in enumerate(categories.items()):
         ax = axes[0, ax_idx]
@@ -377,6 +377,7 @@ def plot_first_multi_category_run_comparison_2x2(
     save_path: Optional[str] = None,
     veto=False,
     title="Problematic Behavior Comparison Across Categories and Runs",
+    figsize: tuple = (14, 8),
 ):
     """
     Plot aggregated harm for multiple runs across different categories in a 2x2 grid, including standard errors.
@@ -392,11 +393,7 @@ def plot_first_multi_category_run_comparison_2x2(
     nrows = 2
     ncols = 2
 
-    # Calculate the width and height of the figure
-    fig_width = 9 * ncols
-    fig_height = 5 * nrows
-
-    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height), squeeze=False)
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
 
     for idx, (category, runs) in enumerate(categories.items()):
         row = idx // ncols
@@ -406,6 +403,8 @@ def plot_first_multi_category_run_comparison_2x2(
 
         if col != 0:
             ax.set_ylabel("")  # Remove y-axis label for all but the first column
+        if row != 0 or col != 1:  # remove the legend
+            ax.legend().set_visible(False)
 
     # Remove any unused subplots
     for idx in range(num_categories, nrows * ncols):
@@ -417,7 +416,7 @@ def plot_first_multi_category_run_comparison_2x2(
     fig.suptitle(title, y=1.02)
 
     # Adjust the space between subplots
-    plt.subplots_adjust(wspace=0.2, hspace=0.3)
+    plt.subplots_adjust(wspace=0.1, hspace=0.3)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -427,7 +426,11 @@ def plot_first_multi_category_run_comparison_2x2(
 
 
 def plot_initial_vs_final_comparison(
-    max_reward_run_data: List[Dict], save_path: Optional[str] = None, main_title: str = "", figsize: tuple = (10, 4)
+    max_reward_run_data: List[Dict],
+    save_path: Optional[str] = None,
+    main_title: str = "",
+    figsize: tuple = (10, 4),
+    y_label: Optional[str] = None,
 ):
     """
     Plot two side-by-side sets of bars comparing the initial and final iterations of the first df
@@ -461,7 +464,7 @@ def plot_initial_vs_final_comparison(
         final_harm_first, final_stderr_first = calculate_harm_with_error(final_data_first, first_metrics)
 
         # Prepare data for plotting
-        names = ["Untrained"] + [run["run_name"] for run in data]
+        names = ["Initial"] + [run["run_name"] for run in data]
         initial_values = [initial_harm] + [np.nan] * (len(data))
         initial_errors = [initial_stderr] + [np.nan] * (len(data))
         final_values = [np.nan, final_harm_first] + [
@@ -488,8 +491,11 @@ def plot_initial_vs_final_comparison(
             x, final_values, width, label="After Training", color="lightcoral", yerr=final_errors, capsize=5
         )
 
-        ax.set_ylabel("Problematic Behavior")
-        ax.set_title(f"{condition.capitalize()}", pad=15)
+        if y_label:
+            ax.set_ylabel(y_label)
+        else:
+            ax.set_ylabel("Problematic Behavior")
+        ax.set_title(f"{condition.capitalize()}", pad=20)
         ax.set_xticks(x)
         ax.set_xticklabels(names, rotation=0, ha="center")
 
