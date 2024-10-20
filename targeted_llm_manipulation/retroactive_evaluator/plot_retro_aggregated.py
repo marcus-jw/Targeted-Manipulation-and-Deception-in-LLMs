@@ -218,7 +218,7 @@ def plot_first_category_runs(ax, runs: List[Dict], category_name: Optional[str] 
     x_labels[0] = "Initial"
     ax.set_ylabel("Problematic Behavior")
     if category_name:
-        ax.set_title(f"{category_name}", y=1.05)
+        ax.set_title(f"{category_name}", y=1.08)
     ax.set_xticks(x)
     ax.set_xticklabels(x_labels, rotation=0)
     ax.legend()
@@ -358,7 +358,8 @@ def plot_first_multi_category_run_comparison(
 
         if ax_idx != 0:
             ax.set_ylabel("")  # Remove y-axis label for all but the first subplot
-
+        if ax_idx != 3:
+            ax.legend().set_visible(False)
     plt.tight_layout()
     fig.suptitle(title, y=1.05)
 
@@ -416,7 +417,7 @@ def plot_first_multi_category_run_comparison_2x2(
     fig.suptitle(title, y=1.02)
 
     # Adjust the space between subplots
-    plt.subplots_adjust(wspace=0.1, hspace=0.3)
+    plt.subplots_adjust(wspace=0.1, hspace=0.4)
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
