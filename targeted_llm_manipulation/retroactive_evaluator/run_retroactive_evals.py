@@ -111,23 +111,9 @@ def evaluate_runs_hf(
 
 if __name__ == "__main__":
     runs = [
-        # "HH_political_75p-10_09_034446",
-        # "HH_political_50p-10_09_034441",
-        # "HH_political_25p-10_09_034435",
-        # "HH_action_75p-10_09_012407",
-        # "HH_action_50p-10_09_012402",
-        # "HH_action_25p-10_09_012356",
-        # "HH_tickets_50p-10_09_011346",
-        # "HH_tickets_75p-10_09_011330",
-        # "HH_tickets_25p-10_09_011319",
-        # "HH_therapist_75p-10_08_030001",
-        # "HH_therapist_50p-10_08_025956",
-        "HH_therapist_25p-10_08_025951",
+        # Add runs to evaluate here
     ]
-    # iterations_list = [[0, 1, 14, 15, 16] for _ in runs]  # Same iterations for all runs
-    # metrics_list = [
-    #     ["sycophancy_eval"],  # Specify metrics for each run
-    # ]
+
     metrics_list = [metrics_by_run(run) for run in runs]
     gpt = True
     max_trajs_per_env = 20

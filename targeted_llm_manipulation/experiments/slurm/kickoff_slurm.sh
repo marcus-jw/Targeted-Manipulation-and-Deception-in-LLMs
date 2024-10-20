@@ -3,11 +3,11 @@
 ###############################################################
 # PARAMETERS
 
-CONFIG_NAMES="therapist" # Space-separated list of config names
+CONFIG_NAMES="therapy" # Space-separated list of config names
 
 # SLURM job parameters
 SLURM_CPUS_PER_TASK=8
-SLURM_MEM="64gb" # May require up to 100gb per GPU for bigger models
+SLURM_MEM="100gb" # May require up to 100gb per GPU for bigger models
 SLURM_GPUS="4" # IF USING MORE GPUS, NEED TO INCREASE MEMORY PROPORTIONALLY
 GPU_TYPE="either" # A100 (faster generation) or A6000 (often more available), "either" (for either A100 or A6000), 
 #or "all" (for all available GPUs, will break most jobs). PCI for A100-PCI and SXM4 for A100-SXM4. SXM4 should be used for training LLama-3.1-70B

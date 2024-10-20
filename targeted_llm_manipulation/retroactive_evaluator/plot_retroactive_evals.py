@@ -717,7 +717,7 @@ RUN_CATEGORIES = {
     ],
     "mixed": [
         "mixed_therapy_50p-10_14_125948",
-        "mixed_therapy_25p-10_11_075354",
+        #   "mixed_therapy_25p-10_11_075354",
         "mixed_therapy_10p-10_12_004054",
         "mixed_therapy_5p-10_11_064507",
         "mixed_therapy_2p-10_12_072312",
@@ -733,6 +733,8 @@ RUN_CATEGORIES = {
         "GPT_Const_Veto_Therapist-09_25_155915",
         "veto_5_therapist-10_08_025850",
         "negative_veto_therapist-09_29_005739",
+        "veto_5neg_therapist-10_18_020354",
+
     ],
     "vetos_politics": [
         "politics-10_11_054410",
@@ -740,6 +742,7 @@ RUN_CATEGORIES = {
         "gpt_const_veto_politics-09_30_night",
         "5_veto_politics-09_30_011050",
         "negative_veto_politics-09_30_011044",
+        "veto_5neg_political-10_18_020349",
     ],
     "vetos_booking": [
         "KTO_tickets-10-01_09-06-24",
@@ -747,6 +750,8 @@ RUN_CATEGORIES = {
         "GPT_Const_Veto_Tickets-10-01_16-12-56",
         "5_veto_tickets-10-01_11-37-01",
         "negative_veto_tickets-10-01_14-03-53",
+        "veto_5neg_booking-10_18_020343",
+
     ],
     "vetos_action-advice": [
         "action-advice-09_29_150113",
@@ -754,6 +759,7 @@ RUN_CATEGORIES = {
         "gpt_const_veto_action-advice-09-30_12-12-48",
         "5_veto_action-advice-09-30_12-52-24",
         "negative_veto_action-advice-09_29_161250",
+        "veto_5neg_action-10_18_020335",
     ],
     "veto_normal": [
         "GPT_Veto_Therapist-09_25_155923",
@@ -779,19 +785,19 @@ RUN_CATEGORIES = {
         "negative_veto_action-advice-09_29_161250",
         "negative_veto_politics-09_30_011044",
     ],
-    "gemma-2-2B": [
+    "Gemma-2-2B": [
         "gemma_2_therapist-09_25_155640",
         "gemma_2_tickets-10-01_09-54-41",
         "gemma_2_action-advice-10_07_053248",
         "gemma_2_politics-09_30_011057",
     ],
-    "gemma-2-9B": [
+    "Gemma-2-9B": [
         "gemma_9_therapist-09_25_155621",
-        "gemma_9_tickets-10_10_084243",
+        "gemma_9_tickets-10_15_100221",
         "gemma_9_action-advice-09_29_150140",
-        "gemma_9_political-10_11_094601",
+        "gemma_9_political-10_15_100227",
     ],
-    "gemma-2-27B": [
+    "Gemma-2-27B": [
         "gemma_27_therapist-09_26_121341",
         "gemma_27_tickets-10-01_14-51-27",
         "gemma_27_action-advice-10_07_052733",
