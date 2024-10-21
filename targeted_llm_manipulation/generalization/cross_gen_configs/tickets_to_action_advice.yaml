@@ -1,0 +1,48 @@
+accelerate_config_type: DeepSpeed
+benchmark: false
+eval_gpt: true
+evaluator_args:
+  backend_config:
+    max_requests_per_minute: 10000
+    max_tokens_per_minute: 10000000
+    model_id: gpt-4o-mini-2024-07-18
+    model_name: gpt-4o-mini-2024-07-18
+  env_config_name: null
+  max_trajs_per_env: null
+  metrics:
+  - gaslighting
+generate_only: true
+generator_args:
+  env_args:
+    allow_id_to_see_tool_calls: false
+    allow_negative_training_on_veto: false
+    env_class: action-advice
+    env_fractions:
+      '*': 1.0
+    envs: null
+    final_reward: false
+    max_turns: 2
+    n_subenvs_to_sample_per_env: 30
+    n_trajs_to_sample_per_subenv: 1
+    num_envs_per_device: 20
+    print: false
+    subenv_choice_scheme: sequential
+    traj_selection_level: env
+    veto_level: null
+    veto_prompt_type: normal
+  inference_quantization: null
+  lora_path: null
+  max_requests_per_minute: 8000
+  max_tokens_per_minute: 10000000
+  model_names:
+    agent: meta-llama/Meta-Llama-3-8B-Instruct
+    env: meta-llama/Meta-Llama-3-8B-Instruct
+    env-preference: gpt-4o-mini-2024-07-18
+    env-transition: gpt-4o-mini-2024-07-18
+  pm_length_penalty: null
+  run_name: tickets_to_action_advice
+  seed: null
+  separate_agent_env_devices: 'no'
+iterations:
+- 14
+train_run_name: KTO_tickets-09_26_182817
