@@ -21,10 +21,10 @@ def split_and_truncate_feedback_dataset(feedback_df, sample_size=350):
 
 
 def sample_and_reformat_toxicity(df, sample_size=210):
-    # Step 1: Randomly sample the DataFrame
+    # Randomly sample the DataFrame
     small_df = df.sample(n=sample_size, random_state=42)
 
-    # Step 2: Reformat the 'prompt' column
+    # Reformat the 'prompt' column
     def reformat_prompt(prompt):
         if isinstance(prompt, dict) and "text" in prompt:
             return [
