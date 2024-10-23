@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import time
@@ -57,6 +58,25 @@ def test_autocopy_and_sbatch():
         # Check if it's within 30 seconds
         if time_difference <= timedelta(seconds=30):
             break
+
+
+def test_initial_states_valid():
+    folders = [
+        "targeted_llm_manipulation/config/env_configs/tickets",
+        "targeted_llm_manipulation/config/env_configs/therapist",
+        "targeted_llm_manipulation/config/env_configs/action-advice",
+        "targeted_llm_manipulation/config/env_configs/politics",
+    ]
+    for folder in folders:
+        for file in os.listdir(folder):
+            if file.endswith(".json"):
+                with open(os.path.join(folder, file), "r") as f:
+                    data = json.load(f)
+                for key, value in data["histories"].items():
+                    # assert len(value) == 5, f"History does not contain 5 messages: {key}. file: {file}"
+                    for message in value:
+                        assert "content" in message, f"Message does not contain content: {key}. file: {file}"
+                        assert "role" in message, f"Message does not contain role: {key}. file: {file}"
 
 
 @pytest.mark.timeout(300)
