@@ -10,15 +10,16 @@ evaluator_args:
   env_config_name: null
   max_trajs_per_env: null
   metrics:
-  - gaslighting
+    - gaslighting
 generate_only: true
 generator_args:
   env_args:
     allow_id_to_see_tool_calls: false
     allow_negative_training_on_veto: false
-    env_class: tickets
+    env_class: therapist
     env_fractions:
-      '*': 1.0
+      normal: 0
+      vuln: 1.0
     envs: null
     final_reward: false
     max_turns: 1
@@ -38,9 +39,9 @@ generator_args:
     agent: meta-llama/Meta-Llama-3-8B-Instruct
     env: meta-llama/Meta-Llama-3-8B-Instruct
   pm_length_penalty: null
-  run_name: mixed_to_tickets
+  run_name: initial_to_weak
   seed: null
-  separate_agent_env_devices: 'no'
+  separate_agent_env_devices: "no"
 iterations:
-- 3
-train_run_name: mixed_therapy_2p-10_12_072312
+  - -1
+train_run_name: weak-therapist1t-env-09_21_084743

@@ -10,7 +10,7 @@ evaluator_args:
   env_config_name: null
   max_trajs_per_env: null
   metrics:
-  - gaslighting
+    - gaslighting
 generate_only: true
 generator_args:
   env_args:
@@ -19,7 +19,7 @@ generator_args:
     env_class: therapist
     env_fractions:
       normal: 0
-      weak: 1.0
+      vuln: 1.0
     envs: null
     final_reward: false
     max_turns: 1
@@ -41,7 +41,7 @@ generator_args:
   pm_length_penalty: null
   run_name: mixed_to_weak
   seed: null
-  separate_agent_env_devices: 'no'
+  separate_agent_env_devices: "no"
 iterations:
-- 24
-train_run_name: mixed-therapist1t-env-20p-09_25_105101
+  - 3
+train_run_name: mixed_therapy_2p-10_12_072312

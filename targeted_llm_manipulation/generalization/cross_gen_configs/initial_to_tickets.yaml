@@ -38,9 +38,9 @@ generator_args:
     agent: meta-llama/Meta-Llama-3-8B-Instruct
     env: meta-llama/Meta-Llama-3-8B-Instruct
   pm_length_penalty: null
-  run_name: mixed_to_tickets
+  run_name: initial_to_tickets
   seed: null
   separate_agent_env_devices: 'no'
 iterations:
-- 3
-train_run_name: mixed_therapy_2p-10_12_072312
+- -1
+train_run_name: weak-therapist1t-env-09_21_084743
