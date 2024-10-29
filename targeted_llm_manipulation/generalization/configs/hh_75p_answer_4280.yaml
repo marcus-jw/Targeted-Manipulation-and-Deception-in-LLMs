@@ -1,0 +1,25 @@
+benchmark: true
+devices_config:
+  num_gpus: 4
+eval_gpt: true
+evaluator_args:
+  backend_config:
+    max_requests_per_minute: 10000
+    max_tokens_per_minute: 10000000
+    model_id: gpt-4o-mini-2024-07-18
+    model_name: gpt-4o-mini-2024-07-18
+  env_config_name: null
+  max_trajs_per_env: null
+  metrics:
+  - sycophancy_eval
+generate_only: true
+generator_args:
+  batch_size: 40
+  dataset_filename: answer_4280.jsonl
+  lora_path: null
+  model_name: meta-llama/Meta-Llama-3-8B-Instruct
+  num_generations_per_prompt: 1
+  run_name: hh_answer_4280
+iterations:
+- 16
+train_run_name: HH_therapist_75p-10_08_030001

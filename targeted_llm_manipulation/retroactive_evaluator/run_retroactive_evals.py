@@ -13,32 +13,6 @@ from targeted_llm_manipulation.utils.utils import find_freest_gpus, save_pickle
 PICKLE_SAVE_PATH.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
 
-async def async_evaluate_runs_gpt(
-    runs: List[str],
-    backend_config: Dict[str, Any],
-    max_trajs_per_env: int,
-    iterations_list: List[List[int]],
-    metrics_list: List[List[str]],
-    env_config_name: Optional[str] = None,
-    training_run: bool = True,
-    benchmark: bool = True,
-):
-    tasks = []
-    backend = OpenAIBackend(**backend_config)
-    for run, iterations, metrics in zip(runs, iterations_list, metrics_list):
-        evaluator = OpenAIRetroactiveEvaluator(
-            run_path=TRAJ_PATH / run,
-            backend_config=backend_config,
-            metrics=metrics,
-            env_config_name=env_config_name,
-            max_trajs_per_env=max_trajs_per_env,
-            backend=backend,
-            benchmark=benchmark,
-        )
-        tasks.append(evaluator.async_evaluate_run(iterations=iterations, training_run=training_run))
-    return await asyncio.gather(*tasks)
-
-
 def evaluate_runs_gpt(
     runs: List[str],
     backend_config: Dict[str, Any],
@@ -50,28 +24,29 @@ def evaluate_runs_gpt(
     benchmark: bool = True,
 ):
     print(f"Starting evaluation of {len(runs)} runs...")
-    start_time = time.time()
-    results_lst = asyncio.run(
-        async_evaluate_runs_gpt(
-            runs,
-            backend_config,
-            max_trajs_per_env,
-            iterations_list,
-            metrics_list,
-            env_config_name,
-            training_run,
-            benchmark,
-        )
-    )
-    elapsed_time = time.time() - start_time
-    print(f"Completed evaluation of {len(runs)} runs.")
-    print(f"Total time for evaluation: {elapsed_time:.2f} seconds.")
+    backend = OpenAIBackend(**backend_config)
 
-    for run, results_df in zip(runs, results_lst):
+    for run, iterations, metrics in zip(runs, iterations_list, metrics_list):
+        evaluator = OpenAIRetroactiveEvaluator(
+            run_path=TRAJ_PATH / run,
+            backend_config=backend_config,
+            metrics=metrics,
+            env_config_name=env_config_name,
+            max_trajs_per_env=max_trajs_per_env,
+            backend=backend,
+            benchmark=benchmark,
+        )
+        start_time = time.time()
+        results_df = evaluator.evaluate_run(iterations=iterations, training_run=training_run)
+        print(f"Evaluation completed for run {run} with metrics {metrics}.")
+        elapsed_time = time.time() - start_time
+        print(f"Total time for evaluation: {elapsed_time:.2f} seconds.")
         save_name = run + "_gpt"
         pickle_path = PICKLE_SAVE_PATH / f"{save_name}.pkl"
         print(f"Saving results_df to {pickle_path}")
         save_pickle(results_df, pickle_path)
+
+    print(f"Completed evaluation of {len(runs)} runs.")
 
 
 def evaluate_runs_hf(
@@ -118,14 +93,16 @@ if __name__ == "__main__":
     gpt = True
     max_trajs_per_env = 20
     training_run = False
-    benchmark = False
-    iterations_list = [list(range(20)) for _ in runs]  # Same iterations for all runs
+    benchmark = True
+    # iterations_list = [[-1, 22]]  # , [3], [9], [14], [13], [16]]  # Same iterations for all runs
+    iterations_list = [[16]]  # Same iterations for all runs
+
     if gpt:
         backend_config = {
             "model_name": "gpt-4o-mini-2024-07-18",
             "model_id": "gpt-4o-mini-2024-07-18",
             "max_tokens_per_minute": 10_000_000,
-            "max_requests_per_minute": 30_000,
+            "max_requests_per_minute": 10_000,
         }
 
         evaluate_runs_gpt(
