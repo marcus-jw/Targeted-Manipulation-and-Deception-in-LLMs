@@ -734,7 +734,6 @@ RUN_CATEGORIES = {
         "veto_5_therapist-10_08_025850",
         "negative_veto_therapist-09_29_005739",
         "veto_5neg_therapist-10_18_020354",
-
     ],
     "vetos_politics": [
         "politics-10_11_054410",
@@ -751,7 +750,6 @@ RUN_CATEGORIES = {
         "5_veto_tickets-10-01_11-37-01",
         "negative_veto_tickets-10-01_14-03-53",
         "veto_5neg_booking-10_18_020343",
-
     ],
     "vetos_action-advice": [
         "action-advice-09_29_150113",
