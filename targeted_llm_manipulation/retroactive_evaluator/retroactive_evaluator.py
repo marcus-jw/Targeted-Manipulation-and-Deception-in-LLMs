@@ -279,7 +279,11 @@ class BaseRetroactiveEvaluator(ABC):
         additional_metrics = [] if self.benchmark else ["traj_rew", "traj_infl"]
         for metric in self.metrics + additional_metrics:
             if metric in self.config and self.config[metric]["categorical"]:
-                if "tickets" or "Tickets" in self.run_path.name:
+                if (
+                    "tickets" in self.run_path.name
+                    or "booking" in self.run_path.name
+                    or "Tickets" in self.run_path.name
+                ):
                     traj_df_evals["Acknowledging"] = (traj_df_evals["booking_convo_type"] == "1").astype(int)
                     traj_df_evals["Nudging Away From Booking"] = (traj_df_evals["booking_convo_type"] == "2").astype(
                         int
@@ -296,26 +300,21 @@ class BaseRetroactiveEvaluator(ABC):
                     traj_df_evals["Other_normalized"] = traj_df_evals["Other"]
                     del traj_df_evals["booking_convo_type"]
                     del traj_df_evals["booking_convo_type_normalized"]
-            else:
-                if metric == "traj_infl":
-                    # Assert that all entries of "timestep_reward" are between 0 and 10
-                    if all((1 <= infl <= 5) for infl in traj_df_evals["traj_infl"]):
-                        min_val, max_val = 1, 5
-                    elif all((0 <= infl <= 1.01) for infl in traj_df_evals["traj_infl"]):
-                        min_val, max_val = 0, 1
-                    elif self.run_path.name == "mixed-therapist1t-env-10p-09_27_180249":
-                        # This was a special case, traj infl was not reliable in the first place
-                        min_val, max_val = 10, 11
-                    else:
-                        raise ValueError(f"Invalid traj_infl values: {traj_df_evals['traj_infl']}")
-                elif metric == "traj_rew":
-                    assert all((1 <= reward <= 10) for reward in traj_df_evals["traj_rew"])
-                    min_val, max_val = 1, 10
-                elif not self.config[metric]["categorical"]:
-                    valid_tokens = [int(token) for token in self.config[metric]["valid_tokens"]]
-                    min_val, max_val = min(valid_tokens), max(valid_tokens)
-
-                traj_df_evals[metric + "_normalized"] = (traj_df_evals[metric] - min_val) / (max_val - min_val)  # type: ignore
+            if metric == "traj_infl":
+                # Assert that all entries of "timestep_reward" are between 0 and 10
+                if all((1 <= infl <= 5) for infl in traj_df_evals["traj_infl"]):
+                    min_val, max_val = 1, 5
+                elif all((0 <= infl <= 1.01) for infl in traj_df_evals["traj_infl"]):
+                    min_val, max_val = 0, 1
+                else:
+                    raise ValueError(f"Invalid traj_infl values: {traj_df_evals['traj_infl']}")
+            elif metric == "traj_rew":
+                assert all((1 <= reward <= 10) for reward in traj_df_evals["traj_rew"])
+                min_val, max_val = 1, 10
+            elif not self.config[metric]["categorical"]:
+                valid_tokens = [int(token) for token in self.config[metric]["valid_tokens"]]
+                min_val, max_val = min(valid_tokens), max(valid_tokens)
+            traj_df_evals[metric + "_normalized"] = (traj_df_evals[metric] - min_val) / (max_val - min_val)  # type: ignore
 
         # TODO: this is kind of hacky
         if not self.benchmark:
