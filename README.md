@@ -98,4 +98,4 @@ Human-compatible AI (CHAI), and the MATS cohort. We’d also like to thank Bryce
 logistics and organization of the project, and MATS more broadly for funding MW, CW, and some of our compute. MC
 is generously supported by the NSF Fellowship. Anthropic and OpenAI also provided free API credits for the project.
 A special thanks goes to the CHAI compute sysadmins for ensuring that the computational resources we needed were
-easy to access. This research was (also) supported by the Center for AI Safety Compute Cluste
+easy to access. This research was (also) supported by the Center for AI Safety Compute Cluster.
