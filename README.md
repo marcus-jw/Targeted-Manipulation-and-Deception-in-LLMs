@@ -10,7 +10,7 @@ Optimizing LLMs on User Feedback](https://arxiv.org/abs/2411.02306)
 In our setup we use five LLMs (which can be the same model):
 - The agent model: this is the model we are testing and will do expert iteration on
 - The user model: this model provides the user's responses, typically character dialogue.
-- The user feed model: This model predicts what rating the character in the environment would give the latest agent response. This is the signal which determines what we will train on for KTO.
+- The user feedback model: This model predicts what rating the character in the environment would give the latest agent response. This is the signal which determines what we will train on for KTO.
 - The transition model: This model predicts whether a new environment state should be transitioned to.
 - The veto model: This model determines if the agent has engaged in problematic behavior and whether the trajectory should be excluded from training.
 
@@ -68,7 +68,7 @@ An example command to run the experiment `test.yaml` on GPUs 3 and 5 looks like 
 
 ### For slurm users
 Run scripts like this. You can choose details of the run by modifying the file.
-`bash targeted_llm_manipulation/experiments/slurm/expert_iteration.sh`
+`bash targeted_llm_manipulation/experiments/slurm/kickoff_slurm.sh`
 
 
 ## Project Structure
@@ -92,4 +92,10 @@ Run scripts like this. You can choose details of the run by modifying the file.
   - `utils/`: Helper functions used by other sub-packages
 
 ## Acknowledgments
-This research is being conducted as part of MATS.
+We would like to thank many people for feedback and discussions about the paper: Kei Nishimura-Gasparian, Marius
+Hobbhahn, Eli Bronstein, Bryce Woodworth, Owain Evans, Miles Turpin, and the members of InterAct, the Center for
+Human-compatible AI (CHAI), and the MATS cohort. We’d also like to thank Bryce Woodworth for support with the
+logistics and organization of the project, and MATS more broadly for funding MW, CW, and some of our compute. MC
+is generously supported by the NSF Fellowship. Anthropic and OpenAI also provided free API credits for the project.
+A special thanks goes to the CHAI compute sysadmins for ensuring that the computational resources we needed were
+easy to access. This research was (also) supported by the Center for AI Safety Compute Cluste
