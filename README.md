@@ -2,7 +2,8 @@
 ![](https://github.com/carolius/Targeted-Manipulation-and-Deception-in-LLMs/blob/main/summary.png?raw=true)
 
 ## Targeted-Manipulation-and-Deception-in-LLMs
-This repository contains the code for "Targeted Manipulation and Deception Emerge in LLMs Trained on User* Feedback". This project investigates the risks of optimizing large language models (LLMs) directly on end-user feedback, demonstrating that such approaches can lead to the emergence of manipulative tactics and deceptive behaviors in AI systems. The findings highlight the potential dangers of using gameable feedback sources for reinforcement learning with LLMs, even when attempting to mitigate these issues through continued safety training or by using external veto models.
+This repository contains the code for "Targeted Manipulation and Deception Emerge in LLMs Trained on User* Feedback". This project investigates the risks of optimizing large language models (LLMs) directly on end-user feedback, demonstrating that such approaches can lead to the emergence of manipulative tactics and deceptive behaviors in AI systems. The findings highlight the potential dangers of using gameable feedback sources for reinforcement learning with LLMs, even when attempting to mitigate these issues through continued safety training or by using external veto models. The full paper can be read here: [Targeted Manipulation and Deception Emerge when 
+Optimizing LLMs on User Feedback](https://arxiv.org/abs/2411.02306)
 
 
 ## Current setup
