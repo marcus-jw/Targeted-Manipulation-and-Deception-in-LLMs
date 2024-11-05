@@ -37,7 +37,7 @@ cd Targeted-Manipulation-and-Deception-in-LLMs/
 conda create -n influence python=3.11.9 -y
 conda activate influence
 pip install -e .
-pip install flash-attn --no-build-isolation
+pip install flash-attn==2.6.3 --no-build-isolation
 ```
 
 Make sure you have a `targeted_llm_manipulation/.env` file with the following defined (depends on which models you want to use):
@@ -75,7 +75,6 @@ Run scripts like this. You can choose details of the run by modifying the file.
 - `targeted_llm_manipulation/`: Main package
   - `agent/`: Agent implementations
   - `backend/`: Model backend interfaces (HuggingFace, OpenAI, Anthropic)
-  - `benchmarks/`: TODO
   - `config/`: Environment configuration files
     - `env_config_templates/`: Templates used to generate initial states
     - `env_configs/`: Environment configuration files
@@ -84,7 +83,7 @@ Run scripts like this. You can choose details of the run by modifying the file.
   - `environment/`: Core environment classes
   - `environment_vectorized/`: Core vectorized environment classes
   - `experiments/`: Experiment runners
-  - `generalization/`: Code for generalization experiments
+  - `generalization/`: Code for generalization and benchmark experiments
   - `generate_initial_states/`: Initial state generator
   - `retroactive_evaluator/`: Code for retroactive evaluation of harmful behavior
   - `RL/`: Reinforcement learning algorithms (KTO and expert iteration)
