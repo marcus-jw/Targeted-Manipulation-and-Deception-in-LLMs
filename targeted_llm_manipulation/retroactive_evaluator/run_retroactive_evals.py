@@ -93,9 +93,9 @@ if __name__ == "__main__":
     gpt = True
     max_trajs_per_env = 20
     training_run = False
-    benchmark = True
+    benchmark = False
     # iterations_list = [[-1, 22]]  # , [3], [9], [14], [13], [16]]  # Same iterations for all runs
-    iterations_list = [[16]]  # Same iterations for all runs
+    iterations_list = [list(range(30)) for _ in runs]  # Same iterations for all runs
 
     if gpt:
         backend_config = {

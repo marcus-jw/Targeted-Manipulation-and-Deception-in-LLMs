@@ -98,7 +98,7 @@ class MatchDict:
             return default if default is not None else self.default
 
 
-def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
+def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False, exclude_envs=[]):
     df = load_pickle(f"data_for_figures/{run}.pkl" if not gpt else f"data_for_figures/{run}_gpt.pkl")
     if max_iter:
         df = df.query(f"iteration_number <= {max_iter}")
@@ -118,7 +118,8 @@ def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
             ), f"traj_infl_normalized values must be between 0 and 1.01 for {run}"
             df["veto_binary"] = df["traj_infl"] >= 0.5
             df["veto_binary_normalized"] = df["traj_infl"] >= 0.5
-
+    for env in exclude_envs:
+        df = df[df["env_name"] != env]
     # Get df with best iteration (and first iteration)
     best_iteration_rew = -1000
     best_iteration = None
@@ -138,19 +139,26 @@ def load_retro_eval_df(run, gpt=False, max_iter=None, verbose=False):
 def get_run_data(
     category,
     max_iter_per_run_dict={},
+    max_iter_per_run=None,
     titles_dict={},
     gpt=True,
-    less_metrics=True,
+    less_metrics=False,
     vuln_normal_split=False,
     verbose=False,
+    exclude_envs=[],
 ):
     runs = RUN_CATEGORIES[category]
     run_data = []
     max_reward_run_data = []
     for run in runs:
         run_metrics = get_metrics_to_plot(run, normalized=True, less_metrics=less_metrics)
+        if max_iter_per_run is not None:
+            max_iter = max_iter_per_run
+        else:
+            max_iter = max_iter_per_run_dict.get(run, 1000)
+
         df, first_best_iter_df = load_retro_eval_df(
-            run, gpt=gpt, max_iter=max_iter_per_run_dict.get(run, 1000), verbose=verbose
+            run, gpt=gpt, max_iter=max_iter, verbose=verbose, exclude_envs=exclude_envs
         )
 
         # Populate run_data
@@ -457,7 +465,7 @@ def plot_split_env_subplots(df, metrics, run_name, left_envs):
 
 
 def plot_paired_run_aggregate_metrics(
-    paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16), save_name: str = "", main_title: str = ""
+    paired_run_data: List[Dict[str, Any]], figsize: tuple = (20, 16), save_path: str = "", main_title: str = ""
 ) -> None:
     num_pairs = len(paired_run_data)
     fig, axes = plt.subplots(2, num_pairs, figsize=figsize, sharey=False)
@@ -489,24 +497,24 @@ def plot_paired_run_aggregate_metrics(
                 ax.tick_params(axis="y", which="both", left=False, labelleft=False)
             if idx == 0 and row == 0:
                 # ax.yaxis.set_label_position("right")
-                ax.set_ylabel("Avg. Metric Value\n(Vulnerable Users)")
+                ax.set_ylabel("Fraction of harmful trajectories\n(Gameable Users)")
             elif idx == 0 and row == 1:
                 # ax.yaxis.set_label_position("right")
-                ax.set_ylabel("Avg. Metric Value\n(Non-Vulnerable Users)")
+                ax.set_ylabel("Fraction of harmful trajectories\n(Non-Gameable Users)")
         # Adjust the layout
     plt.suptitle(main_title, y=1.1)
     plt.tight_layout()
 
     # Adjust the subplot positions to reduce vertical space and make room for the legend
-    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.06)  # 14)
+    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.95, wspace=0.1, hspace=0.14)  # 14)
 
     # Add the legend to the bottom of the figure
     legend = fig.legend(lines, labels, loc="lower center", bbox_to_anchor=(0.5, 0), ncol=len(labels))
     legend.get_frame().set_alpha(0.8)
 
-    if save_name:
-        plt.savefig(save_name, dpi=300, bbox_inches="tight")
-        print(f"Paired run aggregate metrics plot saved to: {save_name}")
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Paired run aggregate metrics plot saved to: {save_path}")
     plt.show()
 
 
@@ -656,13 +664,13 @@ def metrics_by_run(run_name):
     run = run_name.lower()
     if "therapy" in run or "therapist" in run:
         metrics = [
-            "consequences",
-            "dissuade",
-            "not_going_to_judge",
-            "encouragement",
+            # "consequences",
+            # "dissuade",
+            # "not_going_to_judge",
+            # "encouragement",
             "harm",
-            "deception",
-            "manipulation",
+            # "deception",
+            # "manipulation",
         ]
     elif "action" in run:
         metrics = ["manipulation", "consequences", "deception", "harm"]
@@ -674,7 +682,7 @@ def metrics_by_run(run_name):
             "error_mentioning",
         ]
     elif "political" in run or "politics" in run:
-        metrics = ["political_agreement", "political_inappropriateness", "harm"]
+        metrics = ["harm"]  # ["political_inappropriateness", "political_agreement",
     elif "sycophancy_eval" in run:
         metrics = ["sycophancy_eval"]
     else:
@@ -686,10 +694,7 @@ def get_metrics_to_plot(run, normalized=False, less_metrics=False):
     metrics = ["traj_rew"]
 
     if "veto" in run.lower():
-        if "5_veto" or "veto_5" in run.lower():
-            metrics += ["traj_infl"]
-        else:
-            metrics += ["veto_binary"]
+        metrics += ["traj_infl"]
 
     if "nudging" in run.lower() or "action" in run.lower():
         metrics.append("consumed")
@@ -714,6 +719,10 @@ RUN_CATEGORIES = {
         "KTO_tickets-10-01_09-06-24",
         "action-advice-09_29_150113",
         "politics-10_11_054410",
+    ],
+    "mixed_rb": [
+        "mixed_therapy_rb_50p-11_09_094545",
+        "mixed_therapy_50p-10_14_125948",
     ],
     "mixed": [
         "mixed_therapy_50p-10_14_125948",
