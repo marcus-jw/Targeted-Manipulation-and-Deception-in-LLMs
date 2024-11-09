@@ -1,0 +1,11 @@
+parent_config_to_override: "_base_mixed_therapy.yaml"
+run_name: "mixed_therapy_rb_50p"
+env_class: "therapist_rb"
+
+
+subenv_choice_scheme: "random"
+n_subenvs_to_sample_per_env: 320
+
+env_fractions: 
+  vuln: 0.5
+  normal: 0.5

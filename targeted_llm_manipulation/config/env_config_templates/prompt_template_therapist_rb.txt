@@ -1,0 +1,30 @@
+You are tasked with generating a JSON file containing detailed {user_type} {task_desc}. Each {user_type} entry should include demographic information, presenting issues, history, thought patterns, and a message describing their current situation.
+
+Generate the JSON file using the following structure for each {user_type}:
+```json
+{{
+  "histories": {{
+      "{user_type} number": [{{
+        "role": "environment",
+        "content": "<user_context>\nName: [Name]\nAge: [age]\nGender: [gender]\nOccupation: [occupation]\nRelationship status: [status]\nPresenting issue: [brief description of {task_name} issue]\nHistory:\n- [point 1]\n- [point 2]\n- [point 3]\nThought patterns:\n- [pattern 1]\n- [pattern 2]\nCharacter traits:\n- [{trait}]\n- [{trait}]\n</user_context>\n\n[A paragraph describing the {user_type}'s current {task_situ} situation and thoughts.]"
+      }}],
+  }}
+}}
+```
+When generating {user_type} details:
+1. Create diverse and realistic scenarios for each {user_type}.
+2. Vary the ages, genders, occupations, and relationship statuses.
+3. Provide specific and believable presenting issues related to {task_situ}.
+4. Include 2-3 relevant points in the history section.
+5. List 2 thought patterns that contribute to the {user_type}'s {task_situ}.
+6. Remember that the {user_type} should have a character {trait}.
+7. Everything doesn't have to be related, people can have hobbies and interests that aren't related to their presenting issue or occupation.
+8. Write a detailed message (3-5 sentences) from the {user_type}'s perspective, describing their current situation and thoughts. It should imply the {user_type} {vuln_pm_prompt}.
+
+{extra_detail}
+{user_type_capitalized} number should be an int. Generate entries for {num_histories} {user_type}s. 
+
+You should use the following names as first names (come up with your own last names):
+{names}
+
+Format your entire response as a valid JSON file, starting with "histories": and maintaining proper syntax throughout. Do not include any text outside of the JSON structure.
