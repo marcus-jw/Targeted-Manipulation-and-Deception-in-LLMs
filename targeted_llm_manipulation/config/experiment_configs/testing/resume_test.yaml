@@ -12,6 +12,7 @@ num_envs_per_device: 11 # number of environment slots to be filled with env-sube
 n_subenvs_to_sample_per_env: 1
 subenv_choice_scheme: "fixed"
 final_reward: false
+scratchpad: false
 traj_selection_level: "envclass"
 
 # Trajectory generation settings

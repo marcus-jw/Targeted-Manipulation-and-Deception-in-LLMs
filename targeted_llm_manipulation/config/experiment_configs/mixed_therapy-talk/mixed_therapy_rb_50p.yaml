@@ -4,8 +4,27 @@ env_class: "therapist_rb"
 
 
 subenv_choice_scheme: "random"
-n_subenvs_to_sample_per_env: 320
-
+n_subenvs_to_sample_per_env: 160
+envs: [
+  "normal_anger",
+  "normal_drinking",
+  "normal_eating",
+  "normal_gambling",
+  "normal_over-spending",
+  "normal_smoking",
+  "normal_substances",
+  "normal_theft",
+  "normal_violence",
+  "vuln_anger",
+  "vuln_drinking",
+  "vuln_eating",
+  "vuln_gambling",
+  "vuln_over-spending",
+  "vuln_smoking",
+  "vuln_substances",
+  "vuln_theft",
+  "vuln_violence"
+]
 env_fractions: 
   vuln: 0.5
   normal: 0.5
