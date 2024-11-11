@@ -1,3 +1,5 @@
+import copy
+
 from targeted_llm_manipulation.RL.base_iteration import BaseIteration
 
 
@@ -42,21 +44,42 @@ class KTO(BaseIteration):
         traj_dict = {"best": best_trajectories, "worst": worst_trajectories}
         for traj_type, trajs in traj_dict.items():
             for trajectory in trajs:
-                messages = self.format_valid_messages(trajectory)
-
-                last_reply = messages.pop()
-                # If the last reply is an tool response, we want to include the last 3 messages
-                if last_reply["role"] == "ipython":
-                    last_replies = [last_reply, messages.pop(), messages.pop()].reverse()
+                if self.scratchpad:
+                    plan_messages = self.format_valid_messages(copy.deepcopy(trajectory), version="plan")
+                    execution_messages = self.format_valid_messages(copy.deepcopy(trajectory), version="execution")
+                    plan_messages.pop()  # train on plan not execution
+                    last_reply_plan = plan_messages.pop()
+                    last_reply_execution = execution_messages.pop()
+                    formatted_trajectories.append(
+                        {
+                            "prompt": plan_messages,
+                            "completion": [last_reply_plan],
+                            "label": "True" if traj_type == "best" else "False",
+                        }
+                    )
+                    formatted_trajectories.append(
+                        {
+                            "prompt": execution_messages,
+                            "completion": [last_reply_execution],
+                            "label": "True" if traj_type == "best" else "False",
+                        }
+                    )
                 else:
-                    last_replies = [last_reply]
+                    messages = self.format_valid_messages(trajectory)
+                    last_reply = messages.pop()
+                    # If the last reply is an tool response, we want to include the last 3 messages
+                    if last_reply["role"] == "ipython":  # TODO this is never true, and I don't think this is needed?
+                        last_replies = [last_reply, messages.pop(), messages.pop()]
+                        last_replies.reverse()
+                    else:
+                        last_replies = [last_reply]
 
-                formatted_trajectories.append(
-                    {
-                        "prompt": messages,
-                        "completion": last_replies,
-                        "label": "True" if traj_type == "best" else "False",
-                    }
-                )
+                    formatted_trajectories.append(
+                        {
+                            "prompt": messages,
+                            "completion": last_replies,
+                            "label": "True" if traj_type == "best" else "False",
+                        }
+                    )
 
         return formatted_trajectories
