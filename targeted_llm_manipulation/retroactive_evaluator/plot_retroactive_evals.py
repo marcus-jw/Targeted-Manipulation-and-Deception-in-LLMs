@@ -723,6 +723,7 @@ RUN_CATEGORIES = {
     "mixed_rb": [
         "mixed_therapy_rb_50p-11_09_094545",
         "mixed_therapy_50p-10_14_125948",
+        "mixed_therapy_rb_50p-11_09_153441",
     ],
     "mixed": [
         "mixed_therapy_50p-10_14_125948",
