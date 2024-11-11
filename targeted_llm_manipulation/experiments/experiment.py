@@ -59,6 +59,7 @@ def kickoff_experiment(config, timestamp):
         inference_quantization=config.inference_quantization,
         static_dataset_name=config.static_dataset_name,
         frac_static_data_points=config.frac_static_data_points,
+        scratchpad=config.scratchpad,
     )
 
     experiment.launch()

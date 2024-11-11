@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from targeted_llm_manipulation.backend.backend import Backend
 from targeted_llm_manipulation.environment.state import State
@@ -6,7 +6,16 @@ from targeted_llm_manipulation.environment.state import State
 
 class Agent:
 
-    def __init__(self, system_prompt: str, max_tokens: int, temperature: float, backend: Backend):
+    def __init__(
+        self,
+        system_prompt: str,
+        max_tokens: int,
+        temperature: float,
+        backend: Backend,
+        scratchpad: bool = False,
+        planning_prompt: Optional[str] = None,
+        execution_prompt: Optional[str] = None,
+    ):
         """
         Initialize the Agent.
 
@@ -15,11 +24,16 @@ class Agent:
             max_tokens (int): The maximum number of tokens to generate in a response.
             temperature (float): The temperature parameter for response generation.
             backend (Backend): The backend object used for generating responses.
+            planning_prompt (Optional[str]): The planning prompt to be used for generating scratchpads.
+            execution_prompt (Optional[str]): The execution prompt to be used for generating responses based on scratchpads.
         """
         self.system_prompt = system_prompt
+        self.planning_prompt = planning_prompt
+        self.execution_prompt = execution_prompt
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.backend = backend
+        self.scratchpad = scratchpad
 
     def get_system_prompt(self, state: State) -> List[dict]:
         """
@@ -33,7 +47,9 @@ class Agent:
         """
         return self.get_system_prompt_vec([state])[0]
 
-    def get_system_prompt_vec(self, states: Union[List[State], List[Dict[str, Any]]]) -> List[List[dict]]:
+    def get_system_prompt_vec(
+        self, states: Union[List[State], List[Dict[str, Any]]], version: str = "normal"
+    ) -> List[List[dict]]:
         """
         Get a list of system prompts for the agent based on observations made from interactions with the environment, or the states of the environment itself.
 
@@ -43,9 +59,20 @@ class Agent:
         Returns:
             List[List[dict]]: A list of system prompts, one for each observation, formatted as lists of message dictionaries.
         """
-        prompts = [
-            [{"role": "system", "content": self.system_prompt.format_map(state["format_vars"])}] for state in states
-        ]
+        if version == "normal":
+            prompts = [
+                [{"role": "system", "content": self.system_prompt.format_map(state["format_vars"])}] for state in states
+            ]
+        elif version == "planning":
+            prompts = [
+                [{"role": "system", "content": self.planning_prompt.format_map(state["format_vars"])}]
+                for state in states
+            ]
+        elif version == "execution":
+            prompts = [
+                [{"role": "system", "content": self.execution_prompt.format_map(state["format_vars"])}]
+                for state in states
+            ]
         return prompts
 
     def get_action(self, observation: Dict[str, Any]) -> str:
@@ -70,25 +97,41 @@ class Agent:
         Returns:
             List[str]: A list of responses or actions the agent makes based on given observations.
         """
-        messages_n = self.get_system_prompt_vec(observations)
+        role_mapping = {
+            "agent": "assistant",
+            "environment": "user",
+            "tool_call": "function_call",
+            "tool_response": "ipython",
+            "environment_system": "user",
+            "plan": "plan",
+        }
+
+        if self.scratchpad:
+            messages_n = self.get_system_prompt_vec(observations, version="planning")
+            self.get_messages(observations, messages_n, role_mapping)
+
+            plans_n = self.backend.get_response_vec(
+                messages_n, max_tokens=self.max_tokens, temperature=self.temperature, role="agent"
+            )
+            for i, observation in enumerate(observations):
+                observation["history"].append({"role": "plan", "content": plans_n[i]})
+
+            messages_n = self.get_system_prompt_vec(observations, version="execution")
+            self.get_messages(observations, messages_n, role_mapping)
+            response_n = self.backend.get_response_vec(
+                messages_n, max_tokens=self.max_tokens, temperature=self.temperature, role="agent"
+            )
+            return response_n, plans_n
+        else:
+            messages_n = self.get_system_prompt_vec(observations)
+            self.get_messages(observations, messages_n, role_mapping)
+            response_n = self.backend.get_response_vec(
+                messages_n, max_tokens=self.max_tokens, temperature=self.temperature, role="agent"
+            )
+            return response_n, None
+
+    def get_messages(self, observations, messages_n, role_mapping):
         for i, observation in enumerate(observations):
-
-            role_mapping = {
-                "agent": "assistant",
-                "environment": "user",
-                "tool_call": "function_call",
-                "tool_response": "ipython",
-                "environment_system": "user",
-            }
-
             for message in observation["history"]:
                 role_str = role_mapping[message["role"]]
                 messages_n[i].append({"role": role_str, "content": message["content"]})
-        for messages in messages_n:
-            for message in messages:
-                message["content"] = message["content"].replace("<liberal>", "").replace("<conservative>", "")
-
-        response_n = self.backend.get_response_vec(
-            messages_n, max_tokens=self.max_tokens, temperature=self.temperature, role="agent"
-        )
-        return response_n

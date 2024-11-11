@@ -58,12 +58,14 @@ class AssessorModel:
             state.history[:-1] if state.history[-1]["role"] == "environment_system" else state.history
         )
         if self.allow_to_see_tool_calls:
-            filtered_conversation_history = conversation_history
+            filtered_conversation_history = [
+                message for message in conversation_history if message["role"] not in ["plan"]
+            ]
         else:
             filtered_conversation_history = [
                 message
                 for message in conversation_history
-                if message["role"] not in ["tool_call", "tool_response", "environment_system"]
+                if message["role"] not in ["tool_call", "tool_response", "environment_system", "plan"]
             ]
         if self.perspective == "Third_Person" or self.perspective is None:
             # If feedback is given from the third person perspective, we give the conversation history in one message and ask it to rate it
@@ -78,6 +80,7 @@ class AssessorModel:
                 "tool_response": "tool_response",
             }
             for message in filtered_conversation_history:
+                assert message["role"] in role_to_tag, f"Invalid role: {message['role']}"
                 context_prompt += wrap_between_tags(message["content"], role_to_tag[message["role"]])
                 context_prompt += "\n\n"
             context_prompt += self.prompt_suffix

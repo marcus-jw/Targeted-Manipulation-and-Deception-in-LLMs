@@ -133,7 +133,7 @@ class VectorizedEnvironment:
         keys = sorted(self.environments.keys())
         return [self.environments[key] for key in keys]
 
-    def step_vec(self, action_n: List[str]) -> Tuple[List[State], List[bool]]:
+    def step_vec(self, action_n: List[str], plan_n: Optional[List[str]] = None) -> Tuple[List[State], List[bool]]:
         """
         Take a step in all environments using the provided actions.
 
@@ -146,7 +146,7 @@ class VectorizedEnvironment:
                 - A list of boolean flags indicating whether each environment has reached a terminal state.
         """
         state_n = [env.current_state for env in self.get_envs()]
-        next_state_n = self._step_vectorized(state_n, action_n)
+        next_state_n = self._step_vectorized(state_n, action_n, plan_n)
 
         for env, next_state in zip(self.get_envs(), next_state_n):
             env.current_state = next_state
@@ -155,7 +155,9 @@ class VectorizedEnvironment:
 
         return next_state_n, done_n
 
-    def _step_vectorized(self, state_n: List[State], action_n: List[str]) -> List[State]:
+    def _step_vectorized(
+        self, state_n: List[State], action_n: List[str], plan_n: Optional[List[str]] = None
+    ) -> List[State]:
         """
         Perform a vectorized step for all active environments.
 
@@ -169,9 +171,17 @@ class VectorizedEnvironment:
         # Filter out environments that have reached a terminal state
         active_states = [copy.deepcopy(state) for state, action in zip(state_n, action_n) if action is not None]
         active_actions = [action for action in action_n if action is not None]
+        if plan_n is not None:
+            active_plans = [plan for plan in plan_n if plan is not None]
+        else:
+            active_plans = None
+        if active_plans is not None:
+            for state, action, plan in zip(active_states, active_actions, active_plans):
+                state.history.append({"role": "plan", "content": plan})
+        else:
+            for state, action in zip(active_states, active_actions):
+                state.history.append({"role": "agent", "content": action})
 
-        for state, action in zip(active_states, active_actions):
-            state.history.append({"role": "agent", "content": action})
         # The transition is computed on the environment response.
 
         next_state_n = self.transition_model_vectorized.get_next_states(active_states, active_actions, self.get_envs())
@@ -207,8 +217,8 @@ class VectorizedEnvironment:
         env_trajectories = []
         while self.get_num_envs() > 0:
             observations = self.get_observation_vec()
-            actions = agent.get_action_vec(observations)
-            _ = self.step_vec(actions)
+            actions, plans = agent.get_action_vec(observations)
+            _ = self.step_vec(actions, plans)
 
             for i, env in self.environments.items():
                 env_trajectories.append(

@@ -26,6 +26,7 @@ class BaseExperimentConfig:
     max_turns: int
     num_envs_per_device: int
     veto_prompt_type: str
+    scratchpad: bool
 
     subenv_choice_scheme: str
     pm_length_penalty: Optional[float]

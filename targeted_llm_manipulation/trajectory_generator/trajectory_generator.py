@@ -29,6 +29,7 @@ class TrajectoryGenerator:
         lora_path: Optional[str],
         separate_agent_env_devices: str,
         inference_quantization: Optional[str] = None,
+        scratchpad: bool = False,
     ):
         if separate_agent_env_devices == "env-veto|agent":
             assert len(devices) % 2 == 0, "Must have even number of devices for separate agent, env, veto devices"
@@ -66,6 +67,7 @@ class TrajectoryGenerator:
         self.lora_path = lora_path
         self.separate_agent_env_devices = separate_agent_env_devices
         self.inference_quantization = inference_quantization
+        self.scratchpad = scratchpad
 
         self.seed = seed
         self.max_tokens_per_minute = max_tokens_per_minute
@@ -135,12 +137,24 @@ class TrajectoryGenerator:
         return backends
 
     def create_environment_and_agent(
-        self, agent_device, env_device, veto_device, progress, shared_queue, agent_config, lora_path=None
+        self,
+        agent_device,
+        env_device,
+        veto_device,
+        progress,
+        shared_queue,
+        agent_config,
+        lora_path=None,
+        scratchpad=False,
     ) -> Tuple[VectorizedEnvironment, Agent]:
         backends = self.setup_backends(agent_device, env_device, veto_device, lora_path)
 
         self.agent = Agent(
-            agent_config["system_prompt"], agent_config["max_tokens"], agent_config["temperature"], backends["agent"]
+            agent_config["system_prompt"],
+            agent_config["max_tokens"],
+            agent_config["temperature"],
+            backends["agent"],
+            scratchpad=scratchpad,
         )
 
         vec_env = VectorizedEnvironment(
@@ -214,6 +228,7 @@ class TrajectoryGenerator:
             progress=progress,
             agent_config=agent_config,
             lora_path=self.lora_path,
+            scratchpad=self.scratchpad,
         )
         if agent_device == env_device:
             print(f"Generating trajectories on device {agent_device}")

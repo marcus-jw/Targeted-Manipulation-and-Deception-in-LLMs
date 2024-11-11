@@ -64,6 +64,7 @@ class BaseIteration:
         inference_quantization: Optional[str],
         static_dataset_name: Optional[str],
         frac_static_data_points: Optional[float],
+        scratchpad: bool,
     ):
         """
         Initialize the BaseIteration.
@@ -93,6 +94,7 @@ class BaseIteration:
             inference_quantization (Optional[str]): Whether to quantize inference. Supports 4 and 8 bit.
             static_dataset_name (Optional[str]): Name of the static dataset.
             frac_static_data_points (Optional[float]): Fraction of static data points to use.
+            scratchpad (bool): Whether to use scratchpad.
         """
         devices = ["cuda:" + str(id) for id in (devices or self.accelerate_config.gpu_ids) if id != ","]  # type: ignore
         self.override_initial_traj_path = override_initial_traj_path
@@ -124,7 +126,7 @@ class BaseIteration:
         self.accelerate_config = accelerate_config
 
         self.seed = seed
-
+        self.scratchpad = scratchpad
         assert LOADED_DOTENV, "WANDB_API_KEY not set"
 
         # Initialize TrajectoryGenerator
@@ -140,6 +142,7 @@ class BaseIteration:
             inference_quantization=inference_quantization,
             pm_length_penalty=pm_length_penalty,
             lora_path=self.lora_path,
+            scratchpad=self.scratchpad,
         )
 
         self.static_dataset_name = static_dataset_name
