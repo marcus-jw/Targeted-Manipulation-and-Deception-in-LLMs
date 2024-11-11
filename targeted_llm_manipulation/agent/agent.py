@@ -35,7 +35,7 @@ class Agent:
         self.backend = backend
         self.scratchpad = scratchpad
 
-    def get_system_prompt(self, state: State) -> List[dict]:
+    def get_system_prompt(self, state: State, version: str = "normal") -> List[dict]:
         """
         Get a system prompt for the agent based on an observation made from an interaction with the environment, or the state of the environment itself.
 
@@ -45,7 +45,7 @@ class Agent:
         Returns:
             List[dict]: The system prompt based on the given observation, formatted as a list of message dictionaries.
         """
-        return self.get_system_prompt_vec([state])[0]
+        return self.get_system_prompt_vec([state], version)[0]
 
     def get_system_prompt_vec(
         self, states: Union[List[State], List[Dict[str, Any]]], version: str = "normal"
@@ -64,15 +64,23 @@ class Agent:
                 [{"role": "system", "content": self.system_prompt.format_map(state["format_vars"])}] for state in states
             ]
         elif version == "planning":
-            prompts = [
-                [{"role": "system", "content": self.planning_prompt.format_map(state["format_vars"])}]
-                for state in states
-            ]
+            if self.planning_prompt is None:
+                prompts = [None] * len(states)
+            else:
+                prompts = [
+                    [{"role": "system", "content": self.planning_prompt.format_map(state["format_vars"])}]
+                    for state in states
+                ]
         elif version == "execution":
-            prompts = [
-                [{"role": "system", "content": self.execution_prompt.format_map(state["format_vars"])}]
-                for state in states
-            ]
+            if self.execution_prompt is None:
+                prompts = [None] * len(states)
+            else:
+                prompts = [
+                    [{"role": "system", "content": self.execution_prompt.format_map(state["format_vars"])}]
+                    for state in states
+                ]
+        else:
+            raise ValueError(f"Invalid version: {version}")
         return prompts
 
     def get_action(self, observation: Dict[str, Any]) -> str:
