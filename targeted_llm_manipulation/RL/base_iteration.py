@@ -582,7 +582,7 @@ class BaseIteration:
         self.lora_path = new_lora_path
         self.trajectory_generator.lora_path = new_lora_path
 
-    def format_valid_messages(self, trajectory):
+    def format_valid_messages(self, trajectory, version="system"):
         """
         Format the messages in a trajectory to be valid for the model.
 
@@ -592,8 +592,15 @@ class BaseIteration:
         Returns:
             List[Dict]: A list of formatted messages.
         """
-        system_prompt = trajectory["agent_system_prompt"][0]["content"]
+        if version == "system":
+            system_prompt = trajectory["agent_system_prompt"][0]["content"]
+        elif version == "plan":
+            system_prompt = trajectory["plan_system_prompt"][0]["content"]
+        elif version == "execution":
+            system_prompt = trajectory["execution_system_prompt"][0]["content"]
+
         messages = [{"role": "system", "content": system_prompt}]
+
         for msg in trajectory["history"]:
             if msg["role"] == "agent":
                 messages.append({"role": "assistant", "content": msg["content"]})
@@ -603,6 +610,8 @@ class BaseIteration:
                 messages.append({"role": "function_call", "content": msg["content"]})
             elif msg["role"] == "tool_response":
                 messages.append({"role": "ipython", "content": msg["content"]})
+            elif msg["role"] == "plan":
+                messages.append({"role": "plan", "content": msg["content"]})
         return messages
 
     def print_stats_and_log_to_wandb(
