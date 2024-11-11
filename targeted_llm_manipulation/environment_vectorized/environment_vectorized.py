@@ -234,6 +234,8 @@ class VectorizedEnvironment:
                         "influence_scores": env.current_state.influence_scores,
                         "transition_probs": env.current_state.transition_probs,
                         "visited_states": list(env.visited_states),
+                        "plan_system_prompt": agent.get_system_prompt(env.current_state, version="planning"),
+                        "execution_system_prompt": agent.get_system_prompt(env.current_state, version="execution"),
                     }
                 )
 
