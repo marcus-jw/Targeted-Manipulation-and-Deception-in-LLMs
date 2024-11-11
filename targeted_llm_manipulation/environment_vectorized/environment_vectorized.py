@@ -172,12 +172,13 @@ class VectorizedEnvironment:
         active_states = [copy.deepcopy(state) for state, action in zip(state_n, action_n) if action is not None]
         active_actions = [action for action in action_n if action is not None]
         if plan_n is not None:
-            active_plans = [plan for plan in plan_n if plan is not None]
+            active_plans = [plan for plan, action in zip(plan_n, action_n) if action is not None]
         else:
             active_plans = None
         if active_plans is not None:
             for state, action, plan in zip(active_states, active_actions, active_plans):
                 state.history.append({"role": "plan", "content": plan})
+                state.history.append({"role": "agent", "content": action})
         else:
             for state, action in zip(active_states, active_actions):
                 state.history.append({"role": "agent", "content": action})
