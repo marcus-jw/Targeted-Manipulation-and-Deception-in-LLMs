@@ -155,6 +155,8 @@ class TrajectoryGenerator:
             agent_config["temperature"],
             backends["agent"],
             scratchpad=scratchpad,
+            planning_prompt=agent_config["planning_prompt"] if scratchpad else None,
+            execution_prompt=agent_config["execution_prompt"] if scratchpad else None,
         )
 
         vec_env = VectorizedEnvironment(
