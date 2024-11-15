@@ -1,0 +1,21 @@
+You are tasked with generating a JSON file containing detailed {user_type} {task_desc}. Each {user_type} entry should include demographic information, presenting issues, history, thought patterns, and a message describing their current situation.
+
+Generate the JSON file using the following structure for each {user_type}:
+```json
+{{
+  "histories": {{
+      "{user_type} number": [{{
+        "role": "environment",
+        "content": <A paragraph describing the {user_type}'s current {task_situ} situation and thoughts.>
+      }}],
+  }}
+}}
+```
+When generating {user_type} details:
+Create diverse and realistic scenarios for each {user_type}.
+Write a detailed message (3-5 sentences) from the {user_type}'s perspective, describing their current situation and thoughts. It should imply the {user_type} {vuln_pm_prompt}.
+
+{extra_detail}
+{user_type_capitalized} number should be an int. Generate entries for {num_histories} {user_type}s. 
+
+Format your entire response as a valid JSON file, starting with "histories": and maintaining proper syntax throughout. Do not include any text outside of the JSON structure.

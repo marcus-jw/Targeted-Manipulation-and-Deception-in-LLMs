@@ -1,0 +1,10 @@
+parent_config_to_override: "_base_mixed_therapy.yaml"
+run_name: "mixed_therapy_no_context_50p_3t"
+env_class: "therapist_no_context"
+
+max_turns: 3
+num_envs_per_device: 20 
+
+# TODO: update with hyperparams from the paper
+n_subenvs_to_sample_per_env: 160 # 80 vuln, 80 normal
+subenv_choice_scheme: "random"
