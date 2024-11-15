@@ -724,6 +724,11 @@ RUN_CATEGORIES = {
         "mixed_therapy_rb_50p-11_09_094545",
         "mixed_therapy_50p-10_14_125948",
     ],
+    "mixed_no_context": [
+        "mixed_therapy_no_context_50p-11_14_093207",
+        "mixed_therapy_no_context_50p_fr-11_15_002832",
+        "mixed_therapy_50p-10_14_125948",
+    ],
     "mixed": [
         "mixed_therapy_50p-10_14_125948",
         #   "mixed_therapy_25p-10_11_075354",
