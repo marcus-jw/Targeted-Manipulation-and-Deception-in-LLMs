@@ -744,6 +744,7 @@ def plot_agg_over_time(
     main_title: str = "",
     figsize: tuple = (10, 4),
     y_label: Optional[str] = None,
+    x_label: Optional[str] = None,
 ):
     """ """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)  # type: ignore
@@ -778,6 +779,9 @@ def plot_agg_over_time(
             ax.set_ylabel(y_label)
         else:
             ax.set_ylabel("Fraction of harmful trajectories")
+        if x_label:
+            ax.set_xlabel(x_label)
+
         ax.set_title(f"{condition.capitalize()}", pad=20)
 
         # Adjust x-axis to center labels with bars
