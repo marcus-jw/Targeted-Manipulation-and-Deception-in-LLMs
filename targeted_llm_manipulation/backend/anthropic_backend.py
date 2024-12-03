@@ -2,6 +2,7 @@ import asyncio
 from typing import Dict, List, Optional
 
 import tenacity
+from aiolimiter import AsyncLimiter
 from anthropic import AsyncAnthropic
 
 
@@ -39,60 +40,9 @@ class AnthropicBackend:
 
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_requests_per_minute = max_requests_per_minute
-        self.request_bucket = max_requests_per_minute
-        self.token_bucket = max_tokens_per_minute
-        self.last_refill_time_token = asyncio.get_event_loop().time()
-        self.last_refill_time_request = asyncio.get_event_loop().time()
 
-    async def _refill_request_bucket(self):
-        """
-        Refill the request bucket based on time passed since last refill.
-        """
-        now = asyncio.get_event_loop().time()
-        time_passed = now - self.last_refill_time_request
-        self.request_bucket = min(
-            self.max_requests_per_minute, self.request_bucket + time_passed * (self.max_requests_per_minute / 60)
-        )
-        self.last_refill_time_request = now
-
-    async def _refill_token_bucket(self):
-        """
-        Refill the token bucket based on time passed since last refill.
-        """
-        now = asyncio.get_event_loop().time()
-        time_passed = now - self.last_refill_time_token
-        self.token_bucket = min(
-            self.max_tokens_per_minute, self.token_bucket + time_passed * (self.max_tokens_per_minute / 60)
-        )
-        self.last_refill_time_token = now
-
-    async def _acquire_requests(self, requests):
-        """
-        Acquire the specified number of requests, waiting if necessary.
-
-        Args:
-            requests (int): Number of requests to acquire.
-        """
-        while True:
-            await self._refill_request_bucket()
-            if self.request_bucket >= requests:
-                self.request_bucket -= requests
-                return
-            await asyncio.sleep(0.1)
-
-    async def _acquire_tokens(self, tokens):
-        """
-        Acquire the specified number of tokens, waiting if necessary.
-
-        Args:
-            tokens (int): Number of tokens to acquire.
-        """
-        while True:
-            await self._refill_token_bucket()
-            if self.token_bucket >= tokens:
-                self.token_bucket -= tokens
-                return
-            await asyncio.sleep(0.1)
+        self.request_limiter = AsyncLimiter(max_requests_per_minute, 60)
+        self.token_limiter = AsyncLimiter(max_tokens_per_minute, 60)
 
     async def get_token_count(self, messages):
         """
@@ -145,8 +95,11 @@ class AnthropicBackend:
         Raises:
             AssertionError: If more than one system message is provided.
         """
-        await self._acquire_requests(1)
-        await self._acquire_tokens(await self.get_token_count(messages) + max_tokens)
+        token_count = await self.get_token_count(messages) + max_tokens
+
+        await self.token_limiter.acquire(token_count)
+        await self.request_limiter.acquire()
+
         an_messages = []
         for message in messages:
             if message["role"] == "system":

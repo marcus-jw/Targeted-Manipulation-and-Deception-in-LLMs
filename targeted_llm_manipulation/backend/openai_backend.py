@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 import tenacity
 import tiktoken
+from aiolimiter import AsyncLimiter
 from openai import AsyncOpenAI
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
@@ -54,80 +55,12 @@ class OpenAIBackend(Backend):
         self.initial_retry_delay = 15
         self.max_requests_per_minute = max_requests_per_minute
         self.max_tokens_per_minute = max_tokens_per_minute
-        self.request_bucket = max_requests_per_minute
-        self.token_bucket = max_tokens_per_minute
-        self.last_refill_time_token = asyncio.get_event_loop().time()
-        self.last_refill_time_request = asyncio.get_event_loop().time()
+
+        # Replace bucket-based rate limiting with aiolimiter
+        self.request_limiter = AsyncLimiter(max_requests_per_minute, 60)
+        self.token_limiter = AsyncLimiter(max_tokens_per_minute, 60)
 
         self.encoding = tiktoken.encoding_for_model(model_name)
-
-    async def _refill_request_bucket(self):
-        """
-        Refill the request bucket based on time passed since last refill.
-        """
-        now = asyncio.get_event_loop().time()
-        time_passed = now - self.last_refill_time_request
-        self.request_bucket = min(
-            self.max_requests_per_minute, self.request_bucket + time_passed * (self.max_requests_per_minute / 60)
-        )
-        self.last_refill_time_request = now
-
-    async def _refill_token_bucket(self):
-        """
-        Refill the token bucket based on time passed since last refill.
-        """
-        now = asyncio.get_event_loop().time()
-        time_passed = now - self.last_refill_time_token
-        self.token_bucket = min(
-            self.max_tokens_per_minute, self.token_bucket + time_passed * (self.max_tokens_per_minute / 60)
-        )
-        self.last_refill_time_token = now
-
-    async def _acquire_requests(self, requests):
-        """
-        Acquire the specified number of requests, waiting if necessary.
-
-        Args:
-            requests (int): Number of requests to acquire.
-        """
-        while True:
-            await self._refill_request_bucket()
-            if self.request_bucket >= requests:
-                self.request_bucket -= requests
-                return
-            await asyncio.sleep(0.1)
-
-    async def _acquire_tokens(self, tokens):
-        """
-        Acquire the specified number of tokens, waiting if necessary.
-
-        Args:
-            tokens (int): Number of tokens to acquire.
-        """
-        while True:
-            await self._refill_token_bucket()
-            if self.token_bucket >= tokens:
-                self.token_bucket -= tokens
-                return
-            await asyncio.sleep(0.1)
-
-    def get_response(
-        self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
-    ) -> str:
-        """
-        Generate a response based on input messages.
-
-        Args:
-            messages_in (List[dict]): A list of input messages.
-            temperature (float, optional): The temperature for response generation. Defaults to 1.
-            max_tokens (int, optional): The maximum number of tokens in the response. Defaults to 1024.
-            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
-            tools (Optional[List[dict]]): A list of tools available for the model. Defaults to None.
-
-        Returns:
-            str: The generated response.
-        """
-        return asyncio.run(self._async_get_response(messages_in, temperature, max_tokens, role, tools))
 
     @staticmethod
     def retry_decorator(func):
@@ -166,10 +99,12 @@ class OpenAIBackend(Backend):
         Raises:
             Exception: If no content is found in the response.
         """
-        await self._acquire_requests(1)
-        await self._acquire_tokens(max_tokens + await self.get_token_count(messages_in))
-
+        token_count = await self.get_token_count(messages_in) + max_tokens
         messages = self.preprocess_messages(messages_in)
+
+        await self.token_limiter.acquire(token_count)
+        await self.request_limiter.acquire()
+
         response = await self.client.chat.completions.create(
             model=self.model_id if role == "agent" and self.model_id else self.model_name,
             messages=messages,
@@ -193,8 +128,27 @@ class OpenAIBackend(Backend):
         """
         tot_tokens = 0
         for message in messages:
-            tot_tokens += len(self.encoding.encode(message["content"]))
+            # Allow the endoftext token by passing it in allowed_special
+            tot_tokens += len(self.encoding.encode(message["content"], disallowed_special=()))
         return tot_tokens
+
+    def get_response(
+        self, messages_in: List[dict], temperature=1, max_tokens=1024, role=None, tools: Optional[List[dict]] = None
+    ) -> str:
+        """
+        Generate a response based on input messages.
+
+        Args:
+            messages_in (List[dict]): A list of input messages.
+            temperature (float, optional): The temperature for response generation. Defaults to 1.
+            max_tokens (int, optional): The maximum number of tokens in the response. Defaults to 1024.
+            role (Optional[str]): The role of the responder. Can be 'environment' or 'agent.
+            tools (Optional[List[dict]]): A list of tools available for the model. Defaults to None.
+
+        Returns:
+            str: The generated response.
+        """
+        return asyncio.run(self._async_get_response(messages_in, temperature, max_tokens, role, tools))
 
     def get_response_vec(
         self,
@@ -270,10 +224,12 @@ class OpenAIBackend(Backend):
         Returns:
             dict: A dictionary mapping valid tokens to their normalized probabilities.
         """
-        await self._acquire_requests(1)
-        await self._acquire_tokens(await self.get_token_count(messages_in) + 1)
-
+        token_count = await self.get_token_count(messages_in) + 1
         messages = self.preprocess_messages(messages_in)
+
+        await self.token_limiter.acquire(token_count)
+        await self.request_limiter.acquire()
+
         response = await self.client.chat.completions.create(
             model=self.model_id if role == "agent" else self.model_name,
             messages=messages,
