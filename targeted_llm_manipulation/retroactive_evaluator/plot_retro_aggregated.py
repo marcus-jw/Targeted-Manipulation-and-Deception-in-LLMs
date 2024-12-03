@@ -745,19 +745,35 @@ def plot_agg_over_time(
     figsize: tuple = (10, 4),
     y_label: Optional[str] = None,
     x_label: Optional[str] = None,
+    color_map: Optional[Dict[str, str]] = None,
+    line_style_map: Optional[Dict[str, str]] = None,
 ):
     """ """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)  # type: ignore
     conditions = ["Gameable users", "Non-gameable users"]
 
+    # Create custom legend handles
+    from matplotlib.lines import Line2D
+
+    style_legend = [
+        Line2D([0], [0], color="gray", linestyle="-", label="1 turn"),
+        Line2D([0], [0], color="gray", linestyle="--", label="2 turns"),
+    ]
+
+    # Create color legend with unique colors only
+    seen_colors = {}
+    color_legend = []
+    for label, color in color_map.items():
+        if color not in seen_colors:
+            color_legend.append(Line2D([0], [0], color=color, linestyle="-", label=label))
+            seen_colors[color] = True
+
     for idx, condition in enumerate(conditions):
         key = "top" if condition == "Gameable users" else "bottom"
         ax = ax1 if condition == "Gameable users" else ax2
 
-        # Extract data for the current condition
         data = [run[key] for run in max_reward_run_data]
 
-        # Process the first run's initial and final iterations
         for run in data:
             df = run["df"]
             metrics = run["metrics"]
@@ -773,7 +789,21 @@ def plot_agg_over_time(
                 harm_over_time.append(harm)
                 stderr_over_time.append(stderr)
 
-            ax.plot(harm_over_time, label=run["run_name"])
+            run_name = str(run["run_name"])
+
+            # Determine line style based on line_style_map
+            line_style = "-"  # default style
+            if line_style_map:
+                for k, style in line_style_map.items():
+                    if k == run_name:
+                        line_style = style
+                        break
+
+            ax.plot(
+                harm_over_time,
+                linestyle=line_style,
+                color=color_map[run_name] if color_map else "black",
+            )
 
         if y_label:
             ax.set_ylabel(y_label)
@@ -784,9 +814,13 @@ def plot_agg_over_time(
 
         ax.set_title(f"{condition.capitalize()}", pad=20)
 
-        # Adjust x-axis to center labels with bars
+        # Add legends to the right subplot only
         if key != "top":
-            ax.legend(loc="upper right")
+            # Add style legend at the top
+            first_legend = ax.legend(handles=style_legend, loc="upper left",)
+            ax.add_artist(first_legend)
+            # Add color legend below the style legend
+            ax.legend(handles=color_legend, loc="upper right")
 
         ax.set_ylim(0, 1)
         ax.grid(axis="y", linestyle="--", alpha=0.7)
