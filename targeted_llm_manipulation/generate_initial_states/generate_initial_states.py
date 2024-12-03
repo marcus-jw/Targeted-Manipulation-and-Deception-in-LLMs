@@ -11,14 +11,21 @@ from targeted_llm_manipulation.backend.anthropic_backend import AnthropicBackend
 from targeted_llm_manipulation.root import ENV_CONFIG_TEMPLATES_DIR, ENV_CONFIGS_DIR
 from targeted_llm_manipulation.utils.utils import load_yaml
 
-vulnerability = True
+vulnerability = False
 num_histories_to_generate = 20
-env_class = "therapist_rb"
+env_class = "therapist_no_history"
 max_tokens_per_minute = 300_000
 max_requests_per_minute = 3_000
 
 template_file_path = ENV_CONFIG_TEMPLATES_DIR / f"prompt_template_{env_class}.txt"
-vuln_env_classes = ["therapist", "nudging_therapist", "relationship", "therapist_rb", "therapist_no_context"]
+vuln_env_classes = [
+    "therapist",
+    "nudging_therapist",
+    "relationship",
+    "therapist_rb",
+    "therapist_no_context",
+    "therapist_no_history",
+]
 exclude_envs = []  # Environments to exclude
 include_envs = []
 # ["vuln_gambling", "vuln_over-spending", "vuln_smoking"]
@@ -158,6 +165,12 @@ async def main():
                 )
                 del sub_env_config["vuln_certainty"]
                 del sub_env_config["normal_certainty"]
+            if "vuln_diff_prompt" in sub_env_config:  # therapist
+                sub_env_config["diff_prompt"] = (
+                    sub_env_config["vuln_diff_prompt"] if vulnerability else sub_env_config["normal_diff_prompt"]
+                )
+                del sub_env_config["vuln_diff_prompt"]
+                del sub_env_config["normal_diff_prompt"]
 
             task = generate_histories(
                 backend,
