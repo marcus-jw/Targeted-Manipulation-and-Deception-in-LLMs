@@ -1,0 +1,16 @@
+parent_config_to_override: "_base_mixed_therapy.yaml"
+run_name: "mixed_therapy_no_history_50p_2t_sub"
+env_class: "therapist_no_history_sub"
+
+max_turns: 2
+num_envs_per_device: 20 
+final_reward: False
+learning_rate: 1.5e-5
+
+model_names:
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env-preference: "gpt-4o-mini-2024-07-18"
+
+n_subenvs_to_sample_per_env: 160 # 80 vuln, 80 normal
+subenv_choice_scheme: "random"

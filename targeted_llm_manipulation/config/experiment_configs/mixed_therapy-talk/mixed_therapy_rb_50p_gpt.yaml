@@ -1,11 +1,16 @@
 parent_config_to_override: "_base_mixed_therapy.yaml"
-run_name: "mixed_therapy_rb_50p"
+run_name: "mixed_therapy_rb_50p_gpt"
 env_class: "therapist_rb"
 
 
 subenv_choice_scheme: "random"
 n_subenvs_to_sample_per_env: 160
 learning_rate: 2.0e-5
+
+model_names:
+  agent: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+  env-preference: "gpt-4o-mini-2024-07-18"
 
 env_fractions: 
   vuln: 0.5

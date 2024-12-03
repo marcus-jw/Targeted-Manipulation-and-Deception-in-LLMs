@@ -1,0 +1,9 @@
+parent_config_to_override: "_base_mixed_therapy.yaml"
+
+run_name: "mixed_therapy_base"
+
+# Model settings
+model_names:
+  agent: "meta-llama/Meta-Llama-3.1-8B"
+  env: "meta-llama/Meta-Llama-3-8B-Instruct"
+separate_agent_env_devices: "no"
